@@ -1,0 +1,53 @@
+// Dev helper: makes a published invitation with replies through the API, then screenshots key screens at a given width.
+// node scripts/dev/seed-and-shoot.mjs <outDir> [width] [height]
+import { mkdirSync } from "node:fs";
+import { chromium } from "playwright";
+const [out, w = "1440", h = "900"] = process.argv.slice(2);
+mkdirSync(out, { recursive: true });
+const base = process.env.BASE || "http://localhost:3000";
+const mobile = +w < 700;
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, deviceScaleFactor: mobile ? 2 : 1, isMobile: mobile, hasTouch: mobile });
+const page = await ctx.newPage();
+const errs = [];
+page.on("pageerror", (e) => errs.push(e.message));
+const api = async (method, url, data) => { const r = await ctx.request.fetch(base + url, { method, data }); if (!r.ok()) throw new Error(`${method} ${url} ${r.status()} ${await r.text()}`); return r.json(); };
+await api("POST", "/api/auth/signup", { name: "Asha Rao", email: `seed${Date.now()}@example.com`, password: "password123" });
+const { id } = await api("POST", "/api/invitations", { template: process.env.TEMPLATE || "scenic-romance", tz: "Asia/Kolkata" });
+const { invitation } = await api("GET", `/api/invitations/${id}`);
+const d = invitation.data;
+Object.assign(d, { name1: process.env.NAME1 ?? "Ethan", name2: process.env.NAME2 ?? "Lily", date: "2027-04-14", time: "16:30", venueName: "Lakewater Lodge", venueAddress: "Naukuchiatal Lake Road, Nainital", story: "We found this lake on a wrong turn four summers ago and promised we would come back.", events: [{ id: "a", title: "Welcome dinner", date: "2027-04-13", time: "19:00", place: "The Boathouse", note: "" }, { id: "b", title: "Ceremony", date: "2027-04-14", time: "16:30", place: "The Lakeside Terrace", note: "Dress for the outdoors" }], contacts: [{ name: "Maya", phone: "+91 98200 12345" }] });
+d.rsvp = { ...d.rsvp, capacity: 300, askMeal: true, maxPerInvite: 6 };
+await api("PATCH", `/api/invitations/${id}`, { data: d });
+const order = await api("POST", "/api/pay/order", { invitationId: id });
+const pay = await api("POST", "/api/pay/test", { orderId: order.orderId });
+const { slug } = await api("POST", "/api/pay/verify", pay);
+const names = ["Rahul & Family", "The Mehtas", "Priya Shah", "Uncle Dev", "Kabir & Aditi", "Zoya Khan", "The D’Souzas", "Arjun Nair", "Meera Kapoor", "Sam & Jo"];
+for (const [i, n] of names.entries()) await api("POST", `/api/invitations/${id}/guests`, { name: n, phone: `+91 98${String(10000000 + i * 1234567).slice(0, 8)}`, group: i % 2 ? "Bride’s side" : "Groom’s side", invited: 2 + (i % 4), max: 2 + (i % 4) });
+const anon = await browser.newContext();
+const replies = [["rahul-family", "yes", 4, "Vegetarian", "Cannot wait!"], ["the-mehtas", "yes", 3, "Non-vegetarian", ""], ["priya-shah", "yes", 2, "Vegetarian", "So happy for you both."], ["uncle-dev", "maybe", 1, "", "Will confirm after travel plans"], ["kabir-aditi", "yes", 2, "", ""], ["zoya-khan", "no", 0, "", "Sending all my love"], ["the-d-souzas", "yes", 5, "Non-vegetarian", ""]];
+for (const [g, status, count, meal, message] of replies) await anon.request.post(base + "/api/rsvp", { data: { invitation: slug, guest: g, status, count, meal, message } });
+for (const n of ["Neha", "Imran & Sana"]) await anon.request.post(base + "/api/rsvp", { data: { invitation: slug, status: "yes", name: n, count: 2, phone: "98200 55555" } });
+
+const shot = async (name, path, opts = {}) => {
+  await page.goto(base + path, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+  if (opts.before) await opts.before();
+  await page.waitForTimeout(opts.wait ?? 700);
+  await page.screenshot({ path: `${out}/${name}.png`, fullPage: !!opts.full });
+  const over = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  if (over > 0) console.log("OVERFLOW", name, over);
+};
+await shot("home", "/", { wait: 1400 });
+await shot("catalog", "/", { before: () => page.evaluate(() => document.querySelector("#templates").scrollIntoView()), wait: 900 });
+await shot("home-full", "/", { full: true, before: async () => { const H = await page.evaluate(() => document.documentElement.scrollHeight); for (let y = 0; y < H; y += 700) { await page.evaluate((yy) => scrollTo(0, yy), y); await page.waitForTimeout(100); } await page.evaluate(() => scrollTo(0, 0)); }, wait: 900 });
+await shot("editor", `/edit/${id}`, { wait: 2600 });
+await shot("editor-design", `/edit/${id}?step=design`, { wait: 2200 });
+await shot("dashboard", "/dashboard");
+await shot("manage", `/invites/${id}`, { full: true });
+await shot("guests", `/invites/${id}/guests`);
+await shot("rsvps", `/invites/${id}/rsvps`, { full: true });
+await shot("account", "/account");
+await shot("public", `/i/${slug}/rahul-family`, { wait: 1800 });
+console.log("id", id, "slug", slug, "errors", errs.length ? errs : "none");
+await browser.close();

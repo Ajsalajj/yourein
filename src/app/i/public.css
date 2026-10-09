@@ -1,0 +1,27 @@
+/* The page a guest sees. The invitation fills a phone; wider screens get a quiet dark surround. */
+.pub { position: fixed; inset: 0; background: #0c0c0c; display: grid; place-items: center; font-family: var(--f-ui); }
+.pub-frame { position: relative; width: 100%; height: 100dvh; max-width: 480px; overflow: hidden; background: #000; }
+.pub-screen { height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; outline: none; -webkit-overflow-scrolling: touch; }
+.pub-screen::-webkit-scrollbar { display: none; }
+.pub-screen:has(.inv[data-phase="sealed"]), .pub-screen:has(.inv[data-phase="opening"]) { overflow: hidden; }
+.pub-screen .sec-closing { padding-bottom: 9.5em; }
+
+.pub-splash { height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; padding: 0 28px; }
+.pub-splash b { font-family: var(--f-display); font-weight: 400; font-size: 2rem; line-height: 1.1; }
+.pub-splash span { font-size: 0.9rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.8; }
+
+.pub-actions { position: absolute; z-index: 20; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom)); translate: -50% 0; display: flex; gap: 2px; padding: 5px; border-radius: 999px; background: rgba(20, 18, 15, 0.82); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12); transition: opacity 0.3s, translate 0.3s; }
+.pub-actions[data-hidden="true"] { opacity: 0; translate: -50% 16px; pointer-events: none; }
+.pub-actions a, .pub-actions button { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 15px; border: 0; border-radius: 999px; background: none; color: #f6efe0; font-size: 0.86rem; font-weight: 500; text-decoration: none; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.pub-actions .is-main { background: #f6efe0; color: #191714; }
+.pub-actions :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.pub-gone { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 12px; text-align: center; padding: 40px 24px; background: var(--ivory); }
+.pub-gone h1 { font-size: clamp(2rem, 9vw, 3rem); line-height: 1.05; max-width: 14ch; }
+.pub-gone p { color: var(--ink-2); max-width: 26rem; }
+
+@media (min-width: 600px) {
+  .pub { background: radial-gradient(60% 60% at 50% 40%, #2a2620, #0c0c0c 75%); }
+  .pub-frame { max-width: 430px; height: min(100dvh, 932px); border-radius: 0; box-shadow: 0 40px 120px -30px #000, 0 0 0 1px rgba(255, 255, 255, 0.08); }
+}
+@media (min-width: 600px) and (min-height: 980px) { .pub-frame { border-radius: 28px; } }
