@@ -15,6 +15,10 @@ create table if not exists users (
   created_at timestamptz not null default now()
 );
 
+/* guests: visitors customizing before they sign in. They have no email until they claim an account. */
+alter table users add column if not exists guest boolean not null default false;
+alter table users alter column email drop not null;
+
 create table if not exists sessions (
   id uuid primary key,
   user_id uuid not null references users(id) on delete cascade,

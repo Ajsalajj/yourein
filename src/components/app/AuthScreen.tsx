@@ -17,7 +17,8 @@ async function post(url: string, data: object) {
   return { ok: res.ok, ...out } as { ok: boolean; error?: string; code?: string; sent?: boolean; unavailable?: boolean; devLink?: string | null };
 }
 
-export function AuthScreen({ next, template, error, startMode = "choose" }: { next: string; template: { slug: string; name: string } | null; error?: string; startMode?: Mode }) {
+/** `saving`: a guest who has customized a draft and now needs an account to keep it and pay. */
+export function AuthScreen({ next, template, error, saving = false, startMode = "choose" }: { next: string; template: { slug: string; name: string } | null; error?: string; saving?: boolean; startMode?: Mode }) {
   const [mode, setMode] = useState<Mode>(startMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,9 +54,10 @@ export function AuthScreen({ next, template, error, startMode = "choose" }: { ne
     }
   };
 
-  const heading = mode === "signin" ? "Welcome back." : mode === "forgot" ? "Reset your password." : "Make it yours.";
+  const heading = mode === "signin" ? "Welcome back." : mode === "forgot" ? "Reset your password." : saving ? "Save your invitation." : "Make it yours.";
   const sub =
-    mode === "signin" ? "Sign in to continue with your invitation."
+    saving && mode !== "forgot" ? `${mode === "signin" ? "Sign in" : "Create an account"} to keep everything you have made and continue to payment.`
+    : mode === "signin" ? "Sign in to continue with your invitation."
     : mode === "forgot" ? "Enter your email and we will send you a link to choose a new password."
     : "Create an account to save and customize your invitation.";
 

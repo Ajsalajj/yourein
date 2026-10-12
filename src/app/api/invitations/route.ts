@@ -4,7 +4,7 @@ import { body, ok, route } from "@/server/http";
 import { createInvitation } from "@/server/invitations";
 
 export const POST = route(async (req) => {
-  const user = await requireUser();
+  const user = await requireUser({ allowGuest: true });
   const b = await body(req);
   const template = String(b.template ?? "");
   if (b.reuse) {

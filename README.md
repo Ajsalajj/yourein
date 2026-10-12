@@ -3,7 +3,7 @@
 **Invitations worth opening.** A self-service site for animated digital invitations: pick a design, make it yours, pay ₹999 once, share the link and see who is coming.
 
 ```
-BROWSE → PREVIEW → CUSTOMIZE → SIGN IN → EDIT → RSVP SETUP → PAY → PUBLISH → SHARE → TRACK GUESTS
+BROWSE → PREVIEW → CUSTOMIZE → EDIT → RSVP SETUP → SIGN IN → PAY → PUBLISH → SHARE → TRACK GUESTS
 ```
 
 Next.js 16 (App Router), React 19, TypeScript, PostgreSQL, GSAP + Motion. No UI kit, no ORM, no auth library.
@@ -49,7 +49,7 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 ## Rules the code enforces
 
 - **Nothing is published before payment is verified on the server.** The browser's "payment succeeded" callback is never trusted on its own: `/api/pay/verify` recomputes Razorpay's HMAC-SHA256 signature over `order_id|payment_id` with the key secret and only then marks the order paid and publishes, in one transaction. The webhook does the same with the webhook secret. A wrong signature leaves the invitation unpublished.
-- **Preview needs no account. Customizing needs no payment.** Sign-in is asked for at Customize; payment only at the very end.
+- **Preview and customizing need no account.** A signed-out visitor who taps Customize gets a temporary guest account that can only edit its own drafts. Sign-in is asked for when they go to pay; their draft and uploads then move to the account they sign in to, and the guest is removed. Guests cannot pay, publish or open the dashboard. Guest drafts nobody comes back to are deleted after 30 days.
 - **Guests need no account, and see only the invitation.** The public page and `/api/rsvp` never return other guests, totals or replies. Every host route checks the session and that the invitation belongs to that user; another account gets a 404.
 - **Wishes are the one thing guests share with each other.** When the host switches the guestbook on, the public page shows the name and message of each wish that is not hidden, and nothing else about the guest. It is off for invitations made before it existed; the host can hide or delete any wish under Wishes.
 - **WhatsApp is for sharing a published invitation only.** There is no "order on WhatsApp" anywhere.

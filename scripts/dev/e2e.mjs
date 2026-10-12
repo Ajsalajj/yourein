@@ -60,24 +60,14 @@ await page.waitForSelector('.inv[data-phase="open"]', { timeout: 15000 });
 await page.waitForTimeout(500);
 await snap(page, "preview-open");
 
-/* ---------- customize → sign up ---------- */
+/* ---------- customize (no sign-in yet) ---------- */
 await page.locator(".pv-bar [data-customize]").click();
-await page.waitForURL(/\/signin\?next=/);
-await hideDev(page);
-await snap(page, "auth");
-ok("Customize asks a signed-out visitor to sign in", (await page.locator("h1").textContent()) === "Make it yours." && (await page.locator("text=Continue with Google").count()) === 1 && (await page.locator("text=Continue with Email").count()) === 1);
-ok("auth page remembers the chosen design", (await page.locator(".auth-tpl").textContent()).includes("Royal Emerald"));
-await page.locator("text=Continue with Email").click();
-await page.locator('input[autocomplete="name"]').fill("Asha Rao");
-await page.locator('input[type="email"]').fill(email);
-await page.locator('input[type="password"]').fill("correct horse battery");
-await snap(page, "auth-email");
-await page.locator('button[type="submit"]').click();
 await page.waitForURL(/\/edit\//, { timeout: 20000 });
 await hideDev(page);
 const editUrl = page.url();
 const id = editUrl.match(/edit\/([0-9a-f-]+)/)[1];
-ok("after sign-up the editor opens for the chosen design", (await page.locator(".ed-title b").textContent()) === "Royal Emerald");
+ok("Customize opens the editor without signing in", !page.url().includes("signin"));
+ok("the editor opens for the chosen design", (await page.locator(".ed-title b").textContent()) === "Royal Emerald");
 
 /* ---------- edit ---------- */
 await page.waitForSelector(".ed-h");
@@ -164,8 +154,21 @@ ok("preview shows the customer's own names, date, photo, gallery and events", ow
 ok("preview offers Back to Edit and Proceed to Payment", own.bar[0] === "Back to Edit" && own.bar[1] === "Proceed to Payment");
 await page.locator(".pv-bar .btn-solid").click();
 
+/* ---------- sign up at payment ---------- */
+await page.waitForURL(/\/signin\?next=%2Fpay%2F/, { timeout: 20000 });
+await hideDev(page);
+await snap(page, "auth");
+ok("payment asks the visitor to sign in to save their invitation", (await page.locator("h1").textContent()) === "Save your invitation." && (await page.locator("text=Continue with Google").count()) === 1 && (await page.locator("text=Continue with Email").count()) === 1);
+await page.locator("text=Continue with Email").click();
+await page.locator('input[autocomplete="name"]').fill("Asha Rao");
+await page.locator('input[type="email"]').fill(email);
+await page.locator('input[type="password"]').fill("correct horse battery");
+await snap(page, "auth-email");
+await page.locator('button[type="submit"]').click();
+
 /* ---------- pay → publish ---------- */
 await page.waitForURL(/\/pay\//, { timeout: 20000 });
+ok("after sign-up the draft is kept and payment opens", page.url().includes(`/pay/${id}`));
 await hideDev(page);
 await snap(page, "pay");
 const before = await (await host.request.get(`${base}/api/invitations/${id}`)).json();

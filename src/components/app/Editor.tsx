@@ -25,7 +25,7 @@ const STEPS = [
 type StepKey = (typeof STEPS)[number]["key"];
 const TOTAL = STEPS.length + 1; // payment is the final step
 
-type Props = { id: string; initial: InviteData; initialTemplate: string; status: "draft" | "ready" | "published" | "archived" };
+type Props = { id: string; initial: InviteData; initialTemplate: string; status: "draft" | "ready" | "published" | "archived"; guest?: boolean };
 type Errors = Partial<Record<"name1" | "date" | "time" | "venueName", string>>;
 
 function useWide() {
@@ -84,7 +84,7 @@ function Stepper({ value, min, max, onChange, label }: { value: number; min: num
 
 /* ----------------------------------------------------------------- editor */
 
-export function Editor({ id, initial, initialTemplate, status }: Props) {
+export function Editor({ id, initial, initialTemplate, status, guest = false }: Props) {
   const [data, setData] = useState<InviteData>(initial);
   const [templateSlug, setTemplateSlug] = useState(initialTemplate);
   const [step, setStep] = useState<StepKey>("names");
@@ -232,7 +232,8 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
   const back = async () => {
     if (index > 0) return go(STEPS[index - 1].key);
     await flush();
-    window.location.assign(published ? `/invites/${id}` : "/dashboard");
+    /* a guest has no dashboard yet; their draft stays on this device's session */
+    window.location.assign(published ? `/invites/${id}` : guest ? `/templates/${templateSlug}` : "/dashboard");
   };
 
   /* ---- uploads ---- */
@@ -575,7 +576,7 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                   </div>
                 ))}
               </div>
-              {!published && <p className="hint" style={{ marginTop: 14 }}>Next is payment: {PRICE_LABEL}, once. Your invitation is published as soon as it goes through.</p>}
+              {!published && <p className="hint" style={{ marginTop: 14 }}>{guest ? `Next: sign in or create an account to save your invitation, then pay ${PRICE_LABEL} once.` : `Next is payment: ${PRICE_LABEL}, once.`} Your invitation is published as soon as it goes through.</p>}
             </>
           )}
         </main>
