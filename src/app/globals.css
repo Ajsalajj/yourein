@@ -133,6 +133,10 @@ h2 { font-size: clamp(1.95rem, 7.4vw, 3.3rem); line-height: 1.06; text-wrap: bal
 .hp-l .pm { animation-delay: 0.12s; }
 .hp-r .pm { animation-delay: 0.24s; }
 @keyframes rise { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
+/* real 3D phones drawn over the stage; the buttons stay underneath for taps */
+.hero-3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; animation: fade-in 0.8s ease both; filter: drop-shadow(0 34px 34px rgba(50, 34, 10, 0.28)); }
+.hero-stage[data-three="ready"] .hp .pm { opacity: 0; animation: none; transition: none; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------------------------------------------------------------- featured */
 
