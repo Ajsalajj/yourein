@@ -4,6 +4,7 @@ import { PRICE_LABEL, SUPPORT_WHATSAPP } from "@/config/site";
 import { PreviewButton } from "@/components/preview/PreviewProvider";
 import { CustomizeLink } from "./Actions";
 import { HeroStage, RsvpDemoCard } from "./Client";
+import { DashboardDemo } from "./DashboardDemo";
 import { InvitationPhoneMockup } from "./InvitationPhoneMockup";
 import { Price } from "./Price";
 
@@ -150,7 +151,57 @@ export function RsvpDemo() {
   );
 }
 
-const INCLUDES = ["Interactive invitation", "RSVP", "Gallery", "Google Maps", "Countdown", "Music", "Guest tracking", "Shareable link"];
+const INCLUDES = ["Interactive invitation", "RSVP for each function", "Personal links", "QR codes", "Guestbook & photos", "Gallery", "Google Maps", "Countdown", "Music", "Live headcount", "CSV export", "Shareable link"];
+
+const FOR_GUESTS = [
+  "An animated invitation that opens like a real card",
+  "Their own name on a personal link",
+  "RSVP in seconds, for each function",
+  "Directions, add to calendar and a live countdown",
+  "Music, your story and photo gallery",
+  "A guestbook for wishes and photos",
+  "Where to stay, and updates if plans change",
+];
+const FOR_YOU = [
+  "A dashboard with live headcounts",
+  "Head count for every function",
+  "Guest list with WhatsApp sending and QR codes",
+  "Meal, dietary and your own questions",
+  "Private functions for chosen families",
+  "Export everything to a spreadsheet",
+  "Thank-you mode and a shareable picture",
+];
+
+/** A tap-through demo of the host dashboard, and exactly what one payment includes. */
+export function WhatYouGet() {
+  return (
+    <section className="band get" aria-labelledby="get-h">
+      <div className="wrap get-in">
+        <div className="get-copy">
+          <p className="eyebrow">Included with every invitation</p>
+          <h2 id="get-h">Your own dashboard.</h2>
+          <p>Try it: tap through replies, guests, wishes and sharing. These are sample guests; yours appear here once you publish.</p>
+        </div>
+        <DashboardDemo />
+        <div className="get-lists">
+          <div className="get-list">
+            <h3>For your guests</h3>
+            <ul>{FOR_GUESTS.map((x) => <li key={x}>{x}</li>)}</ul>
+          </div>
+          <div className="get-list">
+            <h3>For you</h3>
+            <ul>{FOR_YOU.map((x) => <li key={x}>{x}</li>)}</ul>
+          </div>
+          <div className="get-price">
+            <p><b><Price /></b> once, when you publish. No subscription, no per-guest fees.</p>
+            <a className="btn btn-solid btn-block" href="#templates">Choose your design</a>
+            <small>Customizing is free. You only pay when you are happy with it.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Pricing() {
   return (
