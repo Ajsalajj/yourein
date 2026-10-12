@@ -101,6 +101,7 @@ Email + password (scrypt) and Google. Sessions are random tokens stored hashed, 
 - **Catalog images:** `public/thumbs/*.webp` and `public/og.jpg` are screenshots of the real invitations. After changing artwork or sample names: run the site, then `npm run thumbs`.
 - **Editor steps and fields:** `src/components/app/Editor.tsx`; the fields themselves are defined in `src/lib/invite.ts`.
 - **Stripe:** `src/server/payments/stripe.ts` describes the two functions to fill in. Orders and payments tables already carry currency and provider.
+- **Hero phones:** the home page hero draws a real iPhone 16 model (`public/models/iphone-16.glb`, compressed with meshopt) with three.js in `src/components/site/HeroPhones3D.tsx`. Each phone's screen shows that design's catalog image; poses and sway are in `POSES`. Without WebGL the flat mockups stay. Model: "iPhone 16 - Free" by Wes (sketchfab.com/wimell), Sketchfab Standard licence.
 - **Support link:** set `SUPPORT_WHATSAPP` in `src/config/site.ts` to show a "Help on WhatsApp" link in the footer. Leave empty to hide it.
 
 ## Tests

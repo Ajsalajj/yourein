@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { HeroPhones3D } from "./HeroPhones3D";
 
-/** The three hero phones. They lean a few degrees toward the pointer on desktop. */
-export function HeroStage({ children }: { children: React.ReactNode }) {
+/**
+ * The three hero phones. They lean a few degrees toward the pointer on desktop.
+ * `screens`: the screen image for each `.hp` phone, in page order, shown on the 3D models.
+ */
+export function HeroStage({ children, screens }: { children: React.ReactNode; screens: string[] }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -23,7 +27,12 @@ export function HeroStage({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pointermove", move);
     };
   }, []);
-  return <div className="hero-stage" ref={ref}>{children}</div>;
+  return (
+    <div className="hero-stage" ref={ref}>
+      {children}
+      <HeroPhones3D stage={ref} screens={screens} />
+    </div>
+  );
 }
 
 /** The guest side of the RSVP demo on the home page. It responds to taps but sends nothing. */

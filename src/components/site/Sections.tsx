@@ -23,7 +23,7 @@ export function Hero() {
           </div>
           <p className="hero-note">Every template {PRICE_LABEL} • RSVP included</p>
         </div>
-        <HeroStage>
+        <HeroStage screens={[left, right, centre].map((t) => `/thumbs/${t.slug}.webp`)}>
           <PreviewButton slug={left.slug} className="hp hp-l" label={`Preview ${left.name}`}><InvitationPhoneMockup t={left} priority shadow="deep" sizes="(max-width: 720px) 38vw, 212px" /></PreviewButton>
           <PreviewButton slug={right.slug} className="hp hp-r" label={`Preview ${right.name}`}><InvitationPhoneMockup t={right} priority shadow="deep" sizes="(max-width: 720px) 38vw, 212px" /></PreviewButton>
           <PreviewButton slug={centre.slug} className="hp hp-c" label={`Preview ${centre.name}`}><InvitationPhoneMockup t={centre} priority shadow="deep" sizes="(max-width: 720px) 44vw, 250px" /></PreviewButton>
