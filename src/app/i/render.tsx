@@ -44,6 +44,15 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
 
   const guest = guestSlug && SLUG.test(guestSlug) ? await guestBySlug(inv.id, guestSlug) : null;
   if (guestSlug && !guest) redirect(`/i/${slug}`);
+  if (guest?.disabled) {
+    return (
+      <main className="pub-gone">
+        <p className="logo">YoureIn</p>
+        <h1>This personal link has been turned off.</h1>
+        <p>The hosts have switched off this link. If you think this is a mistake, please get in touch with them directly.</p>
+      </main>
+    );
+  }
 
   const origin = await siteOrigin();
   const t = resolveTemplate(base, inv.data, {

@@ -110,6 +110,7 @@ create table if not exists guests (
 );
 
 alter table guests add column if not exists private_events jsonb not null default '[]'::jsonb;
+alter table guests add column if not exists disabled boolean not null default false;
 
 create table if not exists rsvps (
   id uuid primary key,

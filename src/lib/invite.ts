@@ -87,6 +87,15 @@ export const InviteDataSchema = z.object({
   allowShare: flag(true),
   /** Guests can leave wishes on the invitation. Off unless set, so invitations made before it existed do not change. */
   guestbook: flag(false),
+  /** A short update shown at the top of the invitation, e.g. a changed time or venue. */
+  notice: text(200),
+  /** Places to stay the hosts suggest. */
+  stays: z.array(z.object({
+    name: text(80),
+    note: text(160),
+    url: z.string().trim().max(600).regex(/^(https?:\/\/\S+)?$/i).catch("").default(""),
+    phone: text(24),
+  })).max(4).catch([]).default([]),
 });
 
 export type InviteData = z.infer<typeof InviteDataSchema>;
@@ -260,6 +269,8 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       allowShare: d.allowShare,
       rsvp: rsvp ? { ...rsvp, perEvent: repliesPerEvent(d, allowed), closed, full } : null,
       guestbook: d.guestbook ? { wishes: o.wishes ?? [] } : null,
+      notice: d.notice || undefined,
+      stays: d.stays.filter((s) => s.name),
       invitation: o.invitation,
       shareUrl: o.shareUrl,
       guest: o.guest,
