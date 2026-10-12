@@ -71,7 +71,7 @@ export function Guestbook({ t }: { t: Template }) {
       <h2 className="sec-title" data-rv="wipe">Wishes</h2>
       <p className="sec-body" data-rv="up">Leave a few words for {to}. Everyone with the invitation can read them.</p>
 
-      <form className="rsvp wish-form" data-rv="up" onSubmit={submit} noValidate>
+      <form className="wish-form" data-rv="up" onSubmit={submit} noValidate>
         {!guest && (
           <label className="rsvp-field">
             <span>Your name</span>

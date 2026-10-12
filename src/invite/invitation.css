@@ -283,7 +283,7 @@
   text-decoration: none; cursor: pointer; border-radius: 0; -webkit-tap-highlight-color: transparent; transition: background 0.25s, color 0.25s;
 }
 .inv-btn:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.inv-btn:focus-visible, .rsvp button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.inv-btn:focus-visible, .rsvp button:focus-visible, .wish-form button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .inv-btn-solid { background: var(--ink); color: var(--bg); border-color: var(--ink); width: 100%; }
 .inv-btn-solid:hover { background: color-mix(in srgb, var(--ink) 86%, var(--accent)); }
 .inv-btn-solid:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -306,7 +306,7 @@
 .vg-crest-initials i { font-size: 0.7em; opacity: 0.7; }
 
 /* rsvp */
-.rsvp { max-width: 20em; margin: 1.6em auto 0; display: grid; gap: 0.9em; text-align: left; }
+.rsvp, .wish-form { max-width: 20em; margin: 1.6em auto 0; display: grid; gap: 0.9em; text-align: left; }
 .rsvp-choice { display: grid; gap: 0.5em; }
 .rsvp-choice button, .rsvp-chips button {
   min-height: 3.2rem; padding: 0.5em 1em; border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); background: transparent; color: var(--ink);
@@ -324,7 +324,7 @@
   color: var(--ink); font-family: var(--f-serif); font-size: 16px; line-height: 1.4; -webkit-appearance: none; appearance: none;
 }
 .rsvp-field textarea { resize: vertical; min-height: 4.4rem; }
-.rsvp-field input:focus-visible, .rsvp-field textarea:focus-visible, .rsvp button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rsvp-field input:focus-visible, .rsvp-field textarea:focus-visible, .rsvp button:focus-visible, .wish-form button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rsvp-guests { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
 .inv-stepper { display: inline-flex; align-items: center; border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); }
 .inv-stepper button { width: 2.9rem; height: 2.9rem; border: 0; background: transparent; color: var(--ink); font-size: 1.3em; cursor: pointer; }
