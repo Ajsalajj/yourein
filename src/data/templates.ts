@@ -17,6 +17,9 @@ export type InviteEvent = {
   time: string;
   place: string;
   note?: string;
+  /** Present on a customer's own events: used for replies to each function. */
+  id?: string;
+  dressCode?: string;
 };
 
 export type Theme = {
@@ -59,7 +62,13 @@ export type RsvpSettings = {
   capacity: number | null;
   /** Stop accepting "yes" replies once capacity is reached. */
   hardCapacity: boolean;
+  /** Guests reply to each function separately (when there is more than one). */
+  perEvent: boolean;
+  /** The host's own questions, asked on every reply. */
+  questions: RsvpQuestion[];
 };
+
+export type RsvpQuestion = { id: string; label: string; kind: "text" | "yesno" | "choice"; options: string[] };
 
 /** A guest's message on the invitation's guestbook, as guests see it. */
 export type Wish = { id: string; name: string; message: string; createdAt: string };
@@ -83,7 +92,7 @@ export type Live = {
   invitation?: string;
   shareUrl?: string;
   /** Set when the link is personalised for one guest or family. */
-  guest?: { slug: string; name: string; max: number | null; note: string; replied?: { status: "yes" | "maybe" | "no"; count: number } };
+  guest?: { slug: string; name: string; max: number | null; note: string; replied?: { status: "yes" | "maybe" | "no"; count: number; events?: Record<string, number> } };
 };
 
 export type Template = {

@@ -5,12 +5,14 @@ import type { Template } from "@/data/templates";
 import { formatDate } from "@/lib/invite";
 
 type Status = "yes" | "maybe" | "no";
-type Saved = { status: Status; count: number; name: string; token?: string };
+type Saved = { status: Status; count: number; name: string; token?: string; events?: Record<string, number> };
 
 const LABEL: Record<Status, string> = { yes: "Yes, I’ll be there", maybe: "Maybe", no: "Sorry, can’t make it" };
 
-function summary(s: Saved) {
+function summary(s: Saved, titles: Record<string, string>) {
   if (s.status === "no") return "You let us know you cannot make it.";
+  const each = Object.entries(s.events ?? {}).filter(([id, n]) => n > 0 && titles[id]);
+  if (each.length) return `You are coming to ${each.map(([id, n]) => `${titles[id]} (${n})`).join(", ")}.`;
   const who = s.count === 1 ? "1 guest" : `${s.count} guests`;
   return s.status === "yes" ? `You are coming, with ${who} in total.` : `You replied maybe, for ${who}.`;
 }
@@ -34,7 +36,9 @@ export function RsvpForm({ t }: { t: Template }) {
   const [phone, setPhone] = useState("");
   const [meal, setMeal] = useState("");
   const [message, setMessage] = useState("");
-  const [saved, setSaved] = useState<Saved | null>(guest?.replied ? { status: guest.replied.status, count: guest.replied.count, name: guest.name } : null);
+  const [perEvent, setPerEvent] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<Saved | null>(guest?.replied ? { status: guest.replied.status, count: guest.replied.count, name: guest.name, events: guest.replied.events } : null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -58,6 +62,12 @@ export function RsvpForm({ t }: { t: Template }) {
   if (live && !settings) return null;
 
   const allowMaybe = settings?.allowMaybe ?? true;
+  /* replies per function: one counter per event this guest can see */
+  const byEvent = !!settings?.perEvent && t.events.filter((e) => e.id).length > 1;
+  const fnEvents = byEvent ? t.events.filter((e) => e.id) : [];
+  const titles = Object.fromEntries(fnEvents.map((e) => [e.id!, e.title]));
+  const fnStatus: Status = Object.values(perEvent).some((n) => n > 0) ? "yes" : "no";
+  const questions = (settings?.questions ?? []).filter((q) => q.label);
   const options: Status[] = allowMaybe ? ["yes", "maybe", "no"] : ["yes", "no"];
   const full = !!settings?.full && saved?.status !== "yes";
   const closed = !!settings?.closed;
@@ -65,7 +75,8 @@ export function RsvpForm({ t }: { t: Template }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!status) return;
+    const status_ = byEvent ? fnStatus : status;
+    if (!status_) return;
     setError("");
     if (!guest && !name.trim()) {
       setError("Please add your name.");
@@ -80,14 +91,14 @@ export function RsvpForm({ t }: { t: Template }) {
       const res = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invitation: live.invitation, guest: guest?.slug, status, name, count, phone, meal, message, token: saved?.token }),
+        body: JSON.stringify({ invitation: live.invitation, guest: guest?.slug, status: status_, name, count, phone, meal, message, token: saved?.token, events: byEvent ? perEvent : undefined, answers }),
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(out.error || "Your reply could not be sent. Please try again.");
         return;
       }
-      const next: Saved = { status, count: status === "no" ? 0 : count, name: guest?.name ?? name.trim(), token: out.token ?? saved?.token };
+      const next: Saved = { status: status_, count: out.count ?? (status_ === "no" ? 0 : count), name: guest?.name ?? name.trim(), token: out.token ?? saved?.token, events: byEvent ? perEvent : undefined };
       setSaved(next);
       setEditing(false);
       try {
@@ -106,6 +117,7 @@ export function RsvpForm({ t }: { t: Template }) {
     if (saved) {
       setStatus(saved.status);
       if (saved.count > 0) setCount(Math.min(saved.count, max));
+      if (saved.events) setPerEvent(saved.events);
     }
     setEditing(true);
   };
@@ -120,13 +132,32 @@ export function RsvpForm({ t }: { t: Template }) {
       ) : !showForm && saved ? (
         <div className="rsvp rsvp-done" data-rv="up" role="status">
           <p className="rsvp-thanks">Thank you{saved.name ? `, ${saved.name.split(" ")[0]}` : ""}.</p>
-          <p className="rsvp-summary">{summary(saved)}</p>
+          <p className="rsvp-summary">{summary(saved, titles)}</p>
           <button type="button" className="inv-btn" onClick={startEdit}>Change my reply</button>
         </div>
       ) : (
         <>
           {deadline && <p className="sec-body" data-rv="up">Kindly reply by {deadline}.</p>}
           <form className="rsvp" data-rv="up" onSubmit={submit} noValidate>
+            {byEvent ? (
+              <div className="rsvp-fns" role="group" aria-label="Who is coming to each function">
+                <p className="rsvp-hint">How many of you are coming to each? Leave it at 0 for any you cannot attend.</p>
+                {fnEvents.map((ev) => {
+                  const n = perEvent[ev.id!] ?? 0;
+                  const setN = (v: number) => { setPerEvent((p) => ({ ...p, [ev.id!]: Math.max(0, Math.min(max, v)) })); setNote(""); setError(""); };
+                  return (
+                    <div key={ev.id} className="rsvp-fn">
+                      <span className="rsvp-fn-name"><b>{ev.title}</b>{ev.day && <small>{ev.day}{ev.time && `, ${ev.time}`}</small>}</span>
+                      <div className="inv-stepper">
+                        <button type="button" onClick={() => setN(n - 1)} disabled={n <= 0} aria-label={`One fewer for ${ev.title}`}>−</button>
+                        <output aria-live="polite">{n}</output>
+                        <button type="button" onClick={() => setN(n + 1)} disabled={n >= max} aria-label={`One more for ${ev.title}`}>+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
             <div className="rsvp-choice" role="radiogroup" aria-label="Your reply">
               {options.map((o) => (
                 <button key={o} type="button" role="radio" aria-checked={status === o} disabled={o === "yes" && full} onClick={() => { setStatus(o); setNote(""); setError(""); }}>
@@ -134,9 +165,10 @@ export function RsvpForm({ t }: { t: Template }) {
                 </button>
               ))}
             </div>
+            )}
             {full && <p className="rsvp-hint">This event has reached its capacity, so new “yes” replies are closed.</p>}
 
-            {status && (
+            {(status || byEvent) && (
               <div className="rsvp-fields">
                 {!guest && (
                   <label className="rsvp-field">
@@ -144,7 +176,7 @@ export function RsvpForm({ t }: { t: Template }) {
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={80} required />
                   </label>
                 )}
-                {status !== "no" && (
+                {!byEvent && status !== "no" && (
                   <div className="rsvp-guests">
                     <span>Guests attending{max > 1 ? ` (up to ${max})` : ""}</span>
                     <div className="inv-stepper">
@@ -160,7 +192,7 @@ export function RsvpForm({ t }: { t: Template }) {
                     <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={24} inputMode="tel" />
                   </label>
                 )}
-                {settings?.askMeal && status !== "no" && settings.mealOptions.length > 0 && (
+                {settings?.askMeal && (byEvent ? fnStatus : status) !== "no" && settings.mealOptions.length > 0 && (
                   <div className="rsvp-field">
                     <span id="meal-label">Meal preference</span>
                     <div className="rsvp-chips" role="radiogroup" aria-labelledby="meal-label">
@@ -170,6 +202,23 @@ export function RsvpForm({ t }: { t: Template }) {
                     </div>
                   </div>
                 )}
+                {(byEvent ? fnStatus : status) !== "no" && questions.map((q) => (
+                  q.kind === "text" ? (
+                    <label key={q.id} className="rsvp-field">
+                      <span>{q.label}</span>
+                      <input type="text" value={answers[q.id] ?? ""} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))} maxLength={200} />
+                    </label>
+                  ) : (
+                    <div key={q.id} className="rsvp-field">
+                      <span id={`q-${q.id}`}>{q.label}</span>
+                      <div className="rsvp-chips" role="radiogroup" aria-labelledby={`q-${q.id}`}>
+                        {(q.kind === "yesno" ? ["Yes", "No"] : q.options).map((o) => (
+                          <button key={o} type="button" role="radio" aria-checked={answers[q.id] === o} onClick={() => setAnswers((a) => ({ ...a, [q.id]: a[q.id] === o ? "" : o }))}>{o}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
                 {(settings?.askMessage ?? true) && (
                   <label className="rsvp-field">
                     <span>Message to {t.couple[1] ? "the couple" : "the host"} (optional)</span>
@@ -179,7 +228,7 @@ export function RsvpForm({ t }: { t: Template }) {
               </div>
             )}
 
-            <button type="submit" className="inv-btn inv-btn-solid" disabled={!status || busy}>{busy ? "Sending…" : saved ? "Update reply" : "Submit RSVP"}</button>
+            <button type="submit" className="inv-btn inv-btn-solid" disabled={(!byEvent && !status) || busy}>{busy ? "Sending…" : saved ? "Update reply" : "Submit RSVP"}</button>
             <p className="rsvp-status" role="status" aria-live="polite">{error ? <span className="rsvp-error">{error}</span> : note || " "}</p>
           </form>
         </>

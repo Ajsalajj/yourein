@@ -81,6 +81,7 @@ function Events({ t }: { t: Template }) {
             <p className="event-when">{e.day}{e.time && <span>{e.time}</span>}</p>
             {e.place && <p className="event-place">{e.place}</p>}
             {e.note && <p className="event-note">{e.note}</p>}
+            {e.dressCode && <p className="event-dress">Dress code: {e.dressCode}</p>}
           </li>
         ))}
       </ol>
