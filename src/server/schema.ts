@@ -109,6 +109,8 @@ create table if not exists guests (
   unique (invitation_id, slug)
 );
 
+alter table guests add column if not exists private_events jsonb not null default '[]'::jsonb;
+
 create table if not exists rsvps (
   id uuid primary key,
   invitation_id uuid not null references invitations(id) on delete cascade,
@@ -123,6 +125,8 @@ create table if not exists rsvps (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table rsvps add column if not exists events jsonb not null default '{}'::jsonb;
+alter table rsvps add column if not exists answers jsonb not null default '{}'::jsonb;
 create index if not exists rsvps_invitation_idx on rsvps (invitation_id, created_at desc);
 create unique index if not exists rsvps_guest_uq on rsvps (guest_id) where guest_id is not null;
 

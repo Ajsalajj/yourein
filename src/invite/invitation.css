@@ -336,6 +336,12 @@
 .rsvp-done { text-align: center; justify-items: center; }
 .rsvp-thanks { margin: 0; font-family: var(--f-script); font-size: calc(2.4em * var(--script-scale, 1)); line-height: 1.1; }
 .rsvp-summary { margin: 0 0 0.6em; font-size: 1.08em; }
+.rsvp-fns { display: grid; gap: 0.6em; }
+.rsvp-fn { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: 0.6em 0; border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.rsvp-fn-name { display: grid; gap: 0.15em; text-align: left; }
+.rsvp-fn-name b { font-family: var(--f-serif); font-weight: 500; font-size: 1.08em; }
+.rsvp-fn-name small { font-size: 0.82em; opacity: 0.8; }
+.event-dress { margin: 0.35em 0 0; font-size: 0.9em; font-style: italic; }
 
 /* guestbook */
 .wish-form { margin-bottom: 0.6em; }

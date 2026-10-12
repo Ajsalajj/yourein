@@ -259,7 +259,7 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
   };
 
   /* ---- events ---- */
-  const addEvent = () => set("events", [...data.events, { id: Math.random().toString(36).slice(2, 10), title: "", date: data.date, time: "", place: data.venueName, note: "" }]);
+  const addEvent = () => set("events", [...data.events, { id: Math.random().toString(36).slice(2, 10), title: "", date: data.date, time: "", place: data.venueName, note: "", dressCode: "", private: false }]);
   const patchEvent = (eid: string, p: Partial<InviteEventInput>) => set("events", data.events.map((e) => (e.id === eid ? { ...e, ...p } : e)));
 
   const changeType = (type: InviteData["eventType"]) => {
@@ -422,7 +422,9 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                       <Field label="Time"><input type="time" value={e.time} onChange={(ev) => patchEvent(e.id, { time: ev.target.value })} /></Field>
                     </div>
                     <Field label="Place"><input type="text" value={e.place} onChange={(ev) => patchEvent(e.id, { place: ev.target.value })} maxLength={120} /></Field>
-                    <Field label="Note" hint="For example a dress code."><input type="text" value={e.note} onChange={(ev) => patchEvent(e.id, { note: ev.target.value })} maxLength={160} /></Field>
+                    <Field label="Dress code" hint="Optional. Shown under this function."><input type="text" value={e.dressCode} onChange={(ev) => patchEvent(e.id, { dressCode: ev.target.value })} maxLength={80} placeholder="Traditional, pastel colours…" /></Field>
+                    <Field label="Note" hint="Optional. Anything else guests should know."><input type="text" value={e.note} onChange={(ev) => patchEvent(e.id, { note: ev.target.value })} maxLength={160} /></Field>
+                    <Switch label="Only for guests you choose" hint="Hidden from the general link. Tick it for each family in your guest list." checked={e.private} onChange={(v) => patchEvent(e.id, { private: v })} />
                   </div>
                 ))}
                 {data.events.length < 8 && <button type="button" className="btn btn-quiet btn-block" onClick={addEvent}>+ Add an event</button>}
@@ -449,6 +451,11 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                       <small>The most people one reply can bring. You can set a different limit for each family in your guest list.</small>
                     </div>
                   </div>
+                  {data.events.filter((e) => e.title).length > 1 && (
+                    <div className="ed-group">
+                      <Switch label="Separate reply for each function" hint="Guests say how many are coming to each function. Your dashboard shows a head count for each." checked={data.rsvp.perEvent} onChange={(v) => setRsvp("perEvent", v)} />
+                    </div>
+                  )}
                   <div className="ed-group">
                     <p className="ed-group-h">What to ask</p>
                     <div>
@@ -461,6 +468,46 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                       <Field label="Meal choices" hint="Separate with commas. Up to 6.">
                         <input type="text" defaultValue={data.rsvp.mealOptions.join(", ")} onBlur={(e) => setRsvp("mealOptions", e.target.value.split(",").map((s) => s.trim().slice(0, 30)).filter(Boolean).slice(0, 6))} />
                       </Field>
+                    )}
+                  </div>
+                  <div className="ed-group">
+                    <p className="ed-group-h">Your own questions</p>
+                    <p className="hint">Optional. Asked of everyone who is coming. Up to 6.</p>
+                    {data.rsvp.questions.map((q) => {
+                      const patchQ = (p: Partial<typeof q>) => setRsvp("questions", data.rsvp.questions.map((x) => (x.id === q.id ? { ...x, ...p } : x)));
+                      return (
+                        <div key={q.id} className="event-card">
+                          <div className="event-card-head">
+                            <span>Question</span>
+                            <button type="button" className="btn btn-sm btn-danger" onClick={() => setRsvp("questions", data.rsvp.questions.filter((x) => x.id !== q.id))}>Remove</button>
+                          </div>
+                          <Field label="Question"><input type="text" value={q.label} onChange={(e) => patchQ({ label: e.target.value })} maxLength={80} /></Field>
+                          <Field label="Answer type">
+                            <select value={q.kind} onChange={(e) => patchQ({ kind: e.target.value as typeof q.kind })}>
+                              <option value="text">Short answer</option>
+                              <option value="yesno">Yes or no</option>
+                              <option value="choice">Pick one option</option>
+                            </select>
+                          </Field>
+                          {q.kind === "choice" && (
+                            <Field label="Options" hint="Separate with commas. Up to 6.">
+                              <input type="text" defaultValue={q.options.join(", ")} onBlur={(e) => patchQ({ options: e.target.value.split(",").map((o) => o.trim().slice(0, 40)).filter(Boolean).slice(0, 6) })} />
+                            </Field>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {data.rsvp.questions.length < 6 && (
+                      <div className="chips">
+                        {([
+                          ["Dietary needs", "Any dietary needs or allergies?", "text"],
+                          ["Transport", "Do you need transport to the venue?", "yesno"],
+                          ["Accommodation", "Do you need a place to stay?", "yesno"],
+                          ["+ Custom question", "", "text"],
+                        ] as const).filter(([, label]) => !label || !data.rsvp.questions.some((x) => x.label === label)).map(([chip, label, kind]) => (
+                          <button key={chip} type="button" className="btn btn-quiet btn-sm" onClick={() => setRsvp("questions", [...data.rsvp.questions, { id: Math.random().toString(36).slice(2, 10), label, kind, options: [] }])}>{chip}</button>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <div className="ed-group">

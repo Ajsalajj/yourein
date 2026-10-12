@@ -53,6 +53,7 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
     shareUrl: `${origin}/i/${slug}`,
     attending: await attendingCount(inv.id),
     wishes: inv.data.guestbook ? await listPublicWishes(inv.id) : undefined,
+    privateEvents: guest?.privateEvents ?? [],
     guest: guest ? { slug: guest.slug, name: guest.name, max: guest.max, note: guest.note, replied: guest.reply ?? undefined } : undefined,
   });
   return <PublicInvitation t={t} />;

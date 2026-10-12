@@ -33,7 +33,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
       <InviteSubnav id={inv.id} current="guests" />
-      <GuestManager id={inv.id} initial={guests} baseUrl={baseUrl} published={published} names={names} dateLabel={formatDate(inv.data.date)} defaultMax={inv.data.rsvp.maxPerInvite} />
+      <GuestManager id={inv.id} initial={guests} baseUrl={baseUrl} published={published} names={names} dateLabel={formatDate(inv.data.date)} defaultMax={inv.data.rsvp.maxPerInvite} privateEvents={inv.data.events.filter((e) => e.private && e.title).map((e) => ({ id: e.id, title: e.title }))} />
     </main>
   );
 }

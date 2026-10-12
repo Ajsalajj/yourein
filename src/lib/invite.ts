@@ -33,6 +33,16 @@ const EventSchema = z.object({
   time: timeStr,
   place: text(120),
   note: text(160),
+  dressCode: text(80),
+  /** Shown only to guests the host picks in the guest list. */
+  private: flag(false),
+});
+
+const QuestionSchema = z.object({
+  id: z.string().max(40),
+  label: text(80),
+  kind: z.enum(["text", "yesno", "choice"]).catch("text"),
+  options: z.array(z.string().trim().min(1).max(40)).max(6).catch([]).default([]),
 });
 
 const RsvpSchema = z.object({
@@ -46,6 +56,8 @@ const RsvpSchema = z.object({
   maxPerInvite: z.number().int().min(1).max(20).catch(4).default(4),
   capacity: z.number().int().min(1).max(100000).nullable().catch(null).default(null),
   hardCapacity: flag(false),
+  perEvent: flag(false),
+  questions: z.array(QuestionSchema).max(6).catch([]).default([]),
 });
 
 export const InviteDataSchema = z.object({
@@ -178,7 +190,17 @@ export type ResolveOptions = {
   attending?: number;
   /** Wishes guests have left, newest first. Hidden ones are never passed in. */
   wishes?: Wish[];
+  /** Private events this viewer may see. Public pages show only public events plus these; the host's preview shows all. */
+  privateEvents?: string[];
 };
+
+/** The events a viewer may see: every public one, and private ones they have been given. `null` means all (the host). */
+export function visibleEvents(d: Pick<InviteData, "events">, privateEvents: string[] | null) {
+  return d.events.filter((e) => e.title && (!e.private || privateEvents === null || privateEvents.includes(e.id)));
+}
+
+/** Whether replies are taken per function for this viewer. */
+export const repliesPerEvent = (d: InviteData, privateEvents: string[] | null) => d.rsvp.perEvent && visibleEvents(d, privateEvents).length > 1;
 
 /**
  * Lays a customer's content over a design, producing exactly what the
@@ -194,14 +216,16 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
   const title = eventTitleOf(d);
   const venueName = d.venueName || (preview ? base.venue.name : "");
 
-  let events: InviteEvent[] = d.events
-    .filter((e) => e.title)
+  const allowed = o.mode === "preview" ? null : o.privateEvents ?? [];
+  let events: InviteEvent[] = visibleEvents(d, allowed)
     .map((e) => ({
+      id: e.id,
       title: e.title,
       day: formatDate(e.date || date, { weekday: "long", day: "numeric", month: "long" }),
       time: formatTime(e.time),
       place: e.place || venueName,
       note: e.note || undefined,
+      dressCode: e.dressCode || undefined,
     }));
   if (!events.length) {
     events = [{ title, day: formatDate(date, { weekday: "long", day: "numeric", month: "long" }), time: formatTime(time), place: venueName }];
@@ -234,7 +258,7 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       countdown: d.countdown,
       contacts: d.contacts.filter((c) => c.name || c.phone),
       allowShare: d.allowShare,
-      rsvp: rsvp ? { ...rsvp, closed, full } : null,
+      rsvp: rsvp ? { ...rsvp, perEvent: repliesPerEvent(d, allowed), closed, full } : null,
       guestbook: d.guestbook ? { wishes: o.wishes ?? [] } : null,
       invitation: o.invitation,
       shareUrl: o.shareUrl,

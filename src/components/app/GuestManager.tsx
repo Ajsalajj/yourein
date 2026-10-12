@@ -7,14 +7,16 @@ import { LinkBox, useToast } from "./ShareTools";
 
 export type GuestView = {
   id: string; slug: string; name: string; phone: string; email: string; group: string; invited: number; max: number | null; note: string;
+  privateEvents: string[];
   sentAt: string | null; reply: { status: "yes" | "maybe" | "no"; count: number } | null;
 };
 
-type Draft = { name: string; phone: string; email: string; group: string; invited: number; max: string; note: string };
-const blank: Draft = { name: "", phone: "", email: "", group: "", invited: 2, max: "", note: "" };
+type Draft = { name: string; phone: string; email: string; group: string; invited: number; max: string; note: string; privateEvents: string[] };
+const blank: Draft = { name: "", phone: "", email: "", group: "", invited: 2, max: "", note: "", privateEvents: [] };
 const REPLY = { yes: "Confirmed", maybe: "Maybe", no: "Declined" } as const;
 
-export function GuestManager({ id, initial, baseUrl, published, names, dateLabel, defaultMax }: { id: string; initial: GuestView[]; baseUrl: string; published: boolean; names: string; dateLabel: string; defaultMax: number }) {
+/** `privateEvents`: functions only chosen guests see; each guest can be given any of them. */
+export function GuestManager({ id, initial, baseUrl, published, names, dateLabel, defaultMax, privateEvents = [] }: { id: string; initial: GuestView[]; baseUrl: string; published: boolean; names: string; dateLabel: string; defaultMax: number; privateEvents?: { id: string; title: string }[] }) {
   const [guests, setGuests] = useState(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(blank);
@@ -25,7 +27,7 @@ export function GuestManager({ id, initial, baseUrl, published, names, dateLabel
 
   const linkFor = (g: GuestView) => `${baseUrl}/${g.slug}`;
   const openNew = () => { setDraft(blank); setError(""); setEditing("new"); };
-  const openEdit = (g: GuestView) => { setDraft({ name: g.name, phone: g.phone, email: g.email, group: g.group, invited: g.invited, max: g.max === null ? "" : String(g.max), note: g.note }); setError(""); setEditing(g.id); };
+  const openEdit = (g: GuestView) => { setDraft({ name: g.name, phone: g.phone, email: g.email, group: g.group, invited: g.invited, max: g.max === null ? "" : String(g.max), note: g.note, privateEvents: g.privateEvents }); setError(""); setEditing(g.id); };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +113,9 @@ export function GuestManager({ id, initial, baseUrl, published, names, dateLabel
                 <span>{g.sentAt ? "Sent" : "Not sent yet"}</span>
               </p>
               {g.note && <p className="row-msg">{g.note}</p>}
+              {privateEvents.length > 0 && (
+                <p className="row-sub">Private functions: {privateEvents.filter((e) => g.privateEvents.includes(e.id)).map((e) => e.title).join(", ") || "none"}</p>
+              )}
               <div className="row-actions">
                 <a className="btn btn-solid" href={whatsappShare(text, g.phone)} target="_blank" rel="noopener noreferrer" aria-disabled={!published} onClick={(e) => { if (!published) { e.preventDefault(); setToast("Publish first to send links"); } else markSent(g); }}>WhatsApp</a>
                 <button type="button" className="btn btn-quiet" onClick={async () => { if (!published) return setToast("Publish first to send links"); if (await copyText(linkFor(g))) { setToast("Link copied"); markSent(g); } }}>Copy link</button>
@@ -152,6 +157,18 @@ export function GuestManager({ id, initial, baseUrl, published, names, dateLabel
                 <input type="text" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} maxLength={200} placeholder="We would love to celebrate with you." />
                 <small>Shown under their name at the top of the invitation.</small>
               </label>
+              {privateEvents.length > 0 && (
+                <fieldset className="field">
+                  <span>Private functions they are invited to</span>
+                  {privateEvents.map((ev) => (
+                    <label key={ev.id} className="check-row">
+                      <input type="checkbox" checked={draft.privateEvents.includes(ev.id)} onChange={(e) => setDraft({ ...draft, privateEvents: e.target.checked ? [...draft.privateEvents, ev.id] : draft.privateEvents.filter((x) => x !== ev.id) })} />
+                      {ev.title}
+                    </label>
+                  ))}
+                  <small>Only guests ticked here see these functions on their personal link.</small>
+                </fieldset>
+              )}
               {error && <p className="form-error" role="alert">{error}</p>}
               <div className="modal-actions">
                 <button type="button" className="btn btn-quiet" onClick={() => setEditing(null)}>Cancel</button>

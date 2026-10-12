@@ -87,7 +87,7 @@ src/
 
 Plain PostgreSQL tables, created by `src/server/schema.ts`:
 
-`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `created_at`) · `wishes` (guestbook: `name`, `message`, `hidden`, optional `guest_id`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
+`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `events` (people per function), `answers` (host questions), `created_at`) · `wishes` (guestbook: `name`, `message`, `hidden`, optional `guest_id`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
 
 "Total attending" is the sum of `attendee_count` over "yes" replies, which is a different number from how many replies came in.
 
@@ -102,6 +102,7 @@ Email + password (scrypt) and Google. Sessions are random tokens stored hashed, 
 - **Editor steps and fields:** `src/components/app/Editor.tsx`; the fields themselves are defined in `src/lib/invite.ts`.
 - **Stripe:** `src/server/payments/stripe.ts` describes the two functions to fill in. Orders and payments tables already carry currency and provider.
 - **Hero phones:** the home page hero draws a real iPhone 16 model (`public/models/iphone-16.glb`, compressed with meshopt) with three.js in `src/components/site/HeroPhones3D.tsx`. Each phone's screen shows that design's catalog image; poses and sway are in `POSES`. Without WebGL the flat mockups stay. Model: "iPhone 16 - Free" by Wes (sketchfab.com/wimell), Sketchfab Standard licence.
+- **Functions and replies:** each event can have a dress code and be private (`events[].private`); private events reach only guests whose `guests.private_events` lists them, and are filtered on the server in `resolveTemplate`. With `rsvp.perEvent`, guests give a number for each function they can see; `attendee_count` is the largest of those. Host questions live in `rsvp.questions` (text, yes/no or one choice, up to 6) and are checked in `cleanAnswers`.
 - **Support link:** set `SUPPORT_WHATSAPP` in `src/config/site.ts` to show a "Help on WhatsApp" link in the footer. Leave empty to hide it.
 
 ## Tests
