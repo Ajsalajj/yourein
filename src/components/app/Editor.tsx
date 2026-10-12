@@ -511,6 +511,7 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                 <div>
                   <Switch label="Countdown" hint="A live countdown to your date." checked={data.countdown} onChange={(v) => set("countdown", v)} />
                   <Switch label="Let guests share the invitation" hint="Shows a share button at the end." checked={data.allowShare} onChange={(v) => set("allowShare", v)} />
+                  <Switch label="Guestbook" hint="Guests can leave wishes for everyone to read. You can hide any of them." checked={data.guestbook} onChange={(v) => set("guestbook", v)} />
                 </div>
               </div>
               <div className="ed-group">

@@ -51,6 +51,7 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 - **Nothing is published before payment is verified on the server.** The browser's "payment succeeded" callback is never trusted on its own: `/api/pay/verify` recomputes Razorpay's HMAC-SHA256 signature over `order_id|payment_id` with the key secret and only then marks the order paid and publishes, in one transaction. The webhook does the same with the webhook secret. A wrong signature leaves the invitation unpublished.
 - **Preview needs no account. Customizing needs no payment.** Sign-in is asked for at Customize; payment only at the very end.
 - **Guests need no account, and see only the invitation.** The public page and `/api/rsvp` never return other guests, totals or replies. Every host route checks the session and that the invitation belongs to that user; another account gets a 404.
+- **Wishes are the one thing guests share with each other.** When the host switches the guestbook on, the public page shows the name and message of each wish that is not hidden, and nothing else about the guest. It is off for invitations made before it existed; the host can hide or delete any wish under Wishes.
 - **WhatsApp is for sharing a published invitation only.** There is no "order on WhatsApp" anywhere.
 - **Price lives in one place:** `src/config/site.ts` (`PRICE = 999`, `CURRENCY = "INR"`).
 
@@ -86,7 +87,7 @@ src/
 
 Plain PostgreSQL tables, created by `src/server/schema.ts`:
 
-`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `created_at`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
+`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `created_at`) · `wishes` (guestbook: `name`, `message`, `hidden`, optional `guest_id`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
 
 "Total attending" is the sum of `attendee_count` over "yes" replies, which is a different number from how many replies came in.
 

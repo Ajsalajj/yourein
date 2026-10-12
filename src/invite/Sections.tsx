@@ -6,6 +6,7 @@ import { googleCalendarUrl, icsFile } from "@/lib/share";
 import { Divider, Motif } from "./Ornaments";
 import { BloomArt, CrestArt, DoorwayArt, FloraCorner, PortraitArt, RingsArt } from "./Vignettes";
 import { Feature } from "./Features";
+import { Guestbook } from "./Guestbook";
 import { RsvpForm } from "./Rsvp";
 
 const FRAME_CLASS = { arch: "frame-arch", ogee: "frame-ogee", oval: "frame-oval", rect: "frame-rect" } as const;
@@ -291,6 +292,7 @@ export function Sections({ t, footer }: { t: Template; footer?: React.ReactNode 
       <Venue t={t} />
       <Gallery t={t} />
       <RsvpForm t={t} />
+      <Guestbook t={t} />
       <Closing t={t} footer={footer} />
     </div>
   );

@@ -6,6 +6,7 @@ import { eventTitleOf, formatDate, mediaUrl, namesOf, resolveTemplate } from "@/
 import { guestBySlug } from "@/server/guests";
 import { attendingCount, getPublished } from "@/server/invitations";
 import { siteOrigin } from "@/server/origin";
+import { listPublicWishes } from "@/server/wishes";
 import "./public.css";
 
 const SLUG = /^[a-z0-9-]{1,80}$/;
@@ -51,6 +52,7 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
     invitation: slug,
     shareUrl: `${origin}/i/${slug}`,
     attending: await attendingCount(inv.id),
+    wishes: inv.data.guestbook ? await listPublicWishes(inv.id) : undefined,
     guest: guest ? { slug: guest.slug, name: guest.name, max: guest.max, note: guest.note, replied: guest.reply ?? undefined } : undefined,
   });
   return <PublicInvitation t={t} />;
