@@ -61,6 +61,9 @@ export type RsvpSettings = {
   hardCapacity: boolean;
 };
 
+/** A guest's message on the invitation's guestbook, as guests see it. */
+export type Wish = { id: string; name: string; message: string; createdAt: string };
+
 /** Everything a customer's own invitation adds on top of a design. */
 export type Live = {
   /** "preview": the host is looking at it. "public": a guest has opened the link. */
@@ -74,6 +77,8 @@ export type Live = {
   contacts: { name: string; phone: string }[];
   allowShare: boolean;
   rsvp: (RsvpSettings & { closed: boolean; full: boolean }) | null;
+  /** Present when the host has the guestbook switched on. */
+  guestbook: { wishes: Wish[] } | null;
   /** Public address of this invitation, once published. */
   invitation?: string;
   shareUrl?: string;

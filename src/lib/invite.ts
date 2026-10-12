@@ -3,7 +3,7 @@
  * over a design. Shared by the editor, the server and the public page.
  */
 import { z } from "zod";
-import type { InviteEvent, Live, RsvpSettings, Template } from "@/data/templates";
+import type { InviteEvent, Live, RsvpSettings, Template, Wish } from "@/data/templates";
 
 export const EVENT_TYPES = ["Wedding", "Engagement", "Nikah", "Reception", "Anniversary", "Birthday", "Baby Shower", "Housewarming", "Other"] as const;
 
@@ -73,6 +73,8 @@ export const InviteDataSchema = z.object({
   contacts: z.array(z.object({ name: text(60), phone: text(24) })).max(2).catch([]).default([]),
   rsvp: RsvpSchema.default(RsvpSchema.parse({})),
   allowShare: flag(true),
+  /** Guests can leave wishes on the invitation. Off unless set, so invitations made before it existed do not change. */
+  guestbook: flag(false),
 });
 
 export type InviteData = z.infer<typeof InviteDataSchema>;
@@ -103,6 +105,7 @@ export function defaultData(t: Template, tz = "Asia/Kolkata"): InviteData {
     welcome: t.invocation || "",
     inviteText: requestLineFor(eventType),
     closing: "We cannot wait to celebrate with you.",
+    guestbook: true,
   });
 }
 
@@ -173,6 +176,8 @@ export type ResolveOptions = {
   guest?: Live["guest"];
   /** Total people already confirmed, for the capacity limit. */
   attending?: number;
+  /** Wishes guests have left, newest first. Hidden ones are never passed in. */
+  wishes?: Wish[];
 };
 
 /**
@@ -230,6 +235,7 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       contacts: d.contacts.filter((c) => c.name || c.phone),
       allowShare: d.allowShare,
       rsvp: rsvp ? { ...rsvp, closed, full } : null,
+      guestbook: d.guestbook ? { wishes: o.wishes ?? [] } : null,
       invitation: o.invitation,
       shareUrl: o.shareUrl,
       guest: o.guest,

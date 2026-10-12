@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { api } from "./client";
 
-export function InviteSubnav({ id, current }: { id: string; current: "overview" | "guests" | "rsvps" }) {
-  const items: [typeof current, string, string][] = [["overview", "Overview", `/invites/${id}`], ["guests", "Guests", `/invites/${id}/guests`], ["rsvps", "RSVPs", `/invites/${id}/rsvps`]];
+export function InviteSubnav({ id, current }: { id: string; current: "overview" | "guests" | "rsvps" | "wishes" }) {
+  const items: [typeof current, string, string][] = [["overview", "Overview", `/invites/${id}`], ["guests", "Guests", `/invites/${id}/guests`], ["rsvps", "RSVPs", `/invites/${id}/rsvps`], ["wishes", "Wishes", `/invites/${id}/wishes`]];
   return (
     <nav className="subnav" aria-label="This invitation">
       {items.map(([key, label, href]) => <a key={key} href={href} aria-current={key === current ? "page" : undefined}>{label}</a>)}

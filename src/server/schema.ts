@@ -122,6 +122,17 @@ create table if not exists rsvps (
 create index if not exists rsvps_invitation_idx on rsvps (invitation_id, created_at desc);
 create unique index if not exists rsvps_guest_uq on rsvps (guest_id) where guest_id is not null;
 
+create table if not exists wishes (
+  id uuid primary key,
+  invitation_id uuid not null references invitations(id) on delete cascade,
+  guest_id uuid references guests(id) on delete set null,
+  name text not null,
+  message text not null,
+  hidden boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists wishes_invitation_idx on wishes (invitation_id, created_at desc);
+
 create table if not exists orders (
   id uuid primary key,
   invitation_id uuid not null references invitations(id) on delete cascade,
