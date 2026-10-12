@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource/gfs-didot/latin-400.css";
 import "@fontsource-variable/jost/wght.css";
-import "@fontsource-variable/manrope/wght.css";
 import "./globals.css";
 import { SITE_NAME, SITE_URL, TAGLINE } from "@/config/site";
 
