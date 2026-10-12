@@ -47,6 +47,8 @@ export const getTrack = (id: string | null | undefined) => (id ? TRACKS.find((x)
 
 /** Tracks suggested first for each design. */
 export const RECOMMENDED: Record<string, string[]> = {
+  "moonlit-mahal": ["moonlit-promise", "jasmine-night"],
+  "velvet-opera": ["velvet-evening", "forever-starts-here"],
   "ivory-wax-seal": ["golden-vows", "ivory-morning"],
   "rose-garden": ["golden-vows", "garden-in-bloom", "forever-starts-here"],
   "jasmine-moon": ["jasmine-night", "moonlit-promise"],

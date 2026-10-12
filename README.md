@@ -60,7 +60,7 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 ```
 src/
   config/site.ts            price, currency, site name and address
-  data/templates.ts         the 15 designs: names, categories, palettes, sample content
+  data/templates.ts         the designs (15, plus the Signature designs Moonlit Mahal and Velvet Opera): names, categories, palettes, sample content
   lib/invite.ts             the shape of an invitation's content (zod) and how it is laid over a design
   lib/share.ts              share text, WhatsApp and email links, calendar files
 
@@ -107,6 +107,7 @@ Email + password (scrypt) and Google. Sessions are random tokens stored hashed, 
 - **Memories:** with `guestPhotos` on, a wish can carry one photo (stored in `photos` as kind `guest`, owned by the host; up to 300 per invitation; hidden with its wish and deleted with it). The editor's clean-up of unused uploads only touches portrait, gallery and music. `thanksOn` turns the invitation into a thank-you page: the RSVP form and countdown hide, replies are refused, the guestbook stays open. The manage page draws a phone-sized invitation picture with a QR code in the browser (`src/components/app/InviteImage.tsx`).
 - **Look and feel (design tokens):** colours, type sizes, corner radius, shadows and motion are CSS variables at the top of `src/app/globals.css` (`--bg`, `--surface`, `--accent`, `--r-lg`, `--shadow-card`, `--dur-sheet`…). Headings and numbers use GFS Didot, everything else Jost; invitations keep their own typefaces. Change a token there and every screen follows.
 - **Background music:** the editor offers a built-in library or the host's own file (MP3, M4A, AAC or WAV up to 4 MB, the request limit on Vercel; larger files would need object storage). Track details live only in `src/data/music.ts` (title, mood, style, filters, duration, `active`, order, and `RECOMMENDED` per design). The ten files in `public/audio/builtin/` are original pieces composed by `npm run music` (`scripts/make-music.mjs`, needs macOS for AAC encoding). **They are development placeholders:** to ship produced music, replace the files (same names) and update durations. Invitations store `musicSource` (`builtin` / `upload` / `none`; older invitations read as their upload), `musicTrack`, `musicVolume` (default 35) and `musicStart`. Music never plays before the guest's tap; it fades in over 1.8 s through a gain node (so it works on iPhone), loops, and the guest can mute it.
+- **Signature designs:** Moonlit Mahal and Velvet Opera set `theme.skin` and `theme.display`. The skin restyles the shared sections in `src/invite/skins.css` (arches for Moonlit Mahal; a programme in acts with a theatre-ticket RSVP for Velvet Opera) and can label sections (`src/invite/skins.ts`); `display` letters names and titles in Bodoni Moda or Playfair Display instead of a script. Their scenes and openings are in `src/invite/art/scenes/`.
 - **Support link:** set `SUPPORT_WHATSAPP` in `src/config/site.ts` to show a "Help on WhatsApp" link in the footer. Leave empty to hide it.
 
 ## Tests

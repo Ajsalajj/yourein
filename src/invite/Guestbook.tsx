@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { Template, Wish } from "@/data/templates";
 import { shrinkImage } from "@/components/app/client";
+import { actOf } from "./skins";
 
 const SAMPLE: Wish[] = [
   { id: "s1", name: "Anjali", message: "Wishing you both a lifetime of love and laughter. We cannot wait to dance at your wedding!", createdAt: "" },
@@ -80,7 +81,7 @@ export function Guestbook({ t }: { t: Template }) {
   const to = t.couple[1] ? "the couple" : "the host";
 
   return (
-    <section className="sec sec-wishes" id="wishes">
+    <section className="sec sec-wishes" id="wishes" data-act={actOf(t, "wishes")}>
       <h2 className="sec-title" data-rv="wipe">Wishes</h2>
       <p className="sec-body" data-rv="up">Leave a few words for {to}. Everyone with the invitation can read them.</p>
 

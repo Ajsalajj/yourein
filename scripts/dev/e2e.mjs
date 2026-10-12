@@ -35,7 +35,8 @@ await snap(page, "home");
 const cols = await page.evaluate(() => getComputedStyle(document.querySelector(".grid")).gridTemplateColumns.split(" ").length);
 ok("catalog shows 2 designs per row on a phone", cols === 2, `${cols} columns`);
 ok("no WhatsApp order buttons anywhere on the home page", (await page.locator('a[href*="wa.me"]').count()) === 0 && !(await page.content()).includes("Order on WhatsApp"));
-ok("every card has Preview and Customize", (await page.locator(".grid .card").count()) === 15 && (await page.locator(".grid .card [data-customize]").count()) === 15 && (await page.locator(".grid .card .card-actions button").count()) === 15);
+const cards = await page.locator(".grid .card").count();
+ok("every card has Preview and Customize", cards >= 15 && (await page.locator(".grid .card [data-customize]").count()) === cards && (await page.locator(".grid .card .card-actions button").count()) === cards, `${cards} designs`);
 const fit = await page.evaluate(() => {
   const card = document.querySelector(".grid .card"), img = card.querySelector(".card-render");
   return { ratio: img.getBoundingClientRect().width / card.getBoundingClientRect().width, loaded: img.complete && img.naturalWidth > 0, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };

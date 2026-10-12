@@ -2,6 +2,8 @@ import type { ArtModule } from "./types";
 
 /** Each design's artwork is its own chunk, fetched only when that design is previewed. */
 export const ART: Record<string, () => Promise<{ default: ArtModule }>> = {
+  "moonlit-mahal": () => import("./scenes/moonlit-mahal"),
+  "velvet-opera": () => import("./scenes/velvet-opera"),
   "ivory-wax-seal": () => import("./scenes/ivory-wax-seal"),
   "rose-garden": () => import("./scenes/rose-garden"),
   "jasmine-moon": () => import("./scenes/jasmine-moon"),

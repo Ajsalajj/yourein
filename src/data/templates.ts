@@ -45,6 +45,10 @@ export type Theme = {
   heroInk: string;
   /** Backdrop colour behind the phone in the catalog. */
   plinth: string;
+  /** Signature designs: a skin restyles the shared sections (src/invite/skins.css)... */
+  skin?: "moonlit-mahal" | "velvet-opera";
+  /** ...and a display serif replaces the script for names and titles. */
+  display?: "bodoni" | "playfair" | "cormorant";
 };
 
 export type RsvpSettings = {
@@ -139,6 +143,62 @@ export type Template = {
 };
 
 export const TEMPLATES: Template[] = [
+  {
+    no: "S1",
+    slug: "moonlit-mahal",
+    name: "Moonlit Mahal",
+    category: "Wedding / Nikah",
+    filters: ["Wedding", "Nikah"],
+    blurb: "A palace beside still water. The moon rises, the windows light one by one, and your names appear in gold.",
+    opening: "Out of the dark, a crescent climbs, the palace appears and its windows glow one after another across the water.",
+    openLabel: "Open invitation",
+    couple: ["Zayan", "Inaaya"],
+    date: "2026-12-12T20:00:00+05:30",
+    dateLabel: "12 December 2026",
+    invocation: "Bismillah ir-Rahman ir-Rahim",
+    hosts: "Together with their families, Mr. & Mrs. Imran Siddiqui and Mr. & Mrs. Faisal Qureshi",
+    request: "request the honour of your presence at the Nikah of",
+    story: "A chance meeting on a moonlit terrace in Lucknow, and a conversation that has not ended since.",
+    events: [
+      { title: "Mehendi", day: "Thursday, 10 December", time: "6:00 pm", place: "The Zenana Garden" },
+      { title: "Nikah", day: "Saturday, 12 December", time: "8:00 pm", place: "The Moonlit Terrace", note: "Under the open sky" },
+      { title: "Walima", day: "Sunday, 13 December", time: "8:30 pm", place: "The Mirror Pavilion", note: "Dinner by the water" },
+    ],
+    venue: { name: "Taj Mahal Palace Gardens", address: "Riverside Terrace, Old City", city: "Lucknow, Uttar Pradesh" },
+    closing: "Our joy will be complete with you beside us.",
+    theme: {
+      bg: "#0A1430", bgAlt: "#0E1B3D", ink: "#ECE6D3", soft: "#A9B4CF", accent: "#CDAA63", tint: "#1E2E5A",
+      dark: true, script: "pinyon", caps: "cormorant", motif: "star", frame: "arch", family: "arch",
+      heroTop: 28, heroInk: "#F1E3B8", plinth: "#101C40", skin: "moonlit-mahal", display: "bodoni",
+    },
+  },
+  {
+    no: "S2",
+    slug: "velvet-opera",
+    name: "Velvet Opera",
+    category: "Reception / Wedding",
+    filters: ["Wedding"],
+    blurb: "An opera house after dark. The lights go down, a spotlight finds the stage and the velvet curtain parts on your names.",
+    opening: "The house lights dim, a single spotlight snaps on and the curtain draws slowly apart.",
+    openLabel: "Raise the curtain",
+    couple: ["Vihaan", "Anaya"],
+    date: "2027-01-23T19:30:00+05:30",
+    dateLabel: "23 January 2027",
+    hosts: "Mr. & Mrs. Arvind Rathore and Mr. & Mrs. Kunal Sethi",
+    request: "invite you to an evening in celebration of the marriage of",
+    story: "They met at the interval of a terrible play and agreed on everything except the ending.",
+    events: [
+      { title: "The Ceremony", day: "Saturday, 23 January", time: "7:30 pm", place: "The Grand Foyer" },
+      { title: "The Reception", day: "Saturday, 23 January", time: "9:00 pm", place: "The Opera Ballroom", note: "Black tie" },
+    ],
+    venue: { name: "The Royal Opera House", address: "Charni Road, Girgaon", city: "Mumbai, Maharashtra" },
+    closing: "Take your seats. The best part is yet to come.",
+    theme: {
+      bg: "#17040A", bgAlt: "#22060F", ink: "#F2E4CC", soft: "#C7A9A0", accent: "#D4AF6A", tint: "#5A0E1C",
+      dark: true, script: "allura", caps: "cinzel", motif: "star", frame: "rect", family: "arch",
+      heroTop: 46, heroInk: "#F3DCA5", plinth: "#2A0812", skin: "velvet-opera", display: "playfair",
+    },
+  },
   {
     no: "01",
     slug: "ivory-wax-seal",
