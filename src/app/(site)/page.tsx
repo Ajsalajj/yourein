@@ -35,9 +35,9 @@ export default function Home() {
       <Featured />
       <Catalog />
       <HowItWorks />
-      <Why />
       <RsvpDemo />
       <WhatYouGet />
+      <Why />
       <Pricing />
       <FinalCta />
     </>

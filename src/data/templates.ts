@@ -81,6 +81,10 @@ export type Live = {
   portrait?: string;
   gallery: string[];
   music?: string;
+  /** Out of 100; the music fades up to this. */
+  musicVolume?: number;
+  /** Start when the guest opens the invitation (otherwise the guest taps play). */
+  musicAutostart?: boolean;
   mapsUrl?: string;
   countdown: boolean;
   contacts: { name: string; phone: string }[];
