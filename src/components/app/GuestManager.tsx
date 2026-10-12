@@ -16,6 +16,16 @@ type Draft = { name: string; phone: string; email: string; group: string; invite
 const blank: Draft = { name: "", phone: "", email: "", group: "", invited: 2, max: "", note: "", privateEvents: [] };
 const REPLY = { yes: "Confirmed", maybe: "Maybe", no: "Declined" } as const;
 
+/* for spotting the same family twice: names without case, punctuation or "& family", phones by their last 10 digits */
+const nameKey = (s: string) => s.toLowerCase().replace(/&|\band\b|\bfamily\b|\bfam\b/g, " ").replace(/[^a-z0-9\u0900-\u0d7f]+/g, "");
+const phoneKey = (s: string) => s.replace(/\D/g, "").slice(-10);
+
+/** Other guests that look like the same person or family. */
+function lookalikes(list: { id: string; name: string; phone: string }[], g: { name: string; phone: string }, except?: string) {
+  const n = nameKey(g.name), p = phoneKey(g.phone);
+  return list.filter((x) => x.id !== except && ((n && nameKey(x.name) === n) || (p.length >= 7 && phoneKey(x.phone) === p)));
+}
+
 /** `privateEvents`: functions only chosen guests see; each guest can be given any of them. */
 export function GuestManager({ id, initial, baseUrl, published, names, dateLabel, defaultMax, privateEvents = [] }: { id: string; initial: GuestView[]; baseUrl: string; published: boolean; names: string; dateLabel: string; defaultMax: number; privateEvents?: { id: string; title: string }[] }) {
   const [guests, setGuests] = useState(initial);
@@ -60,6 +70,11 @@ export function GuestManager({ id, initial, baseUrl, published, names, dateLabel
     setBusy(true);
     setError("");
     try {
+      const twins = lookalikes(guests, draft, editing === "new" ? undefined : editing ?? undefined);
+      if (twins.length && !window.confirm(`This looks like ${twins.map((x) => x.name).join(", ")}, already on your list (same name or phone). Save anyway?`)) {
+        setBusy(false);
+        return;
+      }
       const payload = { ...draft, max: draft.max === "" ? null : Number(draft.max) };
       if (editing === "new") {
         const out = await api<{ guest: GuestView }>("POST", `/api/invitations/${id}/guests`, payload);
@@ -132,6 +147,7 @@ export function GuestManager({ id, initial, baseUrl, published, names, dateLabel
                   <p className="row-sub">{[g.group, g.phone].filter(Boolean).join(" • ") || "No details"}</p>
                 </div>
                 {g.disabled && <span className="pill pill-no">Link off</span>}
+                {lookalikes(guests, g, g.id).length > 0 && <span className="pill pill-maybe" title={`Same name or phone as ${lookalikes(guests, g, g.id).map((x) => x.name).join(", ")}`}>Possible duplicate</span>}
                 <span className={`pill pill-${g.reply ? g.reply.status : "none"}`}>{g.reply ? `${REPLY[g.reply.status]}${g.reply.status !== "no" ? ` ${g.reply.count}` : ""}` : "No reply"}</span>
               </div>
               <p className="row-facts">

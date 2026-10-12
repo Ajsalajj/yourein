@@ -101,6 +101,56 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
   const set = useCallback(<K extends keyof InviteData>(key: K, value: InviteData[K]) => setData((d) => ({ ...d, [key]: value })), []);
   const setRsvp = <K extends keyof InviteData["rsvp"]>(key: K, value: InviteData["rsvp"][K]) => setData((d) => ({ ...d, rsvp: { ...d.rsvp, [key]: value } }));
 
+  /* ---- undo and redo: quick runs of changes (typing a word) count as one step ---- */
+  type Snap = { data: InviteData; templateSlug: string };
+  const hist = useRef<{ past: Snap[]; future: Snap[]; prev: Snap; last: number; skip: boolean }>({
+    past: [], future: [], prev: { data: initial, templateSlug: initialTemplate }, last: 0, skip: false,
+  });
+  const [, setHistTick] = useState(0);
+  useEffect(() => {
+    const h = hist.current;
+    const cur = { data, templateSlug };
+    if (h.skip) {
+      h.skip = false;
+      h.prev = cur;
+      return;
+    }
+    if (cur.data === h.prev.data && cur.templateSlug === h.prev.templateSlug) return;
+    const now = Date.now();
+    if (now - h.last > 700) {
+      h.past.push(h.prev);
+      if (h.past.length > 50) h.past.shift();
+    }
+    h.last = now;
+    h.future = [];
+    h.prev = cur;
+    setHistTick((n) => n + 1);
+  }, [data, templateSlug]);
+  const travel = useCallback((dir: "undo" | "redo") => {
+    const h = hist.current;
+    const to = dir === "undo" ? h.past.pop() : h.future.pop();
+    if (!to) return;
+    (dir === "undo" ? h.future : h.past).push(h.prev);
+    h.skip = true;
+    h.last = 0;
+    setData(to.data);
+    setTemplateSlug(to.templateSlug);
+    setHistTick((n) => n + 1);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const el = e.target as HTMLElement | null;
+      /* inside a text box the browser's own undo applies */
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); travel("undo"); }
+      else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); travel("redo"); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [travel]);
+
   /* ---- step in the address bar, so refresh and Back behave ---- */
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -279,6 +329,14 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
           <div className="ed-title">
             <b>{template.name}</b>
             <span>Step {stepNo} of {TOTAL}</span>
+          </div>
+          <div className="ed-hist">
+            <button type="button" className="ed-hist-btn" onClick={() => travel("undo")} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl or ⌘ + Z)">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            <button type="button" className="ed-hist-btn" onClick={() => travel("redo")} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl or ⌘ + Shift + Z)">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
           </div>
           <span className="ed-save" data-state={save} role="status">{save === "saved" ? "Saved" : save === "saving" ? "Saving…" : "Not saved. Retrying"}</span>
         </div>

@@ -98,7 +98,7 @@ export type Live = {
   invitation?: string;
   shareUrl?: string;
   /** Set when the link is personalised for one guest or family. */
-  guest?: { slug: string; name: string; max: number | null; note: string; replied?: { status: "yes" | "maybe" | "no"; count: number; events?: Record<string, number> } };
+  guest?: { slug: string; name: string; max: number | null; note: string; replied?: { status: "yes" | "maybe" | "no"; count: number; events?: Record<string, number>; answers?: Record<string, string>; meal?: string } };
 };
 
 export type Template = {
