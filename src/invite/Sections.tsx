@@ -8,6 +8,7 @@ import { BloomArt, CrestArt, DoorwayArt, FloraCorner, PortraitArt, RingsArt } fr
 import { Feature } from "./Features";
 import { Guestbook } from "./Guestbook";
 import { RsvpForm } from "./Rsvp";
+import { actOf } from "./skins";
 
 const FRAME_CLASS = { arch: "frame-arch", ogee: "frame-ogee", oval: "frame-oval", rect: "frame-rect" } as const;
 
@@ -24,7 +25,7 @@ function Names({ t, className }: { t: Template; className: string }) {
 function Message({ t }: { t: Template }) {
   const guest = t.live?.guest;
   return (
-    <section className="sec sec-message">
+    <section className="sec sec-message" data-act={actOf(t, "message")}>
       <FloraCorner slug={t.slug} seed={4} className="sec-flora sec-flora-tl" />
       <FloraCorner slug={t.slug} seed={8} className="sec-flora sec-flora-br" />
       {guest && (
@@ -69,7 +70,7 @@ function Portrait({ t }: { t: Template }) {
 
 function Events({ t }: { t: Template }) {
   return (
-    <section className="sec sec-events">
+    <section className="sec sec-events" data-act={actOf(t, "events")}>
       <h2 className="sec-title" data-rv="wipe">{t.events.length > 1 ? "The celebrations" : "The details"}</h2>
       <Divider motif={t.theme.motif} />
       <ol className="events">
@@ -113,7 +114,7 @@ function Countdown({ t }: { t: Template }) {
   ];
   const done = left === 0;
   return (
-    <section className="sec sec-count">
+    <section className="sec sec-count" data-act={actOf(t, "count")}>
       <h2 className="sec-title" data-rv="wipe">{done ? "The day is here" : "Counting the days"}</h2>
       <div className="count" data-rv="up" role="timer" aria-label={`Time until ${t.dateLabel}`}>
         {parts.map(([label, v]) => (
@@ -159,7 +160,7 @@ function Venue({ t }: { t: Template }) {
   };
   if (!t.venue.name && !t.venue.address) return null;
   return (
-    <section className="sec sec-venue">
+    <section className="sec sec-venue" data-act={actOf(t, "venue")}>
       <h2 className="sec-title" data-rv="wipe">The venue</h2>
       <div className="venue-card" data-rv="photo">
         <svg className="venue-map" viewBox="0 0 330 190" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -254,7 +255,7 @@ function Gallery({ t }: { t: Template }) {
   if (live?.mode === "public" && live.gallery.length === 0) return null;
   if (live && live.gallery.length > 0) {
     return (
-      <section className="sec sec-gallery">
+      <section className="sec sec-gallery" data-act={actOf(t, "gallery")}>
         <h2 className="sec-title" data-rv="wipe">Moments</h2>
         <div className={`gallery gallery-photos n${Math.min(live.gallery.length, 5)}`}>
           {live.gallery.map((src, i) => (
@@ -268,7 +269,7 @@ function Gallery({ t }: { t: Template }) {
     );
   }
   return (
-    <section className="sec sec-gallery">
+    <section className="sec sec-gallery" data-act={actOf(t, "gallery")}>
       <h2 className="sec-title" data-rv="wipe">Moments</h2>
       <p className="sec-note" data-rv="up">{live ? "Add photos in the editor and they appear here. Without photos, guests will not see this section." : "Shown here with illustrations. Your own photographs go in these frames."}</p>
       <div className="gallery">
@@ -302,7 +303,7 @@ function Closing({ t, footer }: { t: Template; footer?: React.ReactNode }) {
     }
   };
   return (
-    <section className="sec sec-closing">
+    <section className="sec sec-closing" data-act={actOf(t, "closing")}>
       <FloraCorner slug={t.slug} seed={6} className="sec-flora sec-flora-bl" />
       <FloraCorner slug={t.slug} seed={12} className="sec-flora sec-flora-br2" />
       <Motif motif={t.theme.motif} className="closing-motif" size={56} />

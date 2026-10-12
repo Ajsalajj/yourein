@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { Template } from "@/data/templates";
 import { formatDate } from "@/lib/invite";
+import { actOf } from "./skins";
 
 type Status = "yes" | "maybe" | "no";
 type Saved = { status: Status; count: number; name: string; token?: string; events?: Record<string, number>; answers?: Record<string, string>; meal?: string };
@@ -127,7 +128,7 @@ export function RsvpForm({ t }: { t: Template }) {
   const showForm = !saved || editing;
 
   return (
-    <section className="sec sec-rsvp" id="rsvp">
+    <section className="sec sec-rsvp" id="rsvp" data-act={actOf(t, "rsvp")}>
       <h2 className="sec-title" data-rv="wipe">Will you be joining us?</h2>
       {closed ? (
         <p className="sec-body" data-rv="up">Replies closed on {deadline}. Please contact the hosts directly.</p>

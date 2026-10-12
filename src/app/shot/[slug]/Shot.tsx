@@ -25,6 +25,7 @@ export default function Shot({ slug }: { slug: string }) {
       id="shot"
       className="inv"
       data-dark={t.theme.dark ? "true" : "false"}
+      data-skin={t.theme.skin}
       data-ready={art ? "true" : "false"}
       style={{ ...themeVars(t.theme), width: "100vw", height: "100vh", ["--ih" as string]: "100vh" }}
     >

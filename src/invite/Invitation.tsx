@@ -11,6 +11,7 @@ import { Motif } from "./Ornaments";
 import { themeVars } from "./fonts";
 import { gsap, letterIn, prefersReducedMotion, setupScroll } from "./motion";
 import "./invitation.css";
+import "./skins.css";
 
 type Phase = "sealed" | "opening" | "open";
 
@@ -152,7 +153,7 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
   };
 
   return (
-    <div ref={rootRef} className="inv" data-phase={phase} data-dark={t.theme.dark ? "true" : "false"} style={themeVars(t.theme)}>
+    <div ref={rootRef} className="inv" data-phase={phase} data-dark={t.theme.dark ? "true" : "false"} data-skin={t.theme.skin} style={themeVars(t.theme)}>
       <ArtDefs />
       {art ? (
         <>
