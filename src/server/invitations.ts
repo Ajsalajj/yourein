@@ -92,7 +92,7 @@ export async function updateInvitation(id: string, userId: string, patch: Patch)
     if (!parsed.success) throw new ApiError(400, "Some details could not be saved. Please check them and try again.");
     data = parsed.data;
     /* only keep media that really belongs to this invitation */
-    const owned = new Set((await sql<{ id: string }>`select id from photos where invitation_id = ${id}`).map((r) => r.id));
+    const owned = new Set((await sql<{ id: string }>`select id from photos where invitation_id = ${id} and kind <> 'guest'`).map((r) => r.id));
     data.portrait = data.portrait && owned.has(data.portrait) ? data.portrait : null;
     data.music = data.music && owned.has(data.music) ? data.music : null;
     data.gallery = data.gallery.filter((g) => owned.has(g));
@@ -118,7 +118,7 @@ export async function updateInvitation(id: string, userId: string, patch: Patch)
       }
       /* drop uploads that are no longer used; recent ones are left alone in case a save is still on its way */
       const used = [data.portrait, data.music, ...data.gallery].filter(Boolean) as string[];
-      const stale = await q<{ id: string }>`select id from photos where invitation_id = ${id} and created_at < now() - interval '1 hour'`;
+      const stale = await q<{ id: string }>`select id from photos where invitation_id = ${id} and kind in ('portrait', 'gallery', 'music') and created_at < now() - interval '1 hour'`;
       for (const s of stale) if (!used.includes(s.id)) await q`delete from photos where id = ${s.id}`;
     }
   });
@@ -136,7 +136,7 @@ export async function deleteInvitation(id: string, userId: string) {
 const LIMITS = { portrait: 3_500_000, gallery: 3_500_000, music: 4_000_000 } as const;
 export type MediaKind = keyof typeof LIMITS;
 
-function sniff(bytes: Uint8Array): string | null {
+export function sniff(bytes: Uint8Array): string | null {
   const b = bytes;
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
   if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";

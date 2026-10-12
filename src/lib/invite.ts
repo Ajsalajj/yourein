@@ -87,6 +87,11 @@ export const InviteDataSchema = z.object({
   allowShare: flag(true),
   /** Guests can leave wishes on the invitation. Off unless set, so invitations made before it existed do not change. */
   guestbook: flag(false),
+  /** Guests can attach a photo to their wish. */
+  guestPhotos: flag(false),
+  /** After the event: the invitation becomes a thank-you page and replies close. */
+  thanksOn: flag(false),
+  thanks: text(300),
   /** A short update shown at the top of the invitation, e.g. a changed time or venue. */
   notice: text(200),
   /** Places to stay the hosts suggest. */
@@ -240,7 +245,7 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
     events = [{ title, day: formatDate(date, { weekday: "long", day: "numeric", month: "long" }), time: formatTime(time), place: venueName }];
   }
 
-  const rsvp: RsvpSettings | null = d.rsvp.enabled ? d.rsvp : null;
+  const rsvp: RsvpSettings | null = d.rsvp.enabled && !d.thanksOn ? d.rsvp : null;
   const closed = !!rsvp?.deadline && todayIn(d.tz) > rsvp.deadline;
   const full = !!rsvp?.capacity && rsvp.hardCapacity && (o.attending ?? 0) >= rsvp.capacity;
 
@@ -264,11 +269,12 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       gallery: d.gallery.map(o.mediaUrl),
       music: d.music ? o.mediaUrl(d.music) : undefined,
       mapsUrl: d.mapsUrl || undefined,
-      countdown: d.countdown,
+      countdown: d.countdown && !d.thanksOn,
+      thanks: d.thanksOn ? d.thanks || "Thank you for celebrating with us. Your love and blessings made our day." : undefined,
       contacts: d.contacts.filter((c) => c.name || c.phone),
       allowShare: d.allowShare,
       rsvp: rsvp ? { ...rsvp, perEvent: repliesPerEvent(d, allowed), closed, full } : null,
-      guestbook: d.guestbook ? { wishes: o.wishes ?? [] } : null,
+      guestbook: d.guestbook ? { wishes: o.wishes ?? [], photos: d.guestPhotos } : null,
       notice: d.notice || undefined,
       stays: d.stays.filter((s) => s.name),
       invitation: o.invitation,

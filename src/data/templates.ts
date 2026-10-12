@@ -71,7 +71,7 @@ export type RsvpSettings = {
 export type RsvpQuestion = { id: string; label: string; kind: "text" | "yesno" | "choice"; options: string[] };
 
 /** A guest's message on the invitation's guestbook, as guests see it. */
-export type Wish = { id: string; name: string; message: string; createdAt: string };
+export type Wish = { id: string; name: string; message: string; createdAt: string; photo?: string };
 
 /** Everything a customer's own invitation adds on top of a design. */
 export type Live = {
@@ -87,7 +87,9 @@ export type Live = {
   allowShare: boolean;
   rsvp: (RsvpSettings & { closed: boolean; full: boolean }) | null;
   /** Present when the host has the guestbook switched on. */
-  guestbook: { wishes: Wish[] } | null;
+  guestbook: { wishes: Wish[]; photos: boolean } | null;
+  /** Thank-you mode: shown at the top once the event is over. */
+  thanks?: string;
   /** An update from the hosts, shown at the top. */
   notice?: string;
   /** Places to stay the hosts suggest. */

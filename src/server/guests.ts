@@ -211,6 +211,7 @@ export async function submitRsvp(inv: Invitation, guestSlug: string | null, inpu
   const settings = inv.data.rsvp;
   if (inv.status !== "published") throw new ApiError(410, "This invitation is no longer taking replies.");
   if (!settings.enabled) throw new ApiError(400, "Replies are not being collected for this invitation.");
+  if (inv.data.thanksOn) throw new ApiError(400, "Replies are closed. Thank you for celebrating with us.");
   if (settings.deadline && todayIn(inv.data.tz) > settings.deadline) throw new ApiError(400, "The reply date has passed. Please contact the hosts directly.");
 
   const guest = guestSlug ? await activeGuestBySlug(inv.id, guestSlug) : null;

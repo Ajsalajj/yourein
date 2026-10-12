@@ -142,6 +142,11 @@ create table if not exists wishes (
 );
 create index if not exists wishes_invitation_idx on wishes (invitation_id, created_at desc);
 
+/* guests can attach a photo to a wish */
+alter table photos drop constraint if exists photos_kind_check;
+alter table photos add constraint photos_kind_check check (kind in ('portrait', 'gallery', 'music', 'guest'));
+alter table wishes add column if not exists photo_id uuid references photos(id) on delete set null;
+
 create table if not exists orders (
   id uuid primary key,
   invitation_id uuid not null references invitations(id) on delete cascade,

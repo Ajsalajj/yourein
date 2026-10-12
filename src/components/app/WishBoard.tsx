@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "./client";
 import { useToast } from "./ShareTools";
 
-export type WishView = { id: string; name: string; message: string; hidden: boolean; createdAt: string };
+export type WishView = { id: string; name: string; message: string; hidden: boolean; createdAt: string; photo?: string };
 
 const when = (iso: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -85,6 +85,8 @@ export function WishBoard({ id, initial, enabled, published }: { id: string; ini
                 </div>
                 <span className={`pill ${w.hidden ? "pill-none" : "pill-yes"}`}>{w.hidden ? "Hidden" : "Shown"}</span>
               </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {w.photo && <a href={w.photo} target="_blank" rel="noopener"><img src={w.photo} alt={`Photo from ${w.name}`} loading="lazy" style={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 8 }} /></a>}
               <p className="row-msg" style={{ whiteSpace: "pre-line" }}>{w.message}</p>
               <div className="row-actions chips">
                 <button type="button" className="btn btn-quiet btn-sm" disabled={busy === w.id} onClick={() => toggle(w)}>{w.hidden ? "Show to guests" : "Hide from guests"}</button>
