@@ -37,10 +37,10 @@ ok("catalog shows 2 designs per row on a phone", cols === 2, `${cols} columns`);
 ok("no WhatsApp order buttons anywhere on the home page", (await page.locator('a[href*="wa.me"]').count()) === 0 && !(await page.content()).includes("Order on WhatsApp"));
 ok("every card has Preview and Customize", (await page.locator(".grid .card").count()) === 15 && (await page.locator(".grid .card [data-customize]").count()) === 15 && (await page.locator(".grid .card .card-actions button").count()) === 15);
 const fit = await page.evaluate(() => {
-  const card = document.querySelector(".grid .card"), pm = card.querySelector(".pm:not(.pm-back)");
-  return { ratio: pm.getBoundingClientRect().width / card.getBoundingClientRect().width, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
+  const card = document.querySelector(".grid .card"), pm = card.querySelector(".pm:not(.pm-back)"), back = card.querySelector(".pm-back");
+  return { ratio: pm.getBoundingClientRect().width / card.getBoundingClientRect().width, back: back ? back.getBoundingClientRect().width / card.getBoundingClientRect().width : 0, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
 });
-ok("phone mockup takes 75 to 85% of the card width", fit.ratio >= 0.75 && fit.ratio <= 0.85, fit.ratio.toFixed(2));
+ok("two phones per card: front 50 to 65% of the card width, sealed cover behind", fit.ratio >= 0.5 && fit.ratio <= 0.65 && fit.back >= 0.35, `${fit.ratio.toFixed(2)} / ${fit.back.toFixed(2)}`);
 ok("no horizontal overflow, names within 2 lines", fit.over <= 0 && fit.nameLines <= 2, JSON.stringify(fit));
 await page.locator("#templates").scrollIntoViewIfNeeded();
 await page.waitForTimeout(400);

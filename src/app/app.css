@@ -198,7 +198,7 @@
 .ed-top-row { display: flex; align-items: center; gap: 4px; height: 54px; padding: 0 8px 0 4px; }
 .ed-back { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; flex: none; color: var(--ink); }
 .ed-title { flex: 1; min-width: 0; line-height: 1.2; }
-.ed-title b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 0.95rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-title b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ed-title span { font-size: 0.76rem; color: var(--ink-2); }
 .ed-save { font-size: 0.78rem; color: var(--ink-2); padding: 0 8px; white-space: nowrap; }
 .ed-save[data-state="error"] { color: var(--bad); font-weight: 500; }

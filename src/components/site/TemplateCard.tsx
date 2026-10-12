@@ -10,8 +10,8 @@ export function TemplateCard({ t, priority }: { t: Template; priority?: boolean 
     <article className="card">
       <PreviewButton slug={t.slug} className="card-art" label={`Preview ${t.name}`}>
         <span className="card-plinth" style={{ background: t.theme.plinth }} aria-hidden="true" />
-        <InvitationPhoneMockup t={t} variant="alt" className="pm-back" sizes="(max-width: 1039px) 1px, 160px" />
-        <InvitationPhoneMockup t={t} priority={priority} sizes="(max-width: 720px) 40vw, (max-width: 1039px) 26vw, 190px" />
+        <InvitationPhoneMockup t={t} variant="alt" className="pm-back" sizes="(max-width: 720px) 24vw, (max-width: 1039px) 16vw, 160px" />
+        <InvitationPhoneMockup t={t} priority={priority} sizes="(max-width: 720px) 28vw, (max-width: 1039px) 20vw, 190px" />
       </PreviewButton>
       <div className="card-info">
         <p className="card-cat">{t.category}</p>
