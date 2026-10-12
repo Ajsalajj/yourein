@@ -37,10 +37,10 @@ ok("catalog shows 2 designs per row on a phone", cols === 2, `${cols} columns`);
 ok("no WhatsApp order buttons anywhere on the home page", (await page.locator('a[href*="wa.me"]').count()) === 0 && !(await page.content()).includes("Order on WhatsApp"));
 ok("every card has Preview and Customize", (await page.locator(".grid .card").count()) === 15 && (await page.locator(".grid .card [data-customize]").count()) === 15 && (await page.locator(".grid .card .card-actions button").count()) === 15);
 const fit = await page.evaluate(() => {
-  const card = document.querySelector(".grid .card"), pm = card.querySelector(".pm:not(.pm-back)"), back = card.querySelector(".pm-back");
-  return { ratio: pm.getBoundingClientRect().width / card.getBoundingClientRect().width, back: back ? back.getBoundingClientRect().width / card.getBoundingClientRect().width : 0, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
+  const card = document.querySelector(".grid .card"), img = card.querySelector(".card-render");
+  return { ratio: img.getBoundingClientRect().width / card.getBoundingClientRect().width, loaded: img.complete && img.naturalWidth > 0, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
 });
-ok("two phones per card: front 50 to 65% of the card width, sealed cover behind", fit.ratio >= 0.5 && fit.ratio <= 0.65 && fit.back >= 0.35, `${fit.ratio.toFixed(2)} / ${fit.back.toFixed(2)}`);
+ok("each card shows the rendered two-phone picture, filling most of the card", fit.loaded && fit.ratio >= 0.8 && fit.ratio <= 1.25, fit.ratio.toFixed(2));
 ok("no horizontal overflow, names within 2 lines", fit.over <= 0 && fit.nameLines <= 2, JSON.stringify(fit));
 await page.locator("#templates").scrollIntoViewIfNeeded();
 await page.waitForTimeout(400);

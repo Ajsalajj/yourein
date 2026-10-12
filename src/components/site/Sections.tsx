@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CATEGORIES, FEATURED, TEMPLATES, getTemplate } from "@/data/templates";
 import { PRICE_LABEL, SUPPORT_WHATSAPP } from "@/config/site";
@@ -49,8 +50,7 @@ export function Featured() {
             <article key={t.slug} className="feat-row">
               <PreviewButton slug={t.slug} className="feat-art" label={`Preview ${t.name}`}>
                 <span className="feat-plinth" style={{ background: t.theme.plinth }} aria-hidden="true" />
-                <InvitationPhoneMockup t={t} variant="alt" className="feat-phone-b" sizes="(max-width: 720px) 34vw, 220px" />
-                <InvitationPhoneMockup t={t} className="feat-phone-a" shadow="deep" sizes="(max-width: 720px) 38vw, 250px" />
+                <Image className="feat-render" src={`/renders/${t.slug}.webp`} alt={`${t.name} invitation shown on two phones`} width={710} height={831} sizes="(max-width: 720px) 70vw, 420px" />
               </PreviewButton>
               <div className="feat-copy">
                 <p className="feat-cat">{t.category}</p>

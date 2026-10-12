@@ -8,6 +8,7 @@
     "start": "next start",
     "thumbs": "node scripts/make-thumbs.mjs",
     "music": "node scripts/make-music.mjs",
+    "renders": "node scripts/make-phone-renders.mjs",
     "test:flow": "node scripts/dev/e2e.mjs",
     "test:paths": "node scripts/dev/e2e-extra.mjs",
     "test:pay": "node scripts/dev/pay-live-path.mjs"

@@ -98,7 +98,7 @@ Email + password (scrypt) and Google. Sessions are random tokens stored hashed, 
 ## Changing things
 
 - **Add or edit a design:** add an entry in `src/data/templates.ts`, a scene in `src/invite/art/scenes/`, register it in `src/invite/art/index.ts`, then regenerate catalog images (below).
-- **Catalog images:** `public/thumbs/*.webp` and `public/og.jpg` are screenshots of the real invitations. After changing artwork or sample names: run the site, then `npm run thumbs`.
+- **Catalog images:** `public/thumbs/*.webp` and `public/og.jpg` are screenshots of the real invitations. After changing artwork or sample names: run the site, then `npm run thumbs`. Then run `npm run renders`: it draws each design's two screens onto the real iPhone 16 model (`public/models/iphone-16.glb`) and writes the card and featured pictures to `public/renders/<slug>.webp`.
 - **Editor steps and fields:** `src/components/app/Editor.tsx`; the fields themselves are defined in `src/lib/invite.ts`.
 - **Stripe:** `src/server/payments/stripe.ts` describes the two functions to fill in. Orders and payments tables already carry currency and provider.
 - **Hero phones:** the home page hero draws a real iPhone 16 model (`public/models/iphone-16.glb`, compressed with meshopt) with three.js in `src/components/site/HeroPhones3D.tsx`. Each phone's screen shows that design's catalog image; poses and sway are in `POSES`. Without WebGL the flat mockups stay. Model: "iPhone 16 - Free" by Wes (sketchfab.com/wimell), Sketchfab Standard licence.
