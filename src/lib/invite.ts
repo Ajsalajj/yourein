@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import type { InviteEvent, Live, RsvpSettings, Template, Wish } from "@/data/templates";
+import { getTrack } from "@/data/music";
 
 export const EVENT_TYPES = ["Wedding", "Engagement", "Nikah", "Reception", "Anniversary", "Birthday", "Baby Shower", "Housewarming", "Other"] as const;
 
@@ -80,6 +81,16 @@ export const InviteDataSchema = z.object({
   portrait: mediaId.nullable().catch(null).default(null),
   gallery: z.array(mediaId).max(8).catch([]).default([]),
   music: mediaId.nullable().catch(null).default(null),
+  /** Where the background music comes from. "auto" is how invitations made before the library read: their upload, if any. */
+  musicSource: z.enum(["auto", "builtin", "upload", "none"]).catch("auto").default("auto"),
+  /** A track from the built-in library (src/data/music.ts). */
+  musicTrack: z.string().max(40).nullable().catch(null).default(null),
+  /** The uploaded file's name, shown back to the host. */
+  musicName: text(120),
+  /** How loud the music fades up to, out of 100. */
+  musicVolume: z.number().int().min(5).max(100).catch(35).default(35),
+  /** "on_open": starts when the guest opens the invitation. "manual": the guest taps play. */
+  musicStart: z.enum(["on_open", "manual"]).catch("on_open").default("on_open"),
   events: z.array(EventSchema).max(8).catch([]).default([]),
   countdown: flag(true),
   contacts: z.array(z.object({ name: text(60), phone: text(24) })).max(2).catch([]).default([]),
@@ -267,7 +278,9 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       eventTitle: title,
       portrait: d.portrait ? o.mediaUrl(d.portrait) : undefined,
       gallery: d.gallery.map(o.mediaUrl),
-      music: d.music ? o.mediaUrl(d.music) : undefined,
+      music: musicUrlOf(d, o.mediaUrl),
+      musicVolume: d.musicVolume,
+      musicAutostart: d.musicStart === "on_open",
       mapsUrl: d.mapsUrl || undefined,
       countdown: d.countdown && !d.thanksOn,
       thanks: d.thanksOn ? d.thanks || "Thank you for celebrating with us. Your love and blessings made our day." : undefined,
@@ -285,6 +298,22 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
 }
 
 export const mediaUrl = (id: string) => `/api/media/${id}`;
+
+/** Which music source is in effect, reading invitations made before the library as "their upload, if any". */
+export function musicSourceOf(d: Pick<InviteData, "musicSource" | "music" | "musicTrack">): "builtin" | "upload" | "none" {
+  const s = d.musicSource === "auto" ? (d.music ? "upload" : "none") : d.musicSource;
+  if (s === "builtin" && !getTrack(d.musicTrack)) return "none";
+  if (s === "upload" && !d.music) return "none";
+  return s;
+}
+
+/** The address of the music an invitation plays, if any. */
+export function musicUrlOf(d: InviteData, media: (id: string) => string = mediaUrl): string | undefined {
+  const s = musicSourceOf(d);
+  if (s === "builtin") return getTrack(d.musicTrack)!.url;
+  if (s === "upload") return media(d.music!);
+  return undefined;
+}
 
 export function slugify(s: string, fallback = "invitation"): string {
   const out = s

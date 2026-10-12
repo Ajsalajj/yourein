@@ -10,6 +10,7 @@ import { EVENT_TYPES, InviteDataSchema, MAX_GALLERY, TIME_ZONES, formatDate, for
 import { InvitationViewer } from "@/components/preview/InvitationViewer";
 import { InvitationPhoneMockup } from "@/components/site/InvitationPhoneMockup";
 import { api, shrinkImage } from "./client";
+import { MusicPicker } from "./MusicPicker";
 
 const Invitation = dynamic(() => import("@/invite/Invitation"), { ssr: false });
 
@@ -301,12 +302,12 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
     for (const [i, file] of list.entries()) {
       setUploading(kind === "gallery" && list.length > 1 ? `Uploading ${i + 1} of ${list.length}…` : "Uploading…");
       try {
-        if (kind === "music" && file.size > 4_000_000) throw new Error("That audio file is too large. Use an MP3 under 4 MB.");
+        if (kind === "music" && file.size > 4_000_000) throw new Error("That audio file is too large. Use an MP3, M4A or AAC under 4 MB.");
         const blob = kind === "music" ? file : await shrinkImage(file);
         const res = await fetch(`/api/invitations/${id}/media?kind=${kind}`, { method: "POST", body: blob });
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(out.error || "That file could not be uploaded.");
-        setData((d) => ({ ...d, portrait: out.portrait, gallery: out.gallery, music: out.music }));
+        setData((d) => ({ ...d, portrait: out.portrait, gallery: out.gallery, music: out.music, ...(kind === "music" ? { musicSource: "upload" as const, musicName: file.name.slice(0, 120) } : {}) }));
       } catch (e) {
         setUploadError((e as Error).message);
         break;
@@ -635,18 +636,23 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                 </Field>
               </div>
               <div className="ed-group">
-                <p className="ed-group-h">Music</p>
-                <p className="hint">Optional. Plays when a guest opens the invitation, with a button to pause. MP3 or M4A, up to 4 MB. Use music you have the right to share.</p>
-                <div className="chips">
-                  <label className="btn btn-quiet btn-sm file-btn">
-                    {data.music ? "Replace music" : "Choose audio file"}
-                    <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a" onChange={(e) => { void upload("music", e.target.files); e.target.value = ""; }} />
-                  </label>
-                  {data.music && <button type="button" className="btn btn-sm btn-danger" onClick={() => set("music", null)}>Remove</button>}
+                <div>
+                  <p className="ed-group-h">Background music</p>
+                  <p className="hint">Choose a track from our curated library or upload your own.</p>
                 </div>
-                {data.music && <audio controls preload="none" src={mediaUrl(data.music)} style={{ width: "100%" }} />}
-                <p className="hint" role="status">{uploading || " "}</p>
-                {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
+                <MusicPicker
+                  templateSlug={templateSlug}
+                  music={data.music}
+                  musicSource={data.musicSource}
+                  musicTrack={data.musicTrack}
+                  musicName={data.musicName}
+                  musicVolume={data.musicVolume}
+                  musicStart={data.musicStart}
+                  onPatch={(p) => setData((d) => ({ ...d, ...p }))}
+                  onUpload={(files) => void upload("music", files)}
+                  uploading={uploading}
+                  uploadError={uploadError}
+                />
               </div>
               <div className="ed-group">
                 <div>

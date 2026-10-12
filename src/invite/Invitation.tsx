@@ -30,6 +30,64 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const music = t.live?.music;
+  const musicTarget = Math.max(0.05, Math.min(1, (t.live?.musicVolume ?? 35) / 100));
+  const musicAutostart = t.live?.musicAutostart ?? true;
+
+  /* Music runs through a gain node so it can fade (iPhones ignore an audio element's volume).
+     The audio graph is made on the guest's tap, which is also what lets the browser play. */
+  const graphRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
+  const fadeRaf = useRef(0);
+  const graph = () => {
+    if (graphRef.current) return graphRef.current;
+    const a = audioRef.current;
+    const AC = typeof window !== "undefined" ? window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext : undefined;
+    if (!a || !AC) return null;
+    try {
+      const ctx = new AC();
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      ctx.createMediaElementSource(a).connect(gain).connect(ctx.destination);
+      graphRef.current = { ctx, gain };
+    } catch {
+      graphRef.current = null;
+    }
+    return graphRef.current;
+  };
+  const fade = (to: number, secs: number) => {
+    const g = graph(), a = audioRef.current;
+    if (g) {
+      const now = g.ctx.currentTime, p = g.gain.gain;
+      p.cancelScheduledValues(now);
+      p.setValueAtTime(p.value, now);
+      p.linearRampToValueAtTime(to, now + secs);
+      return;
+    }
+    if (!a) return;
+    cancelAnimationFrame(fadeRaf.current);
+    const from = a.volume, t0 = performance.now();
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / (secs * 1000));
+      a.volume = from + (to - from) * k;
+      if (k < 1) fadeRaf.current = requestAnimationFrame(step);
+    };
+    step();
+  };
+  const startMusic = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    const g = graph();
+    if (g) void g.ctx.resume();
+    else a.volume = 0;
+    a.play().then(() => fade(musicTarget, 1.8)).catch(() => {});
+  };
+  const stopMusic = () => {
+    fade(0, 0.6);
+    window.setTimeout(() => audioRef.current?.pause(), 650);
+  };
+  useEffect(() => () => {
+    cancelAnimationFrame(fadeRaf.current);
+    void graphRef.current?.ctx.close();
+  }, []);
 
   const setPhase = useCallback((p: Phase) => {
     setPhaseState(p);
@@ -76,7 +134,7 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
     if (phase !== "sealed" || !art) return;
     const hero = rootRef.current!.querySelector<HTMLElement>(".inv-hero")!;
     /* the tap that opens the invitation is also what lets the browser start the music */
-    audioRef.current?.play().catch(() => {});
+    if (music && musicAutostart) startMusic();
     setPhase("opening");
     const tl = gsap.timeline({ onComplete: () => setPhase("open") });
     art.open(hero, tl);
@@ -89,8 +147,8 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
   const toggleMusic = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (a.paused) a.play().catch(() => {});
-    else a.pause();
+    if (a.paused) startMusic();
+    else stopMusic();
   };
 
   return (
@@ -102,7 +160,7 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
             <>
               <audio ref={audioRef} src={music} loop preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
               {phase === "open" && (
-                <div className="music-dock"><button type="button" className="music-btn" onClick={toggleMusic} aria-pressed={playing} aria-label={playing ? "Pause music" : "Play music"}>
+                <div className="music-dock"><button type="button" className="music-btn" onClick={toggleMusic} aria-pressed={playing} aria-label={playing ? "Mute music" : "Play music"}>
                   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     {playing ? <path d="M8 5v14M16 5v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> : <path d="M9 18V6l10-2v12M9 18a3 3 0 1 1-6 0a3 3 0 0 1 6 0ZM19 16a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />}
                   </svg>
