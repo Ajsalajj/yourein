@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Category } from "@/data/templates";
+import { Logo } from "@/components/Logo";
 
 const LINKS: Category[] = ["Wedding", "Engagement", "Nikah", "Birthday", "Baby Shower", "Other"];
 
@@ -45,7 +46,7 @@ export function Nav() {
   return (
     <header className={`nav${raised ? " is-raised" : ""}`}>
       <div className="nav-in">
-        <Link href="/" className="logo" aria-label="YoureIn, home">YoureIn</Link>
+        <Link href="/" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
         <nav className="nav-links" aria-label="Invitation categories">
           {LINKS.map((c) => (
             <Link key={c} href={`/?category=${encodeURIComponent(c)}#templates`} onClick={(e) => onPick(e, c)}>{c}</Link>

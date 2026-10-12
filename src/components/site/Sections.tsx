@@ -7,6 +7,7 @@ import { HeroStage, RsvpDemoCard } from "./Client";
 import { DashboardDemo } from "./DashboardDemo";
 import { InvitationPhoneMockup } from "./InvitationPhoneMockup";
 import { Price } from "./Price";
+import { Logo } from "@/components/Logo";
 
 export function Hero() {
   const centre = getTemplate("scenic-romance")!;
@@ -236,7 +237,7 @@ export function Footer() {
     <footer className="foot">
       <div className="wrap foot-in">
         <div>
-          <Link href="/" className="logo">YoureIn</Link>
+          <Link href="/" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
           <p className="foot-tag">Invitations worth opening.</p>
         </div>
         <nav aria-label="Categories" className="foot-links">

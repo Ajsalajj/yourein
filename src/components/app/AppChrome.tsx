@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/Logo";
 
 const ITEMS: { href: string; label: string; match: (p: string) => boolean; icon: React.ReactNode }[] = [
   { href: "/dashboard", label: "Home", match: (p) => p === "/dashboard", icon: <path d="M4 11l8-7 8 7v8.5a.5.5 0 0 1-.5.5H14v-6h-4v6H4.500a.5.5 0 0 1-.5-.5Z" /> },
@@ -15,7 +16,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <div className="app">
       <header className="app-top">
-        <Link href="/dashboard" className="logo">YoureIn</Link>
+        <Link href="/dashboard" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
         <nav className="app-top-nav" aria-label="Sections">
           {ITEMS.map((it) => <Link key={it.href} href={it.href} aria-current={it.match(pathname) ? "page" : undefined}>{it.label}</Link>)}
         </nav>

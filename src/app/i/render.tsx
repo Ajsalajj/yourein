@@ -8,6 +8,7 @@ import { attendingCount, getPublished } from "@/server/invitations";
 import { siteOrigin } from "@/server/origin";
 import { listPublicWishes } from "@/server/wishes";
 import "./public.css";
+import { Logo } from "@/components/Logo";
 
 const SLUG = /^[a-z0-9-]{1,80}$/;
 
@@ -33,7 +34,7 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
   if (inv.status === "archived") {
     return (
       <main className="pub-gone">
-        <p className="logo">YoureIn</p>
+        <p className="logo"><Logo /></p>
         <h1>This invitation is no longer available.</h1>
         <p>The hosts have taken it down. If you think this is a mistake, please get in touch with them directly.</p>
       </main>
@@ -47,7 +48,7 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
   if (guest?.disabled) {
     return (
       <main className="pub-gone">
-        <p className="logo">YoureIn</p>
+        <p className="logo"><Logo /></p>
         <h1>This personal link has been turned off.</h1>
         <p>The hosts have switched off this link. If you think this is a mistake, please get in touch with them directly.</p>
       </main>
