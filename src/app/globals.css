@@ -89,6 +89,9 @@ ol, ul { padding: 0; list-style: none; }
 
 h1, h2 { font-family: var(--f-display); font-weight: 400; letter-spacing: -0.02em; }
 .logo { font-family: var(--f-display); font-weight: 400; letter-spacing: -0.02em; }
+.logo { display: inline-flex; align-items: center; line-height: 0; }
+.logo .logo-img { height: 24px; width: auto; }
+@media (min-width: 720px) { .logo .logo-img { height: 28px; } }
 .rs { font-family: var(--f-ui); font-weight: 300; font-size: 0.84em; letter-spacing: 0; margin-right: 0.04em; }
 h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: balance; }
 .sec-head { margin-bottom: 20px; max-width: 44rem; }

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Logo } from "@/components/Logo";
 
 type Mode = "choose" | "signup" | "signin" | "forgot";
 
@@ -64,7 +65,7 @@ export function AuthScreen({ next, template, error, saving = false, startMode = 
   return (
     <div className="auth">
       <header className="auth-top">
-        <Link href="/" className="logo">YoureIn</Link>
+        <Link href="/" className="logo"><Logo /></Link>
         <a className="auth-x" href={template ? `/templates/${template.slug}` : "/"} aria-label="Close and go back">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </a>
@@ -161,7 +162,7 @@ export function ResetScreen({ token }: { token: string }) {
   };
   return (
     <div className="auth">
-      <header className="auth-top"><Link href="/" className="logo">YoureIn</Link></header>
+      <header className="auth-top"><Link href="/" className="logo"><Logo /></Link></header>
       <main className="auth-card">
         <h1>Choose a new password.</h1>
         <p className="auth-sub">You will be signed in straight after.</p>
