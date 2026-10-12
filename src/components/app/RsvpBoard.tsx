@@ -25,6 +25,7 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published, func
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [open, setOpen] = useState<RsvpView | null>(null);
   const { setToast, node } = useToast();
 
   const refresh = async () => {
@@ -44,6 +45,7 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published, func
     if (!window.confirm(`Delete the reply from ${r.name}? This cannot be undone.`)) return;
     try {
       await api("DELETE", `/api/invitations/${id}/rsvps/${r.id}`);
+      setOpen(null);
       await refresh();
     } catch (e) {
       setToast((e as Error).message);
@@ -118,23 +120,15 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published, func
         <>
           <div className="rows rows-as-table">
             {shown.map((r) => (
-              <article key={r.id} className="row-card">
-                <div className="row-head">
-                  <div>
-                    <p className="row-name">{r.name}</p>
-                    <p className="row-sub">{when(r.updatedAt)}</p>
-                  </div>
+              <button key={r.id} type="button" className="row-card row-tap" onClick={() => setOpen(r)} aria-haspopup="dialog">
+                <span className="row-head">
+                  <span>
+                    <span className="row-name">{r.name}</span>
+                    <span className="row-sub">{r.status === "no" ? "Not coming" : `${r.count} ${r.count === 1 ? "guest" : "guests"}`} · {when(r.updatedAt)}</span>
+                  </span>
                   <span className={`pill pill-${r.status}`}>{LABEL[r.status]}</span>
-                </div>
-                <p className="row-facts">
-                  <span><b>{r.count}</b> {r.count === 1 ? "guest" : "guests"}</span>
-                  {r.phone && <span><a href={`tel:${r.phone.replace(/[^\d+]/g, "")}`}>{r.phone}</a></span>}
-                  {r.meal && <span>{r.meal}</span>}
-                </p>
-                {extras(r).length > 0 && <p className="row-facts">{extras(r).map((x) => <span key={x}>{x}</span>)}</p>}
-                {r.message && <p className="row-msg">{r.message}</p>}
-                <div className="row-actions"><button type="button" className="btn btn-danger" onClick={() => remove(r)}>Delete reply</button></div>
-              </article>
+                </span>
+              </button>
             ))}
           </div>
           <table className="table">
@@ -157,6 +151,31 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published, func
             </tbody>
           </table>
         </>
+      )}
+      {open && (
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="rsvp-h" onClick={(e) => { if (e.target === e.currentTarget) setOpen(null); }}>
+          <div className="modal-card">
+            <div className="modal-head">
+              <h2 id="rsvp-h">{open.name}</h2>
+              <button type="button" className="modal-x" onClick={() => setOpen(null)} aria-label="Close">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+              </button>
+            </div>
+            <dl className="detail-list">
+              <div><dt>Reply</dt><dd><span className={`pill pill-${open.status}`}>{LABEL[open.status]}</span></dd></div>
+              <div><dt>Guests</dt><dd>{open.count}</dd></div>
+              {open.phone && <div><dt>Phone</dt><dd><a href={`tel:${open.phone.replace(/[^\d+]/g, "")}`}>{open.phone}</a></dd></div>}
+              {open.meal && <div><dt>Meal</dt><dd>{open.meal}</dd></div>}
+              {functions.filter((f) => open.events?.[f.id]).map((f) => <div key={f.id}><dt>{f.title}</dt><dd>{open.events[f.id]}</dd></div>)}
+              {questions.filter((q) => open.answers?.[q.id]).map((q) => <div key={q.id}><dt>{q.label}</dt><dd>{open.answers[q.id]}</dd></div>)}
+              <div><dt>Replied</dt><dd>{when(open.updatedAt)}</dd></div>
+            </dl>
+            {open.message && <p className="row-msg" style={{ marginTop: 12 }}>{open.message}</p>}
+            <div className="modal-actions" style={{ gridTemplateColumns: "1fr", marginTop: 16 }}>
+              <button type="button" className="btn btn-danger" onClick={() => remove(open)}>Delete reply</button>
+            </div>
+          </div>
+        </div>
       )}
       {node}
     </>

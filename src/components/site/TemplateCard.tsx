@@ -14,11 +14,9 @@ export function TemplateCard({ t, priority }: { t: Template; priority?: boolean 
         <InvitationPhoneMockup t={t} priority={priority} sizes="(max-width: 720px) 40vw, (max-width: 1039px) 26vw, 190px" />
       </PreviewButton>
       <div className="card-info">
+        <p className="card-cat">{t.category}</p>
         <h3 className="card-name"><Link href={`/templates/${t.slug}`}>{t.name}</Link></h3>
-        <p className="card-row">
-          <span className="card-cat">{t.category}</span>
-          <span className="card-price"><Price /></span>
-        </p>
+        <p className="card-price"><Price /></p>
         <p className="card-blurb">{t.blurb}</p>
         <div className="card-actions">
           <PreviewButton slug={t.slug} className="btn btn-quiet btn-sm"><EyeIcon />Preview</PreviewButton>
