@@ -327,3 +327,8 @@
 .check-row { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 0.95rem; }
 .check-row input { width: 18px; height: 18px; accent-color: var(--ink); }
 fieldset.field { border: 0; padding: 0; margin: 0; }
+
+.ed-hist { display: flex; gap: 2px; margin-left: auto; margin-right: 8px; }
+.ed-hist-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
+.ed-hist-btn:hover:not(:disabled) { background: var(--cream); }
+.ed-hist-btn:disabled { opacity: 0.3; cursor: default; }

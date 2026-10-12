@@ -5,7 +5,7 @@ import type { Template } from "@/data/templates";
 import { formatDate } from "@/lib/invite";
 
 type Status = "yes" | "maybe" | "no";
-type Saved = { status: Status; count: number; name: string; token?: string; events?: Record<string, number> };
+type Saved = { status: Status; count: number; name: string; token?: string; events?: Record<string, number>; answers?: Record<string, string>; meal?: string };
 
 const LABEL: Record<Status, string> = { yes: "Yes, I’ll be there", maybe: "Maybe", no: "Sorry, can’t make it" };
 
@@ -38,7 +38,7 @@ export function RsvpForm({ t }: { t: Template }) {
   const [message, setMessage] = useState("");
   const [perEvent, setPerEvent] = useState<Record<string, number>>({});
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState<Saved | null>(guest?.replied ? { status: guest.replied.status, count: guest.replied.count, name: guest.name, events: guest.replied.events } : null);
+  const [saved, setSaved] = useState<Saved | null>(guest?.replied ? { status: guest.replied.status, count: guest.replied.count, name: guest.name, events: guest.replied.events, answers: guest.replied.answers, meal: guest.replied.meal } : null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -98,7 +98,7 @@ export function RsvpForm({ t }: { t: Template }) {
         setError(out.error || "Your reply could not be sent. Please try again.");
         return;
       }
-      const next: Saved = { status: status_, count: out.count ?? (status_ === "no" ? 0 : count), name: guest?.name ?? name.trim(), token: out.token ?? saved?.token, events: byEvent ? perEvent : undefined };
+      const next: Saved = { status: status_, count: out.count ?? (status_ === "no" ? 0 : count), name: guest?.name ?? name.trim(), token: out.token ?? saved?.token, events: byEvent ? perEvent : undefined, answers, meal };
       setSaved(next);
       setEditing(false);
       try {
@@ -118,6 +118,8 @@ export function RsvpForm({ t }: { t: Template }) {
       setStatus(saved.status);
       if (saved.count > 0) setCount(Math.min(saved.count, max));
       if (saved.events) setPerEvent(saved.events);
+      if (saved.answers) setAnswers(saved.answers);
+      if (saved.meal) setMeal(saved.meal);
     }
     setEditing(true);
   };

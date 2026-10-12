@@ -11,12 +11,12 @@ export type Guest = {
   /** The host turned this guest's personal link off. */
   disabled: boolean;
   sentAt: Date | null; createdAt: Date;
-  reply: { status: "yes" | "maybe" | "no"; count: number; events: Record<string, number> } | null;
+  reply: { status: "yes" | "maybe" | "no"; count: number; events: Record<string, number>; answers: Record<string, string>; meal: string } | null;
 };
 
 type GuestRow = {
   id: string; slug: string; name: string; phone: string; email: string; group_name: string; invited_count: number; max_attendees: number | null; note: string;
-  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null; private_events: unknown; reply_events?: unknown; disabled: boolean;
+  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null; private_events: unknown; reply_events?: unknown; reply_answers?: unknown; reply_meal?: string | null; disabled: boolean;
 };
 
 const ids = (v: unknown): string[] => {
@@ -33,12 +33,12 @@ const toGuest = (r: GuestRow): Guest => ({
   id: r.id, slug: r.slug, name: r.name, phone: r.phone, email: r.email, group: r.group_name, invited: r.invited_count, max: r.max_attendees, note: r.note,
   privateEvents: ids(r.private_events),
   disabled: !!r.disabled,
-  sentAt: r.sent_at, createdAt: r.created_at, reply: r.response_status ? { status: r.response_status, count: r.attendee_count ?? 0, events: obj<number>(r.reply_events) } : null,
+  sentAt: r.sent_at, createdAt: r.created_at, reply: r.response_status ? { status: r.response_status, count: r.attendee_count ?? 0, events: obj<number>(r.reply_events), answers: obj<string>(r.reply_answers), meal: r.reply_meal ?? "" } : null,
 });
 
 export async function listGuests(invitationId: string): Promise<Guest[]> {
   const rows = await sql<GuestRow>`
-    select g.*, r.response_status, r.attendee_count, r.events as reply_events from guests g left join rsvps r on r.guest_id = g.id
+    select g.*, r.response_status, r.attendee_count, r.events as reply_events, r.answers as reply_answers, r.meal_preference as reply_meal from guests g left join rsvps r on r.guest_id = g.id
     where g.invitation_id = ${invitationId} order by g.created_at desc`;
   return rows.map(toGuest);
 }
@@ -120,7 +120,7 @@ export async function activeGuestBySlug(invitationId: string, slug: string) {
 
 export async function guestBySlug(invitationId: string, slug: string) {
   const rows = await sql<GuestRow>`
-    select g.*, r.response_status, r.attendee_count, r.events as reply_events from guests g left join rsvps r on r.guest_id = g.id
+    select g.*, r.response_status, r.attendee_count, r.events as reply_events, r.answers as reply_answers, r.meal_preference as reply_meal from guests g left join rsvps r on r.guest_id = g.id
     where g.invitation_id = ${invitationId} and g.slug = ${slug}`;
   return rows[0] ? toGuest(rows[0]) : null;
 }
