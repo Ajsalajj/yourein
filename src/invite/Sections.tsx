@@ -201,6 +201,41 @@ function Venue({ t }: { t: Template }) {
   );
 }
 
+/** An update from the hosts, such as a changed time or venue. */
+function Notice({ t }: { t: Template }) {
+  if (!t.live?.notice) return null;
+  return (
+    <section className="sec sec-notice" role="status">
+      <p className="notice-label">Update from the hosts</p>
+      <p className="notice-text">{t.live.notice}</p>
+    </section>
+  );
+}
+
+function Stays({ t }: { t: Template }) {
+  const stays = t.live?.stays ?? [];
+  if (!stays.length) return null;
+  return (
+    <section className="sec sec-stays">
+      <h2 className="sec-title" data-rv="wipe">Where to stay</h2>
+      <ul className="stays" data-rv="up">
+        {stays.map((s, i) => (
+          <li key={i} className="stay">
+            <h3 className="stay-name">{s.name}</h3>
+            {s.note && <p className="stay-note">{s.note}</p>}
+            {(s.url || s.phone) && (
+              <p className="stay-links">
+                {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer">View or book</a>}
+                {s.phone && <a href={`tel:${s.phone.replace(/[^\d+]/g, "")}`}>{s.phone}</a>}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Gallery({ t }: { t: Template }) {
   const id = useId().replace(/:/g, "");
   const live = t.live;
@@ -285,12 +320,14 @@ function Closing({ t, footer }: { t: Template; footer?: React.ReactNode }) {
 export function Sections({ t, footer }: { t: Template; footer?: React.ReactNode }) {
   return (
     <div className="inv-body">
+      <Notice t={t} />
       <Message t={t} />
       <Portrait t={t} />
       <Feature t={t} />
       <Events t={t} />
       <Countdown t={t} />
       <Venue t={t} />
+      <Stays t={t} />
       <Gallery t={t} />
       <RsvpForm t={t} />
       <Guestbook t={t} />

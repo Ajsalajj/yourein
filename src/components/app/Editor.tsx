@@ -429,6 +429,34 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                 ))}
                 {data.events.length < 8 && <button type="button" className="btn btn-quiet btn-block" onClick={addEvent}>+ Add an event</button>}
               </div>
+              <div className="ed-group">
+                <p className="ed-group-h">Update for guests</p>
+                <Field label="Message" hint="Optional. Shown in a band at the top of the invitation, for example a changed time or venue. Leave empty to hide it.">
+                  <textarea value={data.notice} onChange={(e) => set("notice", e.target.value)} maxLength={200} rows={2} placeholder="The Sangeet now starts at 8 pm." />
+                </Field>
+              </div>
+              <div className="ed-group">
+                <p className="ed-group-h">Where to stay</p>
+                <p className="hint">Optional. Suggest up to 4 hotels or homestays for guests travelling in.</p>
+                {data.stays.map((st, i) => {
+                  const patchStay = (p: Partial<typeof st>) => set("stays", data.stays.map((x, k) => (k === i ? { ...x, ...p } : x)));
+                  return (
+                    <div key={i} className="event-card">
+                      <div className="event-card-head">
+                        <span>Place {i + 1}</span>
+                        <button type="button" className="btn btn-sm btn-danger" onClick={() => set("stays", data.stays.filter((_, k) => k !== i))}>Remove</button>
+                      </div>
+                      <Field label="Name"><input type="text" value={st.name} onChange={(e) => patchStay({ name: e.target.value })} maxLength={80} placeholder="Hotel Lake View" /></Field>
+                      <Field label="Note" hint="Distance, price range, a booking code…"><input type="text" value={st.note} onChange={(e) => patchStay({ note: e.target.value })} maxLength={160} /></Field>
+                      <div className="row2">
+                        <Field label="Website or booking link"><input type="url" value={st.url} onChange={(e) => patchStay({ url: e.target.value })} maxLength={600} placeholder="https://" inputMode="url" /></Field>
+                        <Field label="Phone"><input type="tel" value={st.phone} onChange={(e) => patchStay({ phone: e.target.value })} maxLength={24} inputMode="tel" /></Field>
+                      </div>
+                    </div>
+                  );
+                })}
+                {data.stays.length < 4 && <button type="button" className="btn btn-quiet btn-block" onClick={() => set("stays", [...data.stays, { name: "", note: "", url: "", phone: "" }])}>+ Add a place to stay</button>}
+              </div>
             </>
           )}
 

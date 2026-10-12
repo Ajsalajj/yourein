@@ -88,6 +88,10 @@ export type Live = {
   rsvp: (RsvpSettings & { closed: boolean; full: boolean }) | null;
   /** Present when the host has the guestbook switched on. */
   guestbook: { wishes: Wish[] } | null;
+  /** An update from the hosts, shown at the top. */
+  notice?: string;
+  /** Places to stay the hosts suggest. */
+  stays: { name: string; note: string; url: string; phone: string }[];
   /** Public address of this invitation, once published. */
   invitation?: string;
   shareUrl?: string;

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Wish } from "@/data/templates";
 import { sql } from "./db";
-import { guestBySlug } from "./guests";
+import { activeGuestBySlug } from "./guests";
 import { ApiError } from "./http";
 import type { Invitation } from "./invitations";
 
@@ -29,7 +29,7 @@ export async function addWish(inv: Invitation, guestSlug: string | null, input: 
   if (inv.status !== "published") throw new ApiError(410, "This invitation is no longer taking wishes.");
   if (!inv.data.guestbook) throw new ApiError(400, "The guestbook is not open for this invitation.");
 
-  const guest = guestSlug ? await guestBySlug(inv.id, guestSlug) : null;
+  const guest = guestSlug ? await activeGuestBySlug(inv.id, guestSlug) : null;
   if (guestSlug && !guest) throw new ApiError(404, "This personal link is no longer valid. Ask the hosts for a new one.");
 
   const name = (guest?.name || String(input.name ?? "")).trim().slice(0, 60);

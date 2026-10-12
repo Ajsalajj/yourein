@@ -8,13 +8,15 @@ export type Guest = {
   id: string; slug: string; name: string; phone: string; email: string; group: string; invited: number; max: number | null; note: string;
   /** Private events this guest may see and reply to. */
   privateEvents: string[];
+  /** The host turned this guest's personal link off. */
+  disabled: boolean;
   sentAt: Date | null; createdAt: Date;
   reply: { status: "yes" | "maybe" | "no"; count: number; events: Record<string, number> } | null;
 };
 
 type GuestRow = {
   id: string; slug: string; name: string; phone: string; email: string; group_name: string; invited_count: number; max_attendees: number | null; note: string;
-  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null; private_events: unknown; reply_events?: unknown;
+  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null; private_events: unknown; reply_events?: unknown; disabled: boolean;
 };
 
 const ids = (v: unknown): string[] => {
@@ -30,6 +32,7 @@ const obj = <T,>(v: unknown): Record<string, T> => {
 const toGuest = (r: GuestRow): Guest => ({
   id: r.id, slug: r.slug, name: r.name, phone: r.phone, email: r.email, group: r.group_name, invited: r.invited_count, max: r.max_attendees, note: r.note,
   privateEvents: ids(r.private_events),
+  disabled: !!r.disabled,
   sentAt: r.sent_at, createdAt: r.created_at, reply: r.response_status ? { status: r.response_status, count: r.attendee_count ?? 0, events: obj<number>(r.reply_events) } : null,
 });
 
@@ -40,7 +43,7 @@ export async function listGuests(invitationId: string): Promise<Guest[]> {
   return rows.map(toGuest);
 }
 
-export type GuestInput = { name?: unknown; phone?: unknown; email?: unknown; group?: unknown; invited?: unknown; max?: unknown; note?: unknown; sent?: unknown; privateEvents?: unknown };
+export type GuestInput = { name?: unknown; phone?: unknown; email?: unknown; group?: unknown; invited?: unknown; max?: unknown; note?: unknown; sent?: unknown; privateEvents?: unknown; disabled?: unknown };
 
 /** Keeps only ids of this invitation's private events. */
 async function cleanPrivate(invitationId: string, v: unknown): Promise<string[]> {
@@ -92,7 +95,9 @@ export async function addGuest(invitationId: string, input: GuestInput): Promise
 export async function updateGuest(invitationId: string, guestId: string, input: GuestInput): Promise<Guest> {
   const existing = await sql<{ id: string }>`select id from guests where id = ${guestId} and invitation_id = ${invitationId}`;
   if (!existing[0]) throw new ApiError(404, "That guest is no longer on the list.");
-  if (input.sent !== undefined && input.name === undefined) {
+  if (input.disabled !== undefined && input.name === undefined) {
+    await sql`update guests set disabled = ${input.disabled === true} where id = ${guestId}`;
+  } else if (input.sent !== undefined && input.name === undefined) {
     await sql`update guests set sent_at = ${input.sent ? new Date() : null} where id = ${guestId}`;
   } else {
     const g = clean(input);
@@ -105,6 +110,12 @@ export async function updateGuest(invitationId: string, guestId: string, input: 
 
 export async function removeGuest(invitationId: string, guestId: string) {
   await sql`delete from guests where id = ${guestId} and invitation_id = ${invitationId}`;
+}
+
+/** A guest whose personal link still works; null when there is none or the host turned it off. */
+export async function activeGuestBySlug(invitationId: string, slug: string) {
+  const g = await guestBySlug(invitationId, slug);
+  return g && !g.disabled ? g : null;
 }
 
 export async function guestBySlug(invitationId: string, slug: string) {
@@ -202,7 +213,7 @@ export async function submitRsvp(inv: Invitation, guestSlug: string | null, inpu
   if (!settings.enabled) throw new ApiError(400, "Replies are not being collected for this invitation.");
   if (settings.deadline && todayIn(inv.data.tz) > settings.deadline) throw new ApiError(400, "The reply date has passed. Please contact the hosts directly.");
 
-  const guest = guestSlug ? await guestBySlug(inv.id, guestSlug) : null;
+  const guest = guestSlug ? await activeGuestBySlug(inv.id, guestSlug) : null;
   if (guestSlug && !guest) throw new ApiError(404, "This personal link is no longer valid. Ask the hosts for a new one.");
 
   const name = (guest?.name || String(input.name ?? "")).trim().slice(0, 80);
