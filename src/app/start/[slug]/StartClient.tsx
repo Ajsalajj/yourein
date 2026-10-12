@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function StartClient({ slug, name }: { slug: string; name: string }) {
+export function StartClient({ slug, name, signedOut }: { slug: string; name: string; signedOut: boolean }) {
   const started = useRef(false);
   const [error, setError] = useState("");
 
@@ -10,14 +10,20 @@ export function StartClient({ slug, name }: { slug: string; name: string }) {
     if (started.current) return;
     started.current = true;
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    fetch("/api/invitations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ template: slug, tz, reuse: true }) })
+    const json = { "Content-Type": "application/json" };
+    /* signed-out visitors customize as a guest; sign-in comes at payment */
+    (signedOut ? fetch("/api/auth/guest", { method: "POST", headers: json, body: "{}" }) : Promise.resolve(null))
+      .then((res) => {
+        if (res && !res.ok) throw new Error("We could not start your invitation.");
+        return fetch("/api/invitations", { method: "POST", headers: json, body: JSON.stringify({ template: slug, tz, reuse: true }) });
+      })
       .then(async (res) => {
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(out.error || "We could not start your invitation.");
         window.location.replace(`/edit/${out.id}`);
       })
       .catch((e: Error) => setError(e.message));
-  }, [slug]);
+  }, [slug, signedOut]);
 
   return (
     <div className="auth">

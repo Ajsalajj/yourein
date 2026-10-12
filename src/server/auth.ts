@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqua
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { sql } from "./db";
+import { sql, transaction } from "./db";
 import { ApiError } from "./http";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
@@ -10,7 +10,8 @@ const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) =>
 export const SESSION_COOKIE = "yi_session";
 const SESSION_DAYS = 30;
 
-export type User = { id: string; email: string; name: string; hasPassword: boolean; google: boolean };
+/** `guest` is a visitor customizing a design before signing in: no email, and only allowed to edit their own drafts. */
+export type User = { id: string; email: string; name: string; hasPassword: boolean; google: boolean; guest: boolean };
 
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 export const newToken = () => randomBytes(32).toString("base64url");
@@ -43,10 +44,16 @@ export function checkPassword(password: unknown): string {
   return p;
 }
 
-type UserRow = { id: string; email: string; name: string; password_hash: string | null; google_sub: string | null };
-const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, name: r.name, hasPassword: !!r.password_hash, google: !!r.google_sub });
+type UserRow = { id: string; email: string | null; name: string; password_hash: string | null; google_sub: string | null; guest?: boolean };
+const toUser = (r: UserRow): User => ({ id: r.id, email: r.email ?? "", name: r.name, hasPassword: !!r.password_hash, google: !!r.google_sub, guest: !!r.guest });
 
-export async function createSession(userId: string) {
+/**
+ * Signs the browser in as this user. If the browser was a guest until now,
+ * the drafts it made move to this account and the guest account is removed.
+ */
+export async function createSession(userId: string, opts: { guest?: boolean } = {}) {
+  const previous = await getUser();
+  if (previous?.guest && previous.id !== userId) await claimGuest(previous.id, userId);
   const token = newToken();
   const expires = new Date(Date.now() + SESSION_DAYS * 86400_000);
   await sql`insert into sessions (id, user_id, token_hash, expires_at) values (${randomUUID()}, ${userId}, ${sha256(token)}, ${expires})`;
@@ -58,6 +65,7 @@ export async function createSession(userId: string) {
     expires,
   });
   /* not a secret: lets static pages show "My invitations" instead of "Sign in" */
+  if (opts.guest) return;
   (await cookies()).set("yi_in", "1", { sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires });
 }
 
@@ -74,24 +82,46 @@ export async function getUser(): Promise<User | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const rows = await sql<UserRow>`
-    select u.id, u.email, u.name, u.password_hash, u.google_sub
+    select u.id, u.email, u.name, u.password_hash, u.google_sub, u.guest
     from sessions s join users u on u.id = s.user_id
     where s.token_hash = ${sha256(token)} and s.expires_at > now()`;
   return rows[0] ? toUser(rows[0]) : null;
 }
 
-/** For API routes. */
-export async function requireUser(): Promise<User> {
+/** For API routes. Guests are treated as signed out unless the route only touches their own drafts. */
+export async function requireUser(opts: { allowGuest?: boolean } = {}): Promise<User> {
   const user = await getUser();
-  if (!user) throw new ApiError(401, "Please sign in to continue.", "signed-out");
+  if (!user || (user.guest && !opts.allowGuest)) throw new ApiError(401, "Please sign in to continue.", "signed-out");
   return user;
 }
 
-/** For pages: sends signed-out visitors to sign in, then back to where they were going. */
-export async function requireUserPage(returnTo: string): Promise<User> {
+/** For pages: sends signed-out visitors (and guests, unless allowed) to sign in, then back to where they were going. */
+export async function requireUserPage(returnTo: string, opts: { allowGuest?: boolean } = {}): Promise<User> {
   const user = await getUser();
-  if (!user) redirect(`/signin?next=${encodeURIComponent(returnTo)}`);
+  if (!user || (user.guest && !opts.allowGuest)) redirect(`/signin?next=${encodeURIComponent(returnTo)}`);
   return user;
+}
+
+/* ------------------------------------------------------------------ guests */
+
+/** A temporary account so a visitor can customize a design before signing in. */
+export async function startGuest(): Promise<void> {
+  /* drafts nobody came back to; guests cannot pay, so nothing published is ever removed */
+  await sql`delete from users where guest and created_at < now() - interval '30 days'`;
+  const id = randomUUID();
+  await sql`insert into users (id, email, name, guest) values (${id}, null, '', true)`;
+  await createSession(id, { guest: true });
+}
+
+/** Moves a guest's drafts and uploads to the account they signed in to, then removes the guest. */
+async function claimGuest(guestId: string, userId: string) {
+  await transaction(async (q) => {
+    const rows = await q<{ guest: boolean }>`select guest from users where id = ${guestId}`;
+    if (!rows[0]?.guest) return;
+    await q`update invitations set user_id = ${userId} where user_id = ${guestId}`;
+    await q`update photos set user_id = ${userId} where user_id = ${guestId}`;
+    await q`delete from users where id = ${guestId}`;
+  });
 }
 
 export async function signUp(emailIn: unknown, passwordIn: unknown, nameIn: unknown): Promise<User> {
@@ -105,7 +135,7 @@ export async function signUp(emailIn: unknown, passwordIn: unknown, nameIn: unkn
   }
   const id = randomUUID();
   await sql`insert into users (id, email, name, password_hash) values (${id}, ${email}, ${name}, ${await hashPassword(password)})`;
-  return { id, email, name, hasPassword: true, google: false };
+  return { id, email, name, hasPassword: true, google: false, guest: false };
 }
 
 export async function signIn(emailIn: unknown, passwordIn: unknown): Promise<User> {
@@ -137,7 +167,7 @@ export async function googleUser(sub: string, emailIn: string, name: string): Pr
   }
   const id = randomUUID();
   await sql`insert into users (id, email, name, google_sub) values (${id}, ${email}, ${name.slice(0, 80)}, ${sub})`;
-  return { id, email, name, hasPassword: false, google: true };
+  return { id, email, name, hasPassword: false, google: true, guest: false };
 }
 
 /** Returns a one-hour reset token for the account, or null when there is none. */
