@@ -15,8 +15,9 @@ export function Hero() {
     <section className="hero">
       <div className="wrap hero-in">
         <div className="hero-copy">
+          <p className="eyebrow">Premium digital invitations</p>
           <h1>Invitations worth opening.</h1>
-          <p className="hero-sub">Create a beautiful digital invitation, personalize every detail, and know exactly who’s coming.</p>
+          <p className="hero-sub">Create, personalize and share a beautiful invitation — and know exactly who’s coming.</p>
           <div className="hero-cta">
             <a className="btn btn-solid" href="#templates">Explore Templates</a>
             <a className="btn btn-line" href="/create">Create Invitation</a>

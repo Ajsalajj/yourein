@@ -51,6 +51,7 @@ export function ShareButtons({ url, names, dateLabel, primary }: { url: string; 
   return (
     <div className="share-grid">
       <a className={`btn ${primary ? "btn-solid" : "btn-quiet"}`} href={whatsappShare(text)} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      <a className="btn btn-quiet" href={`sms:?&body=${encodeURIComponent(text)}`}>Messages</a>
       <a className="btn btn-quiet" href={mailShare(`You’re invited: ${names}`, text)}>Email</a>
       {canShare && <button type="button" className="btn btn-quiet" onClick={native}>More…</button>}
       <a className="btn btn-quiet" href="#qr">QR code</a>

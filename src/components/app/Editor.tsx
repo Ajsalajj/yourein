@@ -101,6 +101,13 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
   const set = useCallback(<K extends keyof InviteData>(key: K, value: InviteData[K]) => setData((d) => ({ ...d, [key]: value })), []);
   const setRsvp = <K extends keyof InviteData["rsvp"]>(key: K, value: InviteData["rsvp"][K]) => setData((d) => ({ ...d, rsvp: { ...d.rsvp, [key]: value } }));
 
+  /* ---- keep the current step's chip in view on phones ---- */
+  useEffect(() => {
+    const row = document.querySelector<HTMLElement>(".ed-steps");
+    const el = row?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (row && el) row.scrollTo({ left: el.offsetLeft - row.clientWidth / 2 + el.clientWidth / 2, behavior: "smooth" });
+  }, [step]);
+
   /* ---- undo and redo: quick runs of changes (typing a word) count as one step ---- */
   type Snap = { data: InviteData; templateSlug: string };
   const hist = useRef<{ past: Snap[]; future: Snap[]; prev: Snap; last: number; skip: boolean }>({

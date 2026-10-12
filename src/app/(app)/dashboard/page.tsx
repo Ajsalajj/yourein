@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Greeting } from "@/components/app/Greeting";
 import { InviteCard } from "@/components/app/InviteCard";
 import { requireUserPage } from "@/server/auth";
 import { listForUser } from "@/server/invitations";
@@ -16,18 +17,24 @@ export default async function DashboardPage() {
     <main className="app-main">
       <div className="page-head">
         <div>
-          <h1 className="page-h">Hello{first ? `, ${first}` : ""}</h1>
+          <h1 className="page-h"><Greeting name={first} /></h1>
           <p className="page-sub">
             {invites.length === 0 ? "Let’s make your first invitation." : live.length ? `${responses} ${responses === 1 ? "reply" : "replies"} so far, ${attending} ${attending === 1 ? "guest" : "guests"} attending.` : "Pick up where you left off."}
           </p>
         </div>
-        <a className="btn btn-solid" href="/create">+ Create Invitation</a>
       </div>
+      <a className="create-card" href="/create">
+        <span className="create-card-text">
+          <b>Create a new invitation</b>
+          <small>Choose a design and personalize it in minutes.</small>
+        </span>
+        <span className="create-card-go">Create</span>
+      </a>
+      {invites.length > 0 && <h2 className="section-h">My invitations</h2>}
       {invites.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ marginTop: 16 }}>
           <h2>No invitations yet</h2>
-          <p>Choose a design, add your details and publish when you are ready. Customizing is free.</p>
-          <a className="btn btn-solid" href="/create">Choose a design</a>
+          <p>Create your first one. Customizing is free; you only pay when you publish.</p>
         </div>
       ) : (
         <>

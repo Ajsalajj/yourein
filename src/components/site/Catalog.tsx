@@ -9,6 +9,7 @@ const TABS: Pick[] = ["All", ...CATEGORIES];
 
 export function Catalog({ heading = "All templates", intro }: { heading?: string; intro?: string }) {
   const [cat, setCat] = useState<Pick>("All");
+  const [query, setQuery] = useState("");
   const tabs = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,7 +35,11 @@ export function Catalog({ heading = "All templates", intro }: { heading?: string
     window.history.replaceState(window.history.state, "", url);
   };
 
-  const list = useMemo(() => templatesIn(cat), [cat]);
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const inCat = templatesIn(cat);
+    return q ? inCat.filter((t) => `${t.name} ${t.category} ${t.blurb} ${t.filters.join(" ")}`.toLowerCase().includes(q)) : inCat;
+  }, [cat, query]);
   const counts = useMemo(() => Object.fromEntries(TABS.map((c) => [c, templatesIn(c).length])) as Record<Pick, number>, []);
 
   return (
@@ -44,6 +49,11 @@ export function Catalog({ heading = "All templates", intro }: { heading?: string
           <h2 id="catalog-h">{heading}</h2>
           <p>{intro ?? `${TEMPLATES.length} designs. Tap one to try it, then make it yours.`}</p>
         </div>
+        <label className="search">
+          <span className="sr-only">Search templates</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.7" /><path d="M16 16l4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search templates" enterKeyHint="search" />
+        </label>
         <div className="tabs" ref={tabs} role="group" aria-label="Filter by occasion">
           {TABS.map((c) => (
             <button key={c} type="button" className="tab" aria-pressed={cat === c} onClick={() => choose(c)}>
@@ -53,8 +63,14 @@ export function Catalog({ heading = "All templates", intro }: { heading?: string
           ))}
         </div>
         {list.length > 0 ? (
-          <div className="grid" key={cat}>
+          <div className="grid" key={`${cat}|${query.trim()}`}>
             {list.map((t, i) => <TemplateCard key={t.slug} t={t} priority={i < 2} />)}
+          </div>
+        ) : query.trim() ? (
+          <div className="empty">
+            <h3>No designs match “{query.trim()}”.</h3>
+            <p>Try another word, or browse every design.</p>
+            <button type="button" className="btn btn-solid" onClick={() => { setQuery(""); choose("All"); }}>See all designs</button>
           </div>
         ) : (
           <div className="empty">
