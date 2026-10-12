@@ -18,7 +18,7 @@ export default async function WishesPage({ params }: { params: Promise<{ id: str
     if (e instanceof ApiError) notFound();
     throw e;
   });
-  const rows = (await listWishes(inv.id)).map((w): WishView => ({ id: w.id, name: w.name, message: w.message, hidden: w.hidden, createdAt: w.createdAt }));
+  const rows = (await listWishes(inv.id)).map((w): WishView => ({ id: w.id, name: w.name, message: w.message, hidden: w.hidden, createdAt: w.createdAt, photo: w.photo }));
   const names = namesOf(inv.data) || "Untitled invitation";
   return (
     <main className="app-main">

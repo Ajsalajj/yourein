@@ -201,6 +201,18 @@ function Venue({ t }: { t: Template }) {
   );
 }
 
+/** Thank-you mode, once the event is over. */
+function Thanks({ t }: { t: Template }) {
+  if (!t.live?.thanks) return null;
+  return (
+    <section className="sec sec-thanks">
+      <h2 className="sec-title" data-rv="wipe">Thank you</h2>
+      <p className="sec-body" data-rv="up">{t.live.thanks}</p>
+      {t.live.guestbook && <a className="inv-btn" href="#wishes" data-rv="up">Leave a wish{t.live.guestbook.photos ? " or a photo" : ""}</a>}
+    </section>
+  );
+}
+
 /** An update from the hosts, such as a changed time or venue. */
 function Notice({ t }: { t: Template }) {
   if (!t.live?.notice) return null;
@@ -321,6 +333,7 @@ export function Sections({ t, footer }: { t: Template; footer?: React.ReactNode 
   return (
     <div className="inv-body">
       <Notice t={t} />
+      <Thanks t={t} />
       <Message t={t} />
       <Portrait t={t} />
       <Feature t={t} />

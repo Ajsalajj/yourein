@@ -588,7 +588,17 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                   <Switch label="Countdown" hint="A live countdown to your date." checked={data.countdown} onChange={(v) => set("countdown", v)} />
                   <Switch label="Let guests share the invitation" hint="Shows a share button at the end." checked={data.allowShare} onChange={(v) => set("allowShare", v)} />
                   <Switch label="Guestbook" hint="Guests can leave wishes for everyone to read. You can hide any of them." checked={data.guestbook} onChange={(v) => set("guestbook", v)} />
+                  {data.guestbook && <Switch label="Guests can add a photo" hint="Each wish can include one photo, great after the event. You can hide or delete any of them." checked={data.guestPhotos} onChange={(v) => set("guestPhotos", v)} />}
                 </div>
+              </div>
+              <div className="ed-group">
+                <p className="ed-group-h">After the event</p>
+                <Switch label="Thank-you mode" hint="Turns the invitation into a thank-you page: replies close and the countdown hides. The guestbook stays open." checked={data.thanksOn} onChange={(v) => set("thanksOn", v)} />
+                {data.thanksOn && (
+                  <Field label="Thank-you message">
+                    <textarea value={data.thanks} onChange={(e) => set("thanks", e.target.value)} maxLength={300} rows={3} placeholder="Thank you for celebrating with us. Your love and blessings made our day." />
+                  </Field>
+                )}
               </div>
               <div className="ed-group">
                 <p className="ed-group-h">Contact details</p>
