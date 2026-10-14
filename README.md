@@ -1,6 +1,6 @@
 # YoureIn
 
-**Invitations worth opening.** A self-service site for animated digital invitations: pick a design, make it yours, pay ₹999 once, share the link and see who is coming.
+**Invitations worth opening.** A self-service site for animated digital invitations: pick a design, make it yours, pay once, share the link and see who is coming.
 
 ```
 BROWSE → PREVIEW → CUSTOMIZE → EDIT → RSVP SETUP → SIGN IN → PAY → PUBLISH → SHARE → TRACK GUESTS
@@ -24,10 +24,11 @@ Password reset in this mode shows the reset link on screen instead of emailing i
 1. **Database.** Create a PostgreSQL database (Neon, Supabase, Vercel Postgres, RDS) and set `DATABASE_URL`. Tables are created on first start. *Without it a deployed site stores data in a temporary folder and loses it on restart.*
 2. **Secret.** Set `AUTH_SECRET` to a long random string.
 3. **Address.** Set `NEXT_PUBLIC_SITE_URL` (for example `https://yourein.com`). Invitation links and QR codes use it.
-4. **Razorpay.** Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. Start with test keys (`rzp_test_…`) and pay with Razorpay's test cards, then switch to live keys.
-5. **Webhook (recommended).** In Razorpay → Webhooks, add `https://<site>/api/pay/webhook` for `payment.captured` and `order.paid`, and set `RAZORPAY_WEBHOOK_SECRET`. This publishes the invitation even if the customer closes the tab straight after paying.
+4. **Razorpay.** Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. Start with test keys (`rzp_test_…`) and pay with Razorpay's test cards or test UPI, then switch to live keys (`rzp_live_…`). The pay screen says "Razorpay test mode" while test keys are in use. Open `/admin/setup` and press **Test the Razorpay connection** to confirm the keys are accepted.
+5. **Webhook (recommended).** In Razorpay → Account & Settings → Webhooks, add `https://<site>/api/pay/webhook`, tick `payment.captured`, `order.paid`, `payment.failed` and `refund.processed`, and set the same secret as `RAZORPAY_WEBHOOK_SECRET`. This publishes the invitation even if the customer closes the tab straight after paying, and records failed payments and refunds for the admin area.
 6. **Google sign-in (optional).** Create an OAuth client (Web application) with redirect URI `https://<site>/api/auth/google/callback`; set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Without them the Google button explains that it is not set up and email sign-in still works.
-7. **Email (optional).** Set `RESEND_API_KEY` and `EMAIL_FROM` so "Forgot password" can send its link. Without them the site says reset by email is unavailable.
+7. **Admin area (recommended).** Set `ADMIN_EMAILS` and `ADMIN_ACCESS_CODE` (see below).
+8. **Email (optional).** Set `RESEND_API_KEY` and `EMAIL_FROM` so "Forgot password" can send its link. Without them the site says reset by email is unavailable.
 
 Every variable is described in [`.env.example`](.env.example).
 
@@ -53,7 +54,30 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 - **Guests need no account, and see only the invitation.** The public page and `/api/rsvp` never return other guests, totals or replies. Every host route checks the session and that the invitation belongs to that user; another account gets a 404.
 - **Wishes are the one thing guests share with each other.** When the host switches the guestbook on, the public page shows the name and message of each wish that is not hidden, and nothing else about the guest. It is off for invitations made before it existed; the host can hide or delete any wish under Wishes.
 - **WhatsApp is for sharing a published invitation only.** There is no "order on WhatsApp" anywhere.
-- **Price lives in one place:** `src/config/site.ts` (`PRICE = 999`, `CURRENCY = "INR"`).
+- **Price lives in one place:** `NEXT_PUBLIC_PRICE_INR` (whole rupees, default **1** while testing), read once in `src/config/site.ts` and used by every page, the order amount and the payment screen. Set it to `999` (or any whole number from 1 to 100000) and redeploy to change it. Orders already created keep the price they were made with.
+
+## Admin area (`/admin`)
+
+A private, read-only dashboard for payments and customers. It never changes an order, a payment or an invitation: refunds are made in the Razorpay dashboard and arrive here through the webhook.
+
+**Turning it on.** Set two environment variables and redeploy:
+
+- `ADMIN_EMAILS`: comma-separated emails of the people who may be admins. They must have an account on the site.
+- `ADMIN_ACCESS_CODE`: a long secret of at least 12 characters.
+
+Sign in as an admin, open `/admin`, and type the access code once. It stays unlocked on that browser for 12 hours (the **Lock** button ends it sooner). Anyone else, signed in or not, gets the ordinary "not found" page. The code is needed on top of the email list because signing up does not prove that someone owns an email address; without the code, whoever registered an admin's address first could walk in. Wrong codes are rate limited.
+
+| Page | What it shows |
+| --- | --- |
+| Overview | Net revenue (taken minus refunded), last 24 hours / 7 / 30 days, paid / failed / not completed / refunded counts, a 30-day chart, customers, invitations by status, the latest orders, and a banner for anything wrong with the setup |
+| Payments | Every order with customer, invitation, amount, status and Razorpay ids. Filter by status and date, search by email, name, invitation, order id or payment id, and download a CSV |
+| Customers | Everyone with an account: invitations, published, total paid, last payment |
+| Invitations | Every invitation with owner, status, views, reply count and amount paid. Counts only: guest names and replies are never shown |
+| Setup | A checklist of what must be right before real payments (keys, test or live mode, webhook, database, secrets, site address, price), the webhook URL to add in Razorpay, and a button that tests the Razorpay keys |
+
+Simulated test payments (no Razorpay keys) are hidden from the figures unless you tick "Include simulated test payments". A payment's status is **Paid**, **Failed** (the attempt was declined), **Not completed** (checkout started, never paid), **Partly refunded** or **Refunded**. An order whose first attempt failed but was then paid shows as Paid.
+
+**There are no subscriptions.** Each invitation is a one-time purchase, so the area tracks purchases, not recurring plans. Adding subscriptions would need a plan model, Razorpay Subscriptions and new database tables.
 
 ## Where things are
 
@@ -214,8 +238,10 @@ The site has to be running. Tests use simulated payments, so run them against `n
 ```bash
 npm run test:flow  [screenshot-folder]    # the full journey at 390 px wide
 npm run test:paths [screenshot-folder]    # everything around it, at 360 px wide
-npm run test:pay                          # see the header of scripts/dev/pay-live-path.mjs for how to start the site
+npm run test:pay                          # Razorpay path with a stand-in Razorpay; see the header of scripts/dev/pay-live-path.mjs
+node scripts/dev/admin-check.mjs          # the admin area over HTTP; run after test:pay, see its header
 npm run test:seo                          # SEO logic tests, no site needed
+npm run test:admin                        # price, admin access, setup checks and CSV tests, no site needed
 ```
 
 `scripts/dev/seed-and-shoot.mjs <folder> [width] [height]` creates a published invitation with guests and replies and screenshots every signed-in screen at that size.

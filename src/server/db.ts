@@ -93,6 +93,14 @@ export type Sql = <T = Row>(strings: TemplateStringsArray, ...values: unknown[])
 export const sql: Sql = async <T = Row>(strings: TemplateStringsArray, ...values: unknown[]) =>
   (await (await db()).query(build(strings, values), values)) as T[];
 
+/**
+ * For queries whose shape depends on filters (the admin lists). `text` must contain only $1, $2... placeholders;
+ * every value goes in `params` and is bound, never concatenated into the SQL.
+ */
+export async function query<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
+  return (await (await db()).query(text, params)) as T[];
+}
+
 /** Run several statements atomically. */
 export async function transaction<T>(fn: (sql: Sql) => Promise<T>): Promise<T> {
   const d = await db();

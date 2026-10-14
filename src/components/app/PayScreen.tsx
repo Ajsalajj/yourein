@@ -6,7 +6,7 @@ import { PRICE_LABEL } from "@/config/site";
 import { api } from "./client";
 
 type Checkout =
-  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string } }
+  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean }
   | { mode: "test"; orderId: string }
   | { mode: "published"; slug: string };
 
@@ -34,6 +34,7 @@ export function PayScreen({ id, templateSlug, templateName, names, eventLine, mo
   const [state, setState] = useState<"idle" | "starting" | "test" | "verifying">("idle");
   const [error, setError] = useState("");
   const [testOrder, setTestOrder] = useState("");
+  const [testKeys, setTestKeys] = useState(false);
 
   const verify = async (orderId: string, paymentId: string, signature: string) => {
     setState("verifying");
@@ -60,6 +61,7 @@ export function PayScreen({ id, templateSlug, templateName, names, eventLine, mo
         setState("test");
         return;
       }
+      setTestKeys(co.testKeys);
       await loadRazorpay();
       const rzp = new window.Razorpay!({
         key: co.keyId,
@@ -150,6 +152,7 @@ export function PayScreen({ id, templateSlug, templateName, names, eventLine, mo
                 <button type="button" className="btn btn-quiet btn-block" onClick={() => setState("idle")}>Cancel</button>
               </div>
             )}
+            {testKeys && <p className="notice" role="status"><b>Razorpay test mode.</b> Use a Razorpay test card or test UPI. No real money moves.</p>}
             {error && <p className="form-error" role="alert">{error}</p>}
             <p className="pay-fine">
               {mode === "test" ? "Test mode: payments are simulated on this site." : "Secure payment by Razorpay. UPI, cards, net banking and wallets."}

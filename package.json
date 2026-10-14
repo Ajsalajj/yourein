@@ -14,7 +14,8 @@
     "test:pay": "node scripts/dev/pay-live-path.mjs",
     "seo:audit": "tsx scripts/seo/audit.ts",
     "seo:screens": "node scripts/seo/capture-screens.mjs",
-    "test:seo": "tsx --test scripts/seo/seo.test.ts"
+    "test:seo": "tsx --test scripts/seo/seo.test.ts",
+    "test:admin": "tsx --test scripts/admin/admin.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

@@ -12,6 +12,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 const base = process.env.BASE || "http://localhost:3000";
+/* The price the site is running with (NEXT_PUBLIC_PRICE_INR, default 1). Start the site and this script with the same value. */
+const PRICE_LABEL = `₹${Number(process.env.NEXT_PUBLIC_PRICE_INR) || 1}`;
 const shots = process.argv[2];
 const W = Number(process.env.W || 390), H = Number(process.env.H || 800);
 if (shots) mkdirSync(shots, { recursive: true });
@@ -55,7 +57,7 @@ await snap(page, "preview-sealed");
 ok("preview opens without signing in", page.url().startsWith(base + "/") && !(page.url().includes("signin")));
 const pv = await page.evaluate(() => { const s = document.querySelector(".pv-screen").getBoundingClientRect(); return { w: s.width / innerWidth, h: s.height / innerHeight, bar: document.querySelector(".pv-bar").textContent, top: document.querySelector(".pv-title").textContent }; });
 ok("mobile preview fills the screen, no phone frame", pv.w > 0.99 && pv.h > 0.8, `${(pv.w * 100) | 0}% x ${(pv.h * 100) | 0}%`);
-ok("preview has template name on top and ₹999 + Customize below", pv.top === "Royal Emerald" && pv.bar.includes("₹999") && pv.bar.includes("Customize"));
+ok(`preview has template name on top and ${PRICE_LABEL} + Customize below`, pv.top === "Royal Emerald" && pv.bar.includes(PRICE_LABEL) && pv.bar.includes("Customize"));
 await page.locator(".open-hit").click();
 await page.waitForSelector('.inv[data-phase="open"]', { timeout: 15000 });
 await page.waitForTimeout(500);
@@ -174,8 +176,8 @@ await hideDev(page);
 await snap(page, "pay");
 const before = await (await host.request.get(`${base}/api/invitations/${id}`)).json();
 ok("status is Ready to Pay and it is not public yet", before.invitation.status === "ready" && before.invitation.slug === null);
-ok("payment screen shows template, names, ₹999 and what is included", (await page.locator(".pay-card").textContent()).match(/Royal Emerald.*Aarav & Meera.*₹999.*RSVP.*Shareable link/s) !== null);
-await page.locator("text=Pay ₹999 & Publish").click();
+ok(`payment screen shows template, names, ${PRICE_LABEL} and what is included`, new RegExp(`Royal Emerald.*Aarav & Meera.*${PRICE_LABEL}.*RSVP.*Shareable link`, "s").test(await page.locator(".pay-card").textContent()));
+await page.locator(`text=Pay ${PRICE_LABEL} & Publish`).click();
 await page.waitForSelector(".test-panel");
 await snap(page, "pay-test");
 await page.locator("text=Complete test payment").click();

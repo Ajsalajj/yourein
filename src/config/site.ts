@@ -2,10 +2,12 @@
  * Global site settings. Change values here once; every page picks them up.
  */
 
-/** One price for every template, in rupees. */
-export const PRICE = 999;
+import { parsePrice, priceLabel } from "./price";
+
+/** One price for every template, in rupees. ₹1 while testing; set NEXT_PUBLIC_PRICE_INR to change it (see ./price.ts). */
+export const PRICE = parsePrice(process.env.NEXT_PUBLIC_PRICE_INR);
 export const CURRENCY = "INR";
-export const PRICE_LABEL = "₹999";
+export const PRICE_LABEL = priceLabel(PRICE);
 
 export const SITE_NAME = "YoureIn";
 export const TAGLINE = "Invitations worth opening.";
