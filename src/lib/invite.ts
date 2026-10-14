@@ -3,7 +3,8 @@
  * over a design. Shared by the editor, the server and the public page.
  */
 import { z } from "zod";
-import type { InviteEvent, Live, RsvpSettings, Template } from "@/data/templates";
+import type { InviteEvent, Live, RsvpSettings, Template, Wish } from "@/data/templates";
+import { getTrack } from "@/data/music";
 
 export const EVENT_TYPES = ["Wedding", "Engagement", "Nikah", "Reception", "Anniversary", "Birthday", "Baby Shower", "Housewarming", "Other"] as const;
 
@@ -33,6 +34,16 @@ const EventSchema = z.object({
   time: timeStr,
   place: text(120),
   note: text(160),
+  dressCode: text(80),
+  /** Shown only to guests the host picks in the guest list. */
+  private: flag(false),
+});
+
+const QuestionSchema = z.object({
+  id: z.string().max(40),
+  label: text(80),
+  kind: z.enum(["text", "yesno", "choice"]).catch("text"),
+  options: z.array(z.string().trim().min(1).max(40)).max(6).catch([]).default([]),
 });
 
 const RsvpSchema = z.object({
@@ -46,6 +57,8 @@ const RsvpSchema = z.object({
   maxPerInvite: z.number().int().min(1).max(20).catch(4).default(4),
   capacity: z.number().int().min(1).max(100000).nullable().catch(null).default(null),
   hardCapacity: flag(false),
+  perEvent: flag(false),
+  questions: z.array(QuestionSchema).max(6).catch([]).default([]),
 });
 
 export const InviteDataSchema = z.object({
@@ -68,11 +81,37 @@ export const InviteDataSchema = z.object({
   portrait: mediaId.nullable().catch(null).default(null),
   gallery: z.array(mediaId).max(8).catch([]).default([]),
   music: mediaId.nullable().catch(null).default(null),
+  /** Where the background music comes from. "auto" is how invitations made before the library read: their upload, if any. */
+  musicSource: z.enum(["auto", "builtin", "upload", "none"]).catch("auto").default("auto"),
+  /** A track from the built-in library (src/data/music.ts). */
+  musicTrack: z.string().max(40).nullable().catch(null).default(null),
+  /** The uploaded file's name, shown back to the host. */
+  musicName: text(120),
+  /** How loud the music fades up to, out of 100. */
+  musicVolume: z.number().int().min(5).max(100).catch(35).default(35),
+  /** "on_open": starts when the guest opens the invitation. "manual": the guest taps play. */
+  musicStart: z.enum(["on_open", "manual"]).catch("on_open").default("on_open"),
   events: z.array(EventSchema).max(8).catch([]).default([]),
   countdown: flag(true),
   contacts: z.array(z.object({ name: text(60), phone: text(24) })).max(2).catch([]).default([]),
   rsvp: RsvpSchema.default(RsvpSchema.parse({})),
   allowShare: flag(true),
+  /** Guests can leave wishes on the invitation. Off unless set, so invitations made before it existed do not change. */
+  guestbook: flag(false),
+  /** Guests can attach a photo to their wish. */
+  guestPhotos: flag(false),
+  /** After the event: the invitation becomes a thank-you page and replies close. */
+  thanksOn: flag(false),
+  thanks: text(300),
+  /** A short update shown at the top of the invitation, e.g. a changed time or venue. */
+  notice: text(200),
+  /** Places to stay the hosts suggest. */
+  stays: z.array(z.object({
+    name: text(80),
+    note: text(160),
+    url: z.string().trim().max(600).regex(/^(https?:\/\/\S+)?$/i).catch("").default(""),
+    phone: text(24),
+  })).max(4).catch([]).default([]),
 });
 
 export type InviteData = z.infer<typeof InviteDataSchema>;
@@ -103,6 +142,7 @@ export function defaultData(t: Template, tz = "Asia/Kolkata"): InviteData {
     welcome: t.invocation || "",
     inviteText: requestLineFor(eventType),
     closing: "We cannot wait to celebrate with you.",
+    guestbook: true,
   });
 }
 
@@ -173,7 +213,19 @@ export type ResolveOptions = {
   guest?: Live["guest"];
   /** Total people already confirmed, for the capacity limit. */
   attending?: number;
+  /** Wishes guests have left, newest first. Hidden ones are never passed in. */
+  wishes?: Wish[];
+  /** Private events this viewer may see. Public pages show only public events plus these; the host's preview shows all. */
+  privateEvents?: string[];
 };
+
+/** The events a viewer may see: every public one, and private ones they have been given. `null` means all (the host). */
+export function visibleEvents(d: Pick<InviteData, "events">, privateEvents: string[] | null) {
+  return d.events.filter((e) => e.title && (!e.private || privateEvents === null || privateEvents.includes(e.id)));
+}
+
+/** Whether replies are taken per function for this viewer. */
+export const repliesPerEvent = (d: InviteData, privateEvents: string[] | null) => d.rsvp.perEvent && visibleEvents(d, privateEvents).length > 1;
 
 /**
  * Lays a customer's content over a design, producing exactly what the
@@ -189,20 +241,22 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
   const title = eventTitleOf(d);
   const venueName = d.venueName || (preview ? base.venue.name : "");
 
-  let events: InviteEvent[] = d.events
-    .filter((e) => e.title)
+  const allowed = o.mode === "preview" ? null : o.privateEvents ?? [];
+  let events: InviteEvent[] = visibleEvents(d, allowed)
     .map((e) => ({
+      id: e.id,
       title: e.title,
       day: formatDate(e.date || date, { weekday: "long", day: "numeric", month: "long" }),
       time: formatTime(e.time),
       place: e.place || venueName,
       note: e.note || undefined,
+      dressCode: e.dressCode || undefined,
     }));
   if (!events.length) {
     events = [{ title, day: formatDate(date, { weekday: "long", day: "numeric", month: "long" }), time: formatTime(time), place: venueName }];
   }
 
-  const rsvp: RsvpSettings | null = d.rsvp.enabled ? d.rsvp : null;
+  const rsvp: RsvpSettings | null = d.rsvp.enabled && !d.thanksOn ? d.rsvp : null;
   const closed = !!rsvp?.deadline && todayIn(d.tz) > rsvp.deadline;
   const full = !!rsvp?.capacity && rsvp.hardCapacity && (o.attending ?? 0) >= rsvp.capacity;
 
@@ -224,12 +278,18 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       eventTitle: title,
       portrait: d.portrait ? o.mediaUrl(d.portrait) : undefined,
       gallery: d.gallery.map(o.mediaUrl),
-      music: d.music ? o.mediaUrl(d.music) : undefined,
+      music: musicUrlOf(d, o.mediaUrl),
+      musicVolume: d.musicVolume,
+      musicAutostart: d.musicStart === "on_open",
       mapsUrl: d.mapsUrl || undefined,
-      countdown: d.countdown,
+      countdown: d.countdown && !d.thanksOn,
+      thanks: d.thanksOn ? d.thanks || "Thank you for celebrating with us. Your love and blessings made our day." : undefined,
       contacts: d.contacts.filter((c) => c.name || c.phone),
       allowShare: d.allowShare,
-      rsvp: rsvp ? { ...rsvp, closed, full } : null,
+      rsvp: rsvp ? { ...rsvp, perEvent: repliesPerEvent(d, allowed), closed, full } : null,
+      guestbook: d.guestbook ? { wishes: o.wishes ?? [], photos: d.guestPhotos } : null,
+      notice: d.notice || undefined,
+      stays: d.stays.filter((s) => s.name),
       invitation: o.invitation,
       shareUrl: o.shareUrl,
       guest: o.guest,
@@ -238,6 +298,22 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
 }
 
 export const mediaUrl = (id: string) => `/api/media/${id}`;
+
+/** Which music source is in effect, reading invitations made before the library as "their upload, if any". */
+export function musicSourceOf(d: Pick<InviteData, "musicSource" | "music" | "musicTrack">): "builtin" | "upload" | "none" {
+  const s = d.musicSource === "auto" ? (d.music ? "upload" : "none") : d.musicSource;
+  if (s === "builtin" && !getTrack(d.musicTrack)) return "none";
+  if (s === "upload" && !d.music) return "none";
+  return s;
+}
+
+/** The address of the music an invitation plays, if any. */
+export function musicUrlOf(d: InviteData, media: (id: string) => string = mediaUrl): string | undefined {
+  const s = musicSourceOf(d);
+  if (s === "builtin") return getTrack(d.musicTrack)!.url;
+  if (s === "upload") return media(d.music!);
+  return undefined;
+}
 
 export function slugify(s: string, fallback = "invitation"): string {
   const out = s

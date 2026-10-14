@@ -36,8 +36,7 @@ await page.goto(base + "/dashboard", { waitUntil: "networkidle" });
 ok("after signing out the dashboard asks for sign-in", page.url().includes("/signin"));
 
 /* Google when it has no keys */
-await page.goto(base + "/start/rose-garden", { waitUntil: "networkidle" });
-await page.waitForURL(/\/signin/);
+await page.goto(base + "/signin?next=%2Fstart%2Frose-garden", { waitUntil: "networkidle" });
 await page.locator("text=Continue with Google").click();
 await page.waitForURL(/error=google-off/);
 ok("Google without keys explains itself and keeps the chosen design", (await page.locator(".form-error").textContent()).includes("not set up") && (await page.locator(".auth-tpl").textContent()).includes("Rose Garden"));

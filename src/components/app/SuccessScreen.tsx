@@ -49,7 +49,7 @@ export function SuccessScreen({ id, url, names, dateLabel, qrSvg }: { id: string
           <path d="M31 49.5l12 12L66 37" />
         </svg>
         <div>
-          <h1>Your invitation is live 🎉</h1>
+          <h1>Your invitation is live.</h1>
           <p className="done-sub">Everything is ready to share.</p>
         </div>
         <div className="done-link">

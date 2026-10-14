@@ -15,6 +15,10 @@ create table if not exists users (
   created_at timestamptz not null default now()
 );
 
+/* guests: visitors customizing before they sign in. They have no email until they claim an account. */
+alter table users add column if not exists guest boolean not null default false;
+alter table users alter column email drop not null;
+
 create table if not exists sessions (
   id uuid primary key,
   user_id uuid not null references users(id) on delete cascade,
@@ -105,6 +109,9 @@ create table if not exists guests (
   unique (invitation_id, slug)
 );
 
+alter table guests add column if not exists private_events jsonb not null default '[]'::jsonb;
+alter table guests add column if not exists disabled boolean not null default false;
+
 create table if not exists rsvps (
   id uuid primary key,
   invitation_id uuid not null references invitations(id) on delete cascade,
@@ -119,8 +126,26 @@ create table if not exists rsvps (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table rsvps add column if not exists events jsonb not null default '{}'::jsonb;
+alter table rsvps add column if not exists answers jsonb not null default '{}'::jsonb;
 create index if not exists rsvps_invitation_idx on rsvps (invitation_id, created_at desc);
 create unique index if not exists rsvps_guest_uq on rsvps (guest_id) where guest_id is not null;
+
+create table if not exists wishes (
+  id uuid primary key,
+  invitation_id uuid not null references invitations(id) on delete cascade,
+  guest_id uuid references guests(id) on delete set null,
+  name text not null,
+  message text not null,
+  hidden boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists wishes_invitation_idx on wishes (invitation_id, created_at desc);
+
+/* guests can attach a photo to a wish */
+alter table photos drop constraint if exists photos_kind_check;
+alter table photos add constraint photos_kind_check check (kind in ('portrait', 'gallery', 'music', 'guest'));
+alter table wishes add column if not exists photo_id uuid references photos(id) on delete set null;
 
 create table if not exists orders (
   id uuid primary key,

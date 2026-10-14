@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { api } from "./client";
 import { useToast } from "./ShareTools";
 
-export type RsvpView = { id: string; name: string; status: "yes" | "maybe" | "no"; count: number; phone: string; meal: string; message: string; updatedAt: string };
+export type RsvpView = {
+  id: string; name: string; status: "yes" | "maybe" | "no"; count: number; phone: string; meal: string; message: string; updatedAt: string;
+  events: Record<string, number>; answers: Record<string, string>;
+};
 export type StatsView = { listed: number; sent: number; invited: number; responses: number; confirmed: number; maybe: number; declined: number; attending: number; views: number };
 
 const LABEL = { yes: "Confirmed", maybe: "Maybe", no: "Declined" } as const;
@@ -12,12 +15,17 @@ type Filter = "all" | "yes" | "maybe" | "no";
 
 const when = (iso: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
-export function RsvpBoard({ id, initial, initialStats, capacity, published }: { id: string; initial: RsvpView[]; initialStats: StatsView; capacity: number | null; published: boolean }) {
+/** `functions`: shown with a head count each when replies are per function. `questions`: the host's own questions, shown on each reply. */
+export function RsvpBoard({ id, initial, initialStats, capacity, published, functions = [], questions = [] }: {
+  id: string; initial: RsvpView[]; initialStats: StatsView; capacity: number | null; published: boolean;
+  functions?: { id: string; title: string }[]; questions?: { id: string; label: string }[];
+}) {
   const [rows, setRows] = useState(initial);
   const [stats, setStats] = useState(initialStats);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [open, setOpen] = useState<RsvpView | null>(null);
   const { setToast, node } = useToast();
 
   const refresh = async () => {
@@ -37,6 +45,7 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
     if (!window.confirm(`Delete the reply from ${r.name}? This cannot be undone.`)) return;
     try {
       await api("DELETE", `/api/invitations/${id}/rsvps/${r.id}`);
+      setOpen(null);
       await refresh();
     } catch (e) {
       setToast((e as Error).message);
@@ -47,6 +56,15 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
     () => rows.filter((r) => (filter === "all" || r.status === filter) && (!query || `${r.name} ${r.phone} ${r.meal} ${r.message}`.toLowerCase().includes(query.toLowerCase()))),
     [rows, filter, query],
   );
+  const fnTotals = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const r of rows) for (const [k, n] of Object.entries(r.events ?? {})) out[k] = (out[k] ?? 0) + (Number(n) || 0);
+    return out;
+  }, [rows]);
+  const extras = (r: RsvpView) => [
+    ...functions.filter((f) => r.events?.[f.id]).map((f) => `${f.title}: ${r.events[f.id]}`),
+    ...questions.filter((q) => r.answers?.[q.id]).map((q) => `${q.label} ${r.answers[q.id]}`),
+  ];
   const filters: [Filter, string, number][] = [["all", "All", stats.responses], ["yes", "Confirmed", stats.confirmed], ["maybe", "Maybe", stats.maybe], ["no", "Declined", stats.declined]];
 
   return (
@@ -70,6 +88,7 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
         <div className="tile"><b>{stats.maybe}</b><span>Maybe</span></div>
         <div className="tile"><b>{stats.declined}</b><span>Declined</span></div>
         <div className="tile"><b>{stats.invited}</b><span>Invited on your guest list</span></div>
+        {functions.map((f) => <div key={f.id} className="tile"><b>{fnTotals[f.id] ?? 0}</b><span>Coming to {f.title}</span></div>)}
       </div>
 
       <div className="toolbar">
@@ -101,22 +120,15 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
         <>
           <div className="rows rows-as-table">
             {shown.map((r) => (
-              <article key={r.id} className="row-card">
-                <div className="row-head">
-                  <div>
-                    <p className="row-name">{r.name}</p>
-                    <p className="row-sub">{when(r.updatedAt)}</p>
-                  </div>
+              <button key={r.id} type="button" className="row-card row-tap" onClick={() => setOpen(r)} aria-haspopup="dialog">
+                <span className="row-head">
+                  <span>
+                    <span className="row-name">{r.name}</span>
+                    <span className="row-sub">{r.status === "no" ? "Not coming" : `${r.count} ${r.count === 1 ? "guest" : "guests"}`} · {when(r.updatedAt)}</span>
+                  </span>
                   <span className={`pill pill-${r.status}`}>{LABEL[r.status]}</span>
-                </div>
-                <p className="row-facts">
-                  <span><b>{r.count}</b> {r.count === 1 ? "guest" : "guests"}</span>
-                  {r.phone && <span><a href={`tel:${r.phone.replace(/[^\d+]/g, "")}`}>{r.phone}</a></span>}
-                  {r.meal && <span>{r.meal}</span>}
-                </p>
-                {r.message && <p className="row-msg">{r.message}</p>}
-                <div className="row-actions"><button type="button" className="btn btn-danger" onClick={() => remove(r)}>Delete reply</button></div>
-              </article>
+                </span>
+              </button>
             ))}
           </div>
           <table className="table">
@@ -131,7 +143,7 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
                   <td className="num">{r.count}</td>
                   <td>{r.phone}</td>
                   <td>{r.meal}</td>
-                  <td className="msg">{r.message}</td>
+                  <td className="msg">{[...extras(r), r.message].filter(Boolean).join(" · ")}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{when(r.updatedAt)}</td>
                   <td><button type="button" className="btn btn-sm btn-danger" onClick={() => remove(r)}>Delete</button></td>
                 </tr>
@@ -139,6 +151,31 @@ export function RsvpBoard({ id, initial, initialStats, capacity, published }: { 
             </tbody>
           </table>
         </>
+      )}
+      {open && (
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="rsvp-h" onClick={(e) => { if (e.target === e.currentTarget) setOpen(null); }}>
+          <div className="modal-card">
+            <div className="modal-head">
+              <h2 id="rsvp-h">{open.name}</h2>
+              <button type="button" className="modal-x" onClick={() => setOpen(null)} aria-label="Close">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+              </button>
+            </div>
+            <dl className="detail-list">
+              <div><dt>Reply</dt><dd><span className={`pill pill-${open.status}`}>{LABEL[open.status]}</span></dd></div>
+              <div><dt>Guests</dt><dd>{open.count}</dd></div>
+              {open.phone && <div><dt>Phone</dt><dd><a href={`tel:${open.phone.replace(/[^\d+]/g, "")}`}>{open.phone}</a></dd></div>}
+              {open.meal && <div><dt>Meal</dt><dd>{open.meal}</dd></div>}
+              {functions.filter((f) => open.events?.[f.id]).map((f) => <div key={f.id}><dt>{f.title}</dt><dd>{open.events[f.id]}</dd></div>)}
+              {questions.filter((q) => open.answers?.[q.id]).map((q) => <div key={q.id}><dt>{q.label}</dt><dd>{open.answers[q.id]}</dd></div>)}
+              <div><dt>Replied</dt><dd>{when(open.updatedAt)}</dd></div>
+            </dl>
+            {open.message && <p className="row-msg" style={{ marginTop: 12 }}>{open.message}</p>}
+            <div className="modal-actions" style={{ gridTemplateColumns: "1fr", marginTop: 16 }}>
+              <button type="button" className="btn btn-danger" onClick={() => remove(open)}>Delete reply</button>
+            </div>
+          </div>
+        </div>
       )}
       {node}
     </>

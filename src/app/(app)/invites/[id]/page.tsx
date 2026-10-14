@@ -6,7 +6,8 @@ import { PRICE_LABEL } from "@/config/site";
 import { StatusPill } from "@/components/app/InviteCard";
 import { InviteSubnav, VisibilityControls } from "@/components/app/ManageParts";
 import { LinkBox, ShareButtons } from "@/components/app/ShareTools";
-import { formatDate, namesOf } from "@/lib/invite";
+import { InviteImage } from "@/components/app/InviteImage";
+import { eventTitleOf, formatDate, formatTime, namesOf } from "@/lib/invite";
 import { requireUserPage } from "@/server/auth";
 import { statsFor } from "@/server/guests";
 import { ApiError } from "@/server/http";
@@ -95,6 +96,22 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
             <p className="hint" style={{ textAlign: "center" }}>Print it on a card or show it on a screen. It opens your invitation.</p>
             <a className="btn btn-quiet btn-sm" href={qrPng} download={`${inv.slug}-qr.png`}>Download PNG</a>
           </div>
+
+          {t && (
+            <>
+              <h2 className="section-h" id="picture">Invitation picture</h2>
+              <InviteImage
+                couple={[inv.data.name1, inv.data.name2]}
+                eventTitle={eventTitleOf(inv.data)}
+                dateLabel={dateLabel}
+                time={formatTime(inv.data.time)}
+                venue={[inv.data.venueName, inv.data.venueAddress].filter(Boolean).join(", ")}
+                url={url}
+                theme={{ bg: t.theme.bg, ink: t.theme.ink, accent: t.theme.accent, script: t.theme.script, caps: t.theme.caps }}
+                slug={inv.slug ?? "invitation"}
+              />
+            </>
+          )}
         </>
       )}
 

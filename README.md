@@ -3,7 +3,7 @@
 **Invitations worth opening.** A self-service site for animated digital invitations: pick a design, make it yours, pay ₹999 once, share the link and see who is coming.
 
 ```
-BROWSE → PREVIEW → CUSTOMIZE → SIGN IN → EDIT → RSVP SETUP → PAY → PUBLISH → SHARE → TRACK GUESTS
+BROWSE → PREVIEW → CUSTOMIZE → EDIT → RSVP SETUP → SIGN IN → PAY → PUBLISH → SHARE → TRACK GUESTS
 ```
 
 Next.js 16 (App Router), React 19, TypeScript, PostgreSQL, GSAP + Motion. No UI kit, no ORM, no auth library.
@@ -49,8 +49,9 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 ## Rules the code enforces
 
 - **Nothing is published before payment is verified on the server.** The browser's "payment succeeded" callback is never trusted on its own: `/api/pay/verify` recomputes Razorpay's HMAC-SHA256 signature over `order_id|payment_id` with the key secret and only then marks the order paid and publishes, in one transaction. The webhook does the same with the webhook secret. A wrong signature leaves the invitation unpublished.
-- **Preview needs no account. Customizing needs no payment.** Sign-in is asked for at Customize; payment only at the very end.
+- **Preview and customizing need no account.** A signed-out visitor who taps Customize gets a temporary guest account that can only edit its own drafts. Sign-in is asked for when they go to pay; their draft and uploads then move to the account they sign in to, and the guest is removed. Guests cannot pay, publish or open the dashboard. Guest drafts nobody comes back to are deleted after 30 days.
 - **Guests need no account, and see only the invitation.** The public page and `/api/rsvp` never return other guests, totals or replies. Every host route checks the session and that the invitation belongs to that user; another account gets a 404.
+- **Wishes are the one thing guests share with each other.** When the host switches the guestbook on, the public page shows the name and message of each wish that is not hidden, and nothing else about the guest. It is off for invitations made before it existed; the host can hide or delete any wish under Wishes.
 - **WhatsApp is for sharing a published invitation only.** There is no "order on WhatsApp" anywhere.
 - **Price lives in one place:** `src/config/site.ts` (`PRICE = 999`, `CURRENCY = "INR"`).
 
@@ -59,7 +60,7 @@ Do one real test-mode payment and one Google sign-in on your deployment before a
 ```
 src/
   config/site.ts            price, currency, site name and address
-  data/templates.ts         the 15 designs: names, categories, palettes, sample content
+  data/templates.ts         the designs (15, plus the Signature designs Moonlit Mahal and Velvet Opera): names, categories, palettes, sample content
   lib/invite.ts             the shape of an invitation's content (zod) and how it is laid over a design
   lib/share.ts              share text, WhatsApp and email links, calendar files
 
@@ -86,7 +87,7 @@ src/
 
 Plain PostgreSQL tables, created by `src/server/schema.ts`:
 
-`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `created_at`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
+`users` · `sessions` · `password_resets` · `templates` · `invitations` (status `draft` → `ready` → `published` ↔ `archived`, content as JSON) · `events` · `photos` (portrait, gallery, music; stored in the database) · `guests` · `rsvps` (`invitation_id`, optional `guest_id`, `guest_name`, `response_status`, `attendee_count`, `phone`, `meal_preference`, `message`, `events` (people per function), `answers` (host questions), `created_at`) · `wishes` (guestbook: `name`, `message`, `hidden`, optional `guest_id`) · `orders` · `payments` (provider payment id, order id, amount, status, signature, `paid_at`) · `analytics`.
 
 "Total attending" is the sum of `attendee_count` over "yes" replies, which is a different number from how many replies came in.
 
@@ -97,9 +98,16 @@ Email + password (scrypt) and Google. Sessions are random tokens stored hashed, 
 ## Changing things
 
 - **Add or edit a design:** add an entry in `src/data/templates.ts`, a scene in `src/invite/art/scenes/`, register it in `src/invite/art/index.ts`, then regenerate catalog images (below).
-- **Catalog images:** `public/thumbs/*.webp` and `public/og.jpg` are screenshots of the real invitations. After changing artwork or sample names: run the site, then `npm run thumbs`.
+- **Catalog images:** `public/thumbs/*.webp` and `public/og.jpg` are screenshots of the real invitations. After changing artwork or sample names: run the site, then `npm run thumbs`. Then run `npm run renders`: it draws each design's two screens onto the real iPhone 16 model (`public/models/iphone-16.glb`) and writes the card and featured pictures to `public/renders/<slug>.webp`.
 - **Editor steps and fields:** `src/components/app/Editor.tsx`; the fields themselves are defined in `src/lib/invite.ts`.
 - **Stripe:** `src/server/payments/stripe.ts` describes the two functions to fill in. Orders and payments tables already carry currency and provider.
+- **Hero phones:** the home page hero draws a real iPhone 16 model (`public/models/iphone-16.glb`, compressed with meshopt) with three.js in `src/components/site/HeroPhones3D.tsx`. Each phone's screen shows that design's catalog image; poses and sway are in `POSES`. Without WebGL the flat mockups stay. Model: "iPhone 16 - Free" by Wes (sketchfab.com/wimell), Sketchfab Standard licence.
+- **Functions and replies:** each event can have a dress code and be private (`events[].private`); private events reach only guests whose `guests.private_events` lists them, and are filtered on the server in `resolveTemplate`. With `rsvp.perEvent`, guests give a number for each function they can see; `attendee_count` is the largest of those. Host questions live in `rsvp.questions` (text, yes/no or one choice, up to 6) and are checked in `cleanAnswers`.
+- **Event guide:** `notice` shows an "Update from the hosts" band at the top of the invitation; `stays` (up to 4) adds "Where to stay". In the guest list each family has a QR code for their personal link and can have the link turned off (`guests.disabled`): the page then says so, and replies, wishes and tracking from it are refused (`activeGuestBySlug`).
+- **Memories:** with `guestPhotos` on, a wish can carry one photo (stored in `photos` as kind `guest`, owned by the host; up to 300 per invitation; hidden with its wish and deleted with it). The editor's clean-up of unused uploads only touches portrait, gallery and music. `thanksOn` turns the invitation into a thank-you page: the RSVP form and countdown hide, replies are refused, the guestbook stays open. The manage page draws a phone-sized invitation picture with a QR code in the browser (`src/components/app/InviteImage.tsx`).
+- **Look and feel (design tokens):** colours, type sizes, corner radius, shadows and motion are CSS variables at the top of `src/app/globals.css` (`--bg`, `--surface`, `--accent`, `--r-lg`, `--shadow-card`, `--dur-sheet`…). Headings and numbers use GFS Didot, everything else Jost; invitations keep their own typefaces. Change a token there and every screen follows.
+- **Background music:** the editor offers a built-in library or the host's own file (MP3, M4A, AAC or WAV up to 4 MB, the request limit on Vercel; larger files would need object storage). Track details live only in `src/data/music.ts` (title, mood, style, filters, duration, `active`, order, and `RECOMMENDED` per design). The ten files in `public/audio/builtin/` are original pieces composed by `npm run music` (`scripts/make-music.mjs`, needs macOS for AAC encoding). **They are development placeholders:** to ship produced music, replace the files (same names) and update durations. Invitations store `musicSource` (`builtin` / `upload` / `none`; older invitations read as their upload), `musicTrack`, `musicVolume` (default 35) and `musicStart`. Music never plays before the guest's tap; it fades in over 1.8 s through a gain node (so it works on iPhone), loops, and the guest can mute it.
+- **Signature designs:** Moonlit Mahal and Velvet Opera set `theme.skin` and `theme.display`. The skin restyles the shared sections in `src/invite/skins.css` (arches for Moonlit Mahal; a programme in acts with a theatre-ticket RSVP for Velvet Opera) and can label sections (`src/invite/skins.ts`); `display` letters names and titles in Bodoni Moda or Playfair Display instead of a script. Their scenes and openings are in `src/invite/art/scenes/`.
 - **Support link:** set `SUPPORT_WHATSAPP` in `src/config/site.ts` to show a "Help on WhatsApp" link in the footer. Leave empty to hide it.
 
 ## Tests

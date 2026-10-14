@@ -92,7 +92,7 @@ export async function updateInvitation(id: string, userId: string, patch: Patch)
     if (!parsed.success) throw new ApiError(400, "Some details could not be saved. Please check them and try again.");
     data = parsed.data;
     /* only keep media that really belongs to this invitation */
-    const owned = new Set((await sql<{ id: string }>`select id from photos where invitation_id = ${id}`).map((r) => r.id));
+    const owned = new Set((await sql<{ id: string }>`select id from photos where invitation_id = ${id} and kind <> 'guest'`).map((r) => r.id));
     data.portrait = data.portrait && owned.has(data.portrait) ? data.portrait : null;
     data.music = data.music && owned.has(data.music) ? data.music : null;
     data.gallery = data.gallery.filter((g) => owned.has(g));
@@ -118,7 +118,7 @@ export async function updateInvitation(id: string, userId: string, patch: Patch)
       }
       /* drop uploads that are no longer used; recent ones are left alone in case a save is still on its way */
       const used = [data.portrait, data.music, ...data.gallery].filter(Boolean) as string[];
-      const stale = await q<{ id: string }>`select id from photos where invitation_id = ${id} and created_at < now() - interval '1 hour'`;
+      const stale = await q<{ id: string }>`select id from photos where invitation_id = ${id} and kind in ('portrait', 'gallery', 'music') and created_at < now() - interval '1 hour'`;
       for (const s of stale) if (!used.includes(s.id)) await q`delete from photos where id = ${s.id}`;
     }
   });
@@ -136,11 +136,14 @@ export async function deleteInvitation(id: string, userId: string) {
 const LIMITS = { portrait: 3_500_000, gallery: 3_500_000, music: 4_000_000 } as const;
 export type MediaKind = keyof typeof LIMITS;
 
-function sniff(bytes: Uint8Array): string | null {
+export function sniff(bytes: Uint8Array): string | null {
   const b = bytes;
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
   if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
   if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "image/webp";
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x41 && b[10] === 0x56 && b[11] === 0x45) return "audio/wav";
+  /* AAC in ADTS frames: sync word, then layer bits 00 */
+  if (b[0] === 0xff && (b[1] & 0xf6) === 0xf0) return "audio/aac";
   if ((b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return "audio/mpeg";
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) return "audio/mp4";
   return null;
@@ -149,10 +152,10 @@ function sniff(bytes: Uint8Array): string | null {
 export async function addMedia(id: string, userId: string, kind: MediaKind, bytes: Uint8Array): Promise<{ id: string; data: InviteData }> {
   const inv = await getOwned(id, userId);
   if (!(kind in LIMITS)) throw new ApiError(400, "Unknown upload type.");
-  if (bytes.byteLength > LIMITS[kind]) throw new ApiError(413, kind === "music" ? "That audio file is too large. Use an MP3 under 4 MB." : "That photo is too large.");
+  if (bytes.byteLength > LIMITS[kind]) throw new ApiError(413, kind === "music" ? "That audio file is too large. Use an MP3, M4A or AAC under 4 MB." : "That photo is too large.");
   const mime = sniff(bytes);
   const wantAudio = kind === "music";
-  if (!mime || mime.startsWith("audio/") !== wantAudio) throw new ApiError(400, wantAudio ? "Please choose an MP3 or M4A audio file." : "Please choose a JPG, PNG or WebP photo.");
+  if (!mime || mime.startsWith("audio/") !== wantAudio) throw new ApiError(400, wantAudio ? "Please choose an MP3, M4A, AAC or WAV audio file." : "Please choose a JPG, PNG or WebP photo.");
   const data = inv.data;
   if (kind === "gallery" && data.gallery.length >= 8) throw new ApiError(400, "The gallery holds up to 8 photos. Remove one to add another.");
 

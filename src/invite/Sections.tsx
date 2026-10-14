@@ -6,7 +6,9 @@ import { googleCalendarUrl, icsFile } from "@/lib/share";
 import { Divider, Motif } from "./Ornaments";
 import { BloomArt, CrestArt, DoorwayArt, FloraCorner, PortraitArt, RingsArt } from "./Vignettes";
 import { Feature } from "./Features";
+import { Guestbook } from "./Guestbook";
 import { RsvpForm } from "./Rsvp";
+import { actOf } from "./skins";
 
 const FRAME_CLASS = { arch: "frame-arch", ogee: "frame-ogee", oval: "frame-oval", rect: "frame-rect" } as const;
 
@@ -23,7 +25,7 @@ function Names({ t, className }: { t: Template; className: string }) {
 function Message({ t }: { t: Template }) {
   const guest = t.live?.guest;
   return (
-    <section className="sec sec-message">
+    <section className="sec sec-message" data-act={actOf(t, "message")}>
       <FloraCorner slug={t.slug} seed={4} className="sec-flora sec-flora-tl" />
       <FloraCorner slug={t.slug} seed={8} className="sec-flora sec-flora-br" />
       {guest && (
@@ -68,7 +70,7 @@ function Portrait({ t }: { t: Template }) {
 
 function Events({ t }: { t: Template }) {
   return (
-    <section className="sec sec-events">
+    <section className="sec sec-events" data-act={actOf(t, "events")}>
       <h2 className="sec-title" data-rv="wipe">{t.events.length > 1 ? "The celebrations" : "The details"}</h2>
       <Divider motif={t.theme.motif} />
       <ol className="events">
@@ -80,6 +82,7 @@ function Events({ t }: { t: Template }) {
             <p className="event-when">{e.day}{e.time && <span>{e.time}</span>}</p>
             {e.place && <p className="event-place">{e.place}</p>}
             {e.note && <p className="event-note">{e.note}</p>}
+            {e.dressCode && <p className="event-dress">Dress code: {e.dressCode}</p>}
           </li>
         ))}
       </ol>
@@ -111,7 +114,7 @@ function Countdown({ t }: { t: Template }) {
   ];
   const done = left === 0;
   return (
-    <section className="sec sec-count">
+    <section className="sec sec-count" data-act={actOf(t, "count")}>
       <h2 className="sec-title" data-rv="wipe">{done ? "The day is here" : "Counting the days"}</h2>
       <div className="count" data-rv="up" role="timer" aria-label={`Time until ${t.dateLabel}`}>
         {parts.map(([label, v]) => (
@@ -157,7 +160,7 @@ function Venue({ t }: { t: Template }) {
   };
   if (!t.venue.name && !t.venue.address) return null;
   return (
-    <section className="sec sec-venue">
+    <section className="sec sec-venue" data-act={actOf(t, "venue")}>
       <h2 className="sec-title" data-rv="wipe">The venue</h2>
       <div className="venue-card" data-rv="photo">
         <svg className="venue-map" viewBox="0 0 330 190" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -199,13 +202,60 @@ function Venue({ t }: { t: Template }) {
   );
 }
 
+/** Thank-you mode, once the event is over. */
+function Thanks({ t }: { t: Template }) {
+  if (!t.live?.thanks) return null;
+  return (
+    <section className="sec sec-thanks">
+      <h2 className="sec-title" data-rv="wipe">Thank you</h2>
+      <p className="sec-body" data-rv="up">{t.live.thanks}</p>
+      {t.live.guestbook && <a className="inv-btn" href="#wishes" data-rv="up">Leave a wish{t.live.guestbook.photos ? " or a photo" : ""}</a>}
+    </section>
+  );
+}
+
+/** An update from the hosts, such as a changed time or venue. */
+function Notice({ t }: { t: Template }) {
+  if (!t.live?.notice) return null;
+  return (
+    <section className="sec sec-notice" role="status">
+      <p className="notice-label">Update from the hosts</p>
+      <p className="notice-text">{t.live.notice}</p>
+    </section>
+  );
+}
+
+function Stays({ t }: { t: Template }) {
+  const stays = t.live?.stays ?? [];
+  if (!stays.length) return null;
+  return (
+    <section className="sec sec-stays">
+      <h2 className="sec-title" data-rv="wipe">Where to stay</h2>
+      <ul className="stays" data-rv="up">
+        {stays.map((s, i) => (
+          <li key={i} className="stay">
+            <h3 className="stay-name">{s.name}</h3>
+            {s.note && <p className="stay-note">{s.note}</p>}
+            {(s.url || s.phone) && (
+              <p className="stay-links">
+                {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer">View or book</a>}
+                {s.phone && <a href={`tel:${s.phone.replace(/[^\d+]/g, "")}`}>{s.phone}</a>}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Gallery({ t }: { t: Template }) {
   const id = useId().replace(/:/g, "");
   const live = t.live;
   if (live?.mode === "public" && live.gallery.length === 0) return null;
   if (live && live.gallery.length > 0) {
     return (
-      <section className="sec sec-gallery">
+      <section className="sec sec-gallery" data-act={actOf(t, "gallery")}>
         <h2 className="sec-title" data-rv="wipe">Moments</h2>
         <div className={`gallery gallery-photos n${Math.min(live.gallery.length, 5)}`}>
           {live.gallery.map((src, i) => (
@@ -219,7 +269,7 @@ function Gallery({ t }: { t: Template }) {
     );
   }
   return (
-    <section className="sec sec-gallery">
+    <section className="sec sec-gallery" data-act={actOf(t, "gallery")}>
       <h2 className="sec-title" data-rv="wipe">Moments</h2>
       <p className="sec-note" data-rv="up">{live ? "Add photos in the editor and they appear here. Without photos, guests will not see this section." : "Shown here with illustrations. Your own photographs go in these frames."}</p>
       <div className="gallery">
@@ -253,7 +303,7 @@ function Closing({ t, footer }: { t: Template; footer?: React.ReactNode }) {
     }
   };
   return (
-    <section className="sec sec-closing">
+    <section className="sec sec-closing" data-act={actOf(t, "closing")}>
       <FloraCorner slug={t.slug} seed={6} className="sec-flora sec-flora-bl" />
       <FloraCorner slug={t.slug} seed={12} className="sec-flora sec-flora-br2" />
       <Motif motif={t.theme.motif} className="closing-motif" size={56} />
@@ -283,14 +333,18 @@ function Closing({ t, footer }: { t: Template; footer?: React.ReactNode }) {
 export function Sections({ t, footer }: { t: Template; footer?: React.ReactNode }) {
   return (
     <div className="inv-body">
+      <Notice t={t} />
+      <Thanks t={t} />
       <Message t={t} />
       <Portrait t={t} />
       <Feature t={t} />
       <Events t={t} />
       <Countdown t={t} />
       <Venue t={t} />
+      <Stays t={t} />
       <Gallery t={t} />
       <RsvpForm t={t} />
+      <Guestbook t={t} />
       <Closing t={t} footer={footer} />
     </div>
   );

@@ -4,6 +4,8 @@ type Flora = { mix: [FlowerKind, PetalColor][]; greens: GreenColor[]; petal: Pet
 
 /** Which flowers and foliage each design carries through its inner sections. */
 export const FLORA: Record<string, Flora> = {
+  "moonlit-mahal": { mix: [["jasmine", "white"], ["bud", "white"], ["jasmine", "white"]], greens: ["night", "deep"], petal: "white", dress: ["#E9E4D2", "#B9A673"] },
+  "velvet-opera": { mix: [["rose", "rose"], ["rose", "ivory"], ["bud", "ivory"]], greens: ["deep", "gilt"], petal: "rose", dress: ["#7A1220", "#4A0812"] },
   "ivory-wax-seal": { mix: [["rose", "ivory"], ["rose", "white"], ["blossom", "white"], ["rose", "peach"]], greens: ["sage", "olive"], petal: "ivory", dress: ["#FBF3E4", "#E3CFA8"] },
   "rose-garden": { mix: [["rose", "blush"], ["rose", "rose"], ["rose", "ivory"], ["blossom", "ivory"]], greens: ["sage", "leaf"], petal: "rose", dress: ["#F8D3CF", "#DFA09E"] },
   "jasmine-moon": { mix: [["jasmine", "white"], ["bud", "white"], ["blossom", "night"]], greens: ["night", "deep"], petal: "white", dress: ["#E9DDBD", "#C2A76B"] },

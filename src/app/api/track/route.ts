@@ -1,4 +1,4 @@
-import { guestBySlug } from "@/server/guests";
+import { activeGuestBySlug } from "@/server/guests";
 import { body, clientIp, ok, rateLimit, route } from "@/server/http";
 import { getPublished, recordView } from "@/server/invitations";
 
@@ -11,7 +11,7 @@ export const POST = route(async (req) => {
   const type = String(b.type ?? "");
   const inv = await getPublished(String(b.invitation ?? ""));
   if (!inv || inv.status !== "published" || !TYPES.has(type)) return ok();
-  const guest = typeof b.guest === "string" && b.guest ? await guestBySlug(inv.id, b.guest) : null;
+  const guest = typeof b.guest === "string" && b.guest ? await activeGuestBySlug(inv.id, b.guest) : null;
   await recordView(inv.id, guest?.id ?? null, type);
   return ok();
 });

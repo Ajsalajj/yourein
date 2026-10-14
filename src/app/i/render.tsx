@@ -6,7 +6,9 @@ import { eventTitleOf, formatDate, mediaUrl, namesOf, resolveTemplate } from "@/
 import { guestBySlug } from "@/server/guests";
 import { attendingCount, getPublished } from "@/server/invitations";
 import { siteOrigin } from "@/server/origin";
+import { listPublicWishes } from "@/server/wishes";
 import "./public.css";
+import { Logo } from "@/components/Logo";
 
 const SLUG = /^[a-z0-9-]{1,80}$/;
 
@@ -32,7 +34,7 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
   if (inv.status === "archived") {
     return (
       <main className="pub-gone">
-        <p className="logo">YoureIn</p>
+        <p className="logo"><Logo /></p>
         <h1>This invitation is no longer available.</h1>
         <p>The hosts have taken it down. If you think this is a mistake, please get in touch with them directly.</p>
       </main>
@@ -43,6 +45,15 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
 
   const guest = guestSlug && SLUG.test(guestSlug) ? await guestBySlug(inv.id, guestSlug) : null;
   if (guestSlug && !guest) redirect(`/i/${slug}`);
+  if (guest?.disabled) {
+    return (
+      <main className="pub-gone">
+        <p className="logo"><Logo /></p>
+        <h1>This personal link has been turned off.</h1>
+        <p>The hosts have switched off this link. If you think this is a mistake, please get in touch with them directly.</p>
+      </main>
+    );
+  }
 
   const origin = await siteOrigin();
   const t = resolveTemplate(base, inv.data, {
@@ -51,6 +62,8 @@ export async function InvitationPage({ slug, guestSlug }: { slug: string; guestS
     invitation: slug,
     shareUrl: `${origin}/i/${slug}`,
     attending: await attendingCount(inv.id),
+    wishes: inv.data.guestbook ? await listPublicWishes(inv.id) : undefined,
+    privateEvents: guest?.privateEvents ?? [],
     guest: guest ? { slug: guest.slug, name: guest.name, max: guest.max, note: guest.note, replied: guest.reply ?? undefined } : undefined,
   });
   return <PublicInvitation t={t} />;

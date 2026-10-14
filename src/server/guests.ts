@@ -1,33 +1,59 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { slugify, todayIn } from "@/lib/invite";
+import { repliesPerEvent, slugify, todayIn, visibleEvents, type InviteData } from "@/lib/invite";
 import { sql } from "./db";
 import { ApiError } from "./http";
 import { attendingCount, type Invitation } from "./invitations";
 
 export type Guest = {
   id: string; slug: string; name: string; phone: string; email: string; group: string; invited: number; max: number | null; note: string;
+  /** Private events this guest may see and reply to. */
+  privateEvents: string[];
+  /** The host turned this guest's personal link off. */
+  disabled: boolean;
   sentAt: Date | null; createdAt: Date;
-  reply: { status: "yes" | "maybe" | "no"; count: number } | null;
+  reply: { status: "yes" | "maybe" | "no"; count: number; events: Record<string, number>; answers: Record<string, string>; meal: string } | null;
 };
 
 type GuestRow = {
   id: string; slug: string; name: string; phone: string; email: string; group_name: string; invited_count: number; max_attendees: number | null; note: string;
-  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null;
+  sent_at: Date | null; created_at: Date; response_status: "yes" | "maybe" | "no" | null; attendee_count: number | null; private_events: unknown; reply_events?: unknown; reply_answers?: unknown; reply_meal?: string | null; disabled: boolean;
+};
+
+const ids = (v: unknown): string[] => {
+  const a = typeof v === "string" ? JSON.parse(v) : v;
+  return Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : [];
+};
+
+const obj = <T,>(v: unknown): Record<string, T> => {
+  const o = typeof v === "string" ? JSON.parse(v) : v;
+  return o && typeof o === "object" && !Array.isArray(o) ? (o as Record<string, T>) : {};
 };
 
 const toGuest = (r: GuestRow): Guest => ({
   id: r.id, slug: r.slug, name: r.name, phone: r.phone, email: r.email, group: r.group_name, invited: r.invited_count, max: r.max_attendees, note: r.note,
-  sentAt: r.sent_at, createdAt: r.created_at, reply: r.response_status ? { status: r.response_status, count: r.attendee_count ?? 0 } : null,
+  privateEvents: ids(r.private_events),
+  disabled: !!r.disabled,
+  sentAt: r.sent_at, createdAt: r.created_at, reply: r.response_status ? { status: r.response_status, count: r.attendee_count ?? 0, events: obj<number>(r.reply_events), answers: obj<string>(r.reply_answers), meal: r.reply_meal ?? "" } : null,
 });
 
 export async function listGuests(invitationId: string): Promise<Guest[]> {
   const rows = await sql<GuestRow>`
-    select g.*, r.response_status, r.attendee_count from guests g left join rsvps r on r.guest_id = g.id
+    select g.*, r.response_status, r.attendee_count, r.events as reply_events, r.answers as reply_answers, r.meal_preference as reply_meal from guests g left join rsvps r on r.guest_id = g.id
     where g.invitation_id = ${invitationId} order by g.created_at desc`;
   return rows.map(toGuest);
 }
 
-export type GuestInput = { name?: unknown; phone?: unknown; email?: unknown; group?: unknown; invited?: unknown; max?: unknown; note?: unknown; sent?: unknown };
+export type GuestInput = { name?: unknown; phone?: unknown; email?: unknown; group?: unknown; invited?: unknown; max?: unknown; note?: unknown; sent?: unknown; privateEvents?: unknown; disabled?: unknown };
+
+/** Keeps only ids of this invitation's private events. */
+async function cleanPrivate(invitationId: string, v: unknown): Promise<string[]> {
+  if (!Array.isArray(v)) return [];
+  const rows = await sql<{ data: unknown }>`select data from invitations where id = ${invitationId}`;
+  const raw = rows[0]?.data;
+  const events = ((typeof raw === "string" ? JSON.parse(raw) : raw) as { events?: { id: string; private?: boolean }[] } | null)?.events ?? [];
+  const allowed = new Set(events.filter((e) => e.private).map((e) => e.id));
+  return [...new Set(v.filter((x): x is string => typeof x === "string" && allowed.has(x)))];
+}
 
 function clean(input: GuestInput) {
   const name = String(input.name ?? "").trim().slice(0, 80);
@@ -60,19 +86,24 @@ export async function addGuest(invitationId: string, input: GuestInput): Promise
     slug = `${base}-${n}`;
   }
   const id = randomUUID();
-  await sql`insert into guests (id, invitation_id, slug, name, phone, email, group_name, invited_count, max_attendees, note)
-    values (${id}, ${invitationId}, ${slug}, ${g.name}, ${g.phone}, ${g.email}, ${g.group}, ${g.invited}, ${g.max}, ${g.note})`;
+  const priv = JSON.stringify(await cleanPrivate(invitationId, input.privateEvents));
+  await sql`insert into guests (id, invitation_id, slug, name, phone, email, group_name, invited_count, max_attendees, note, private_events)
+    values (${id}, ${invitationId}, ${slug}, ${g.name}, ${g.phone}, ${g.email}, ${g.group}, ${g.invited}, ${g.max}, ${g.note}, ${priv}::jsonb)`;
   return (await listGuests(invitationId)).find((x) => x.id === id)!;
 }
 
 export async function updateGuest(invitationId: string, guestId: string, input: GuestInput): Promise<Guest> {
   const existing = await sql<{ id: string }>`select id from guests where id = ${guestId} and invitation_id = ${invitationId}`;
   if (!existing[0]) throw new ApiError(404, "That guest is no longer on the list.");
-  if (input.sent !== undefined && input.name === undefined) {
+  if (input.disabled !== undefined && input.name === undefined) {
+    await sql`update guests set disabled = ${input.disabled === true} where id = ${guestId}`;
+  } else if (input.sent !== undefined && input.name === undefined) {
     await sql`update guests set sent_at = ${input.sent ? new Date() : null} where id = ${guestId}`;
   } else {
     const g = clean(input);
-    await sql`update guests set name = ${g.name}, phone = ${g.phone}, email = ${g.email}, group_name = ${g.group}, invited_count = ${g.invited}, max_attendees = ${g.max}, note = ${g.note} where id = ${guestId}`;
+    const priv = JSON.stringify(await cleanPrivate(invitationId, input.privateEvents));
+    await sql`update guests set name = ${g.name}, phone = ${g.phone}, email = ${g.email}, group_name = ${g.group}, invited_count = ${g.invited}, max_attendees = ${g.max}, note = ${g.note},
+      private_events = ${priv}::jsonb where id = ${guestId}`;
   }
   return (await listGuests(invitationId)).find((x) => x.id === guestId)!;
 }
@@ -81,9 +112,15 @@ export async function removeGuest(invitationId: string, guestId: string) {
   await sql`delete from guests where id = ${guestId} and invitation_id = ${invitationId}`;
 }
 
+/** A guest whose personal link still works; null when there is none or the host turned it off. */
+export async function activeGuestBySlug(invitationId: string, slug: string) {
+  const g = await guestBySlug(invitationId, slug);
+  return g && !g.disabled ? g : null;
+}
+
 export async function guestBySlug(invitationId: string, slug: string) {
   const rows = await sql<GuestRow>`
-    select g.*, r.response_status, r.attendee_count from guests g left join rsvps r on r.guest_id = g.id
+    select g.*, r.response_status, r.attendee_count, r.events as reply_events, r.answers as reply_answers, r.meal_preference as reply_meal from guests g left join rsvps r on r.guest_id = g.id
     where g.invitation_id = ${invitationId} and g.slug = ${slug}`;
   return rows[0] ? toGuest(rows[0]) : null;
 }
@@ -92,16 +129,28 @@ export async function guestBySlug(invitationId: string, slug: string) {
 
 export type Rsvp = {
   id: string; guestId: string | null; name: string; status: "yes" | "maybe" | "no"; count: number; phone: string; meal: string; message: string;
+  /** People coming to each function, by event id, when replies are per function. */
+  events: Record<string, number>;
+  /** Answers to the host's questions, by question id. */
+  answers: Record<string, string>;
   createdAt: Date; updatedAt: Date;
 };
 type RsvpRow = {
   id: string; guest_id: string | null; guest_name: string; response_status: "yes" | "maybe" | "no"; attendee_count: number; phone: string; meal_preference: string;
-  message: string; created_at: Date; updated_at: Date;
+  message: string; events: unknown; answers: unknown; created_at: Date; updated_at: Date;
 };
 const toRsvp = (r: RsvpRow): Rsvp => ({
   id: r.id, guestId: r.guest_id, name: r.guest_name, status: r.response_status, count: r.attendee_count, phone: r.phone, meal: r.meal_preference, message: r.message,
+  events: obj<number>(r.events), answers: obj<string>(r.answers),
   createdAt: r.created_at, updatedAt: r.updated_at,
 });
+
+/** People coming to each function, from every reply. */
+export function perEventTotals(rows: Rsvp[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) for (const [id, n] of Object.entries(r.events)) out[id] = (out[id] ?? 0) + (Number(n) || 0);
+  return out;
+}
 
 export async function listRsvps(invitationId: string): Promise<Rsvp[]> {
   return (await sql<RsvpRow>`select * from rsvps where invitation_id = ${invitationId} order by updated_at desc`).map(toRsvp);
@@ -137,7 +186,22 @@ export async function statsFor(invitationId: string): Promise<Stats> {
   return rows[0];
 }
 
-export type RsvpInput = { status?: unknown; name?: unknown; count?: unknown; phone?: unknown; meal?: unknown; message?: unknown; token?: unknown };
+export type RsvpInput = { status?: unknown; name?: unknown; count?: unknown; phone?: unknown; meal?: unknown; message?: unknown; token?: unknown; events?: unknown; answers?: unknown };
+
+/** Checks answers against the host's questions; unknown questions and bad choices are dropped. */
+function cleanAnswers(d: InviteData, input: unknown): Record<string, string> {
+  const given = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const out: Record<string, string> = {};
+  for (const q of d.rsvp.questions) {
+    if (!q.label) continue;
+    const v = String(given[q.id] ?? "").trim();
+    if (!v) continue;
+    if (q.kind === "yesno" && (v === "Yes" || v === "No")) out[q.id] = v;
+    else if (q.kind === "choice" && q.options.includes(v)) out[q.id] = v;
+    else if (q.kind === "text") out[q.id] = v.slice(0, 200);
+  }
+  return out;
+}
 
 /**
  * Stores a guest's reply. A personalised link keeps one reply per guest; a
@@ -147,21 +211,38 @@ export async function submitRsvp(inv: Invitation, guestSlug: string | null, inpu
   const settings = inv.data.rsvp;
   if (inv.status !== "published") throw new ApiError(410, "This invitation is no longer taking replies.");
   if (!settings.enabled) throw new ApiError(400, "Replies are not being collected for this invitation.");
+  if (inv.data.thanksOn) throw new ApiError(400, "Replies are closed. Thank you for celebrating with us.");
   if (settings.deadline && todayIn(inv.data.tz) > settings.deadline) throw new ApiError(400, "The reply date has passed. Please contact the hosts directly.");
 
-  const status = String(input.status ?? "");
-  if (status !== "yes" && status !== "no" && !(status === "maybe" && settings.allowMaybe)) throw new ApiError(400, "Choose whether you are coming.");
-
-  const guest = guestSlug ? await guestBySlug(inv.id, guestSlug) : null;
+  const guest = guestSlug ? await activeGuestBySlug(inv.id, guestSlug) : null;
   if (guestSlug && !guest) throw new ApiError(404, "This personal link is no longer valid. Ask the hosts for a new one.");
 
   const name = (guest?.name || String(input.name ?? "")).trim().slice(0, 80);
   if (!name) throw new ApiError(400, "Please add your name.");
 
   const max = guest?.max ?? settings.maxPerInvite;
-  let count = status === "no" ? 0 : Math.round(Number(input.count) || 1);
-  if (status !== "no" && (count < 1 || count > max)) throw new ApiError(400, max === 1 ? "This invitation is for one guest." : `This invitation is for up to ${max} guests.`);
-  if (status === "no") count = 0;
+  const tooMany = () => new ApiError(400, max === 1 ? "This invitation is for one guest." : `This invitation is for up to ${max} guests.`);
+  const priv = guest?.privateEvents ?? [];
+  let status: string;
+  let count: number;
+  const events: Record<string, number> = {};
+  if (repliesPerEvent(inv.data, priv)) {
+    /* one number per function this guest can see; 0 means not coming to that one */
+    const given = input.events && typeof input.events === "object" ? (input.events as Record<string, unknown>) : {};
+    for (const e of visibleEvents(inv.data, priv)) {
+      const n = Math.round(Number(given[e.id]) || 0);
+      if (n < 0 || n > max) throw tooMany();
+      if (n > 0) events[e.id] = n;
+    }
+    count = Math.max(0, ...Object.values(events));
+    status = count > 0 ? "yes" : "no";
+  } else {
+    status = String(input.status ?? "");
+    if (status !== "yes" && status !== "no" && !(status === "maybe" && settings.allowMaybe)) throw new ApiError(400, "Choose whether you are coming.");
+    count = status === "no" ? 0 : Math.round(Number(input.count) || 1);
+    if (status !== "no" && (count < 1 || count > max)) throw tooMany();
+  }
+  const answers = status === "no" ? {} : cleanAnswers(inv.data, input.answers);
 
   const phone = settings.askPhone ? String(input.phone ?? "").replace(/[^\d+\s-]/g, "").trim().slice(0, 24) : "";
   const mealRaw = String(input.meal ?? "").trim().slice(0, 30);
@@ -185,26 +266,34 @@ export async function submitRsvp(inv: Invitation, guestSlug: string | null, inpu
   if (existing) {
     /* an empty phone on an update keeps the number they gave before */
     await sql`update rsvps set guest_name = ${name}, response_status = ${status}, attendee_count = ${count}, phone = case when ${phone} = '' then phone else ${phone} end,
-      meal_preference = ${meal}, message = ${message}, updated_at = now() where id = ${existing}`;
+      meal_preference = ${meal}, message = ${message}, events = ${JSON.stringify(events)}::jsonb, answers = ${JSON.stringify(answers)}::jsonb, updated_at = now() where id = ${existing}`;
     return { status, count };
   }
   const fresh = guest ? null : randomBytes(24).toString("base64url");
-  await sql`insert into rsvps (id, invitation_id, guest_id, guest_name, response_status, attendee_count, phone, meal_preference, message, edit_token_hash)
-    values (${randomUUID()}, ${inv.id}, ${guest?.id ?? null}, ${name}, ${status}, ${count}, ${phone}, ${meal}, ${message}, ${fresh ? hash(fresh) : null})`;
+  await sql`insert into rsvps (id, invitation_id, guest_id, guest_name, response_status, attendee_count, phone, meal_preference, message, events, answers, edit_token_hash)
+    values (${randomUUID()}, ${inv.id}, ${guest?.id ?? null}, ${name}, ${status}, ${count}, ${phone}, ${meal}, ${message}, ${JSON.stringify(events)}::jsonb, ${JSON.stringify(answers)}::jsonb, ${fresh ? hash(fresh) : null})`;
   return { token: fresh ?? undefined, status, count };
 }
 
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 
 /** CSV for spreadsheets. Cells that could be read as formulas are neutralised. */
-export function rsvpsToCsv(rows: Rsvp[]): string {
+export function rsvpsToCsv(rows: Rsvp[], d?: InviteData): string {
   const cell = (v: string | number) => {
     let s = String(v ?? "");
     if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const label = { yes: "Confirmed", maybe: "Maybe", no: "Declined" } as const;
-  const lines = [["Guest name", "Status", "Guest count", "Phone", "Meal", "Message", "Response date"].join(",")];
-  for (const r of rows) lines.push([r.name, label[r.status], r.count, r.phone, r.meal, r.message, r.updatedAt.toISOString().slice(0, 16).replace("T", " ")].map(cell).join(","));
+  /* a column per function (when replies are per function) and per host question */
+  const events = d && d.rsvp.perEvent ? visibleEvents(d, null) : [];
+  const questions = d ? d.rsvp.questions.filter((q) => q.label) : [];
+  const lines = [["Guest name", "Status", "Guest count", ...events.map((e) => e.title), "Phone", "Meal", ...questions.map((q) => q.label), "Message", "Response date"].map(cell).join(",")];
+  for (const r of rows) {
+    lines.push([
+      r.name, label[r.status], r.count, ...events.map((e) => r.events[e.id] ?? 0), r.phone, r.meal, ...questions.map((q) => r.answers[q.id] ?? ""), r.message,
+      r.updatedAt.toISOString().slice(0, 16).replace("T", " "),
+    ].map(cell).join(","));
+  }
   return "﻿" + lines.join("\r\n") + "\r\n";
 }

@@ -35,12 +35,13 @@ await snap(page, "home");
 const cols = await page.evaluate(() => getComputedStyle(document.querySelector(".grid")).gridTemplateColumns.split(" ").length);
 ok("catalog shows 2 designs per row on a phone", cols === 2, `${cols} columns`);
 ok("no WhatsApp order buttons anywhere on the home page", (await page.locator('a[href*="wa.me"]').count()) === 0 && !(await page.content()).includes("Order on WhatsApp"));
-ok("every card has Preview and Customize", (await page.locator(".grid .card").count()) === 15 && (await page.locator(".grid .card [data-customize]").count()) === 15 && (await page.locator(".grid .card .card-actions button").count()) === 15);
+const cards = await page.locator(".grid .card").count();
+ok("every card has Preview and Customize", cards >= 15 && (await page.locator(".grid .card [data-customize]").count()) === cards && (await page.locator(".grid .card .card-actions button").count()) === cards, `${cards} designs`);
 const fit = await page.evaluate(() => {
-  const card = document.querySelector(".grid .card"), pm = card.querySelector(".pm:not(.pm-back)");
-  return { ratio: pm.getBoundingClientRect().width / card.getBoundingClientRect().width, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
+  const card = document.querySelector(".grid .card"), img = card.querySelector(".card-render");
+  return { ratio: img.getBoundingClientRect().width / card.getBoundingClientRect().width, loaded: img.complete && img.naturalWidth > 0, over: document.documentElement.scrollWidth - innerWidth, nameLines: Math.max(...[...document.querySelectorAll(".card-name")].map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))) };
 });
-ok("phone mockup takes 75 to 85% of the card width", fit.ratio >= 0.75 && fit.ratio <= 0.85, fit.ratio.toFixed(2));
+ok("each card shows the rendered two-phone picture, filling most of the card", fit.loaded && fit.ratio >= 0.8 && fit.ratio <= 1.25, fit.ratio.toFixed(2));
 ok("no horizontal overflow, names within 2 lines", fit.over <= 0 && fit.nameLines <= 2, JSON.stringify(fit));
 await page.locator("#templates").scrollIntoViewIfNeeded();
 await page.waitForTimeout(400);
@@ -60,24 +61,14 @@ await page.waitForSelector('.inv[data-phase="open"]', { timeout: 15000 });
 await page.waitForTimeout(500);
 await snap(page, "preview-open");
 
-/* ---------- customize → sign up ---------- */
+/* ---------- customize (no sign-in yet) ---------- */
 await page.locator(".pv-bar [data-customize]").click();
-await page.waitForURL(/\/signin\?next=/);
-await hideDev(page);
-await snap(page, "auth");
-ok("Customize asks a signed-out visitor to sign in", (await page.locator("h1").textContent()) === "Make it yours." && (await page.locator("text=Continue with Google").count()) === 1 && (await page.locator("text=Continue with Email").count()) === 1);
-ok("auth page remembers the chosen design", (await page.locator(".auth-tpl").textContent()).includes("Royal Emerald"));
-await page.locator("text=Continue with Email").click();
-await page.locator('input[autocomplete="name"]').fill("Asha Rao");
-await page.locator('input[type="email"]').fill(email);
-await page.locator('input[type="password"]').fill("correct horse battery");
-await snap(page, "auth-email");
-await page.locator('button[type="submit"]').click();
 await page.waitForURL(/\/edit\//, { timeout: 20000 });
 await hideDev(page);
 const editUrl = page.url();
 const id = editUrl.match(/edit\/([0-9a-f-]+)/)[1];
-ok("after sign-up the editor opens for the chosen design", (await page.locator(".ed-title b").textContent()) === "Royal Emerald");
+ok("Customize opens the editor without signing in", !page.url().includes("signin"));
+ok("the editor opens for the chosen design", (await page.locator(".ed-title b").textContent()) === "Royal Emerald");
 
 /* ---------- edit ---------- */
 await page.waitForSelector(".ed-h");
@@ -164,8 +155,21 @@ ok("preview shows the customer's own names, date, photo, gallery and events", ow
 ok("preview offers Back to Edit and Proceed to Payment", own.bar[0] === "Back to Edit" && own.bar[1] === "Proceed to Payment");
 await page.locator(".pv-bar .btn-solid").click();
 
+/* ---------- sign up at payment ---------- */
+await page.waitForURL(/\/signin\?next=%2Fpay%2F/, { timeout: 20000 });
+await hideDev(page);
+await snap(page, "auth");
+ok("payment asks the visitor to sign in to save their invitation", (await page.locator("h1").textContent()) === "Save your invitation." && (await page.locator("text=Continue with Google").count()) === 1 && (await page.locator("text=Continue with Email").count()) === 1);
+await page.locator("text=Continue with Email").click();
+await page.locator('input[autocomplete="name"]').fill("Asha Rao");
+await page.locator('input[type="email"]').fill(email);
+await page.locator('input[type="password"]').fill("correct horse battery");
+await snap(page, "auth-email");
+await page.locator('button[type="submit"]').click();
+
 /* ---------- pay → publish ---------- */
 await page.waitForURL(/\/pay\//, { timeout: 20000 });
+ok("after sign-up the draft is kept and payment opens", page.url().includes(`/pay/${id}`));
 await hideDev(page);
 await snap(page, "pay");
 const before = await (await host.request.get(`${base}/api/invitations/${id}`)).json();

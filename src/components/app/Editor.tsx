@@ -10,6 +10,7 @@ import { EVENT_TYPES, InviteDataSchema, MAX_GALLERY, TIME_ZONES, formatDate, for
 import { InvitationViewer } from "@/components/preview/InvitationViewer";
 import { InvitationPhoneMockup } from "@/components/site/InvitationPhoneMockup";
 import { api, shrinkImage } from "./client";
+import { MusicPicker } from "./MusicPicker";
 
 const Invitation = dynamic(() => import("@/invite/Invitation"), { ssr: false });
 
@@ -25,7 +26,7 @@ const STEPS = [
 type StepKey = (typeof STEPS)[number]["key"];
 const TOTAL = STEPS.length + 1; // payment is the final step
 
-type Props = { id: string; initial: InviteData; initialTemplate: string; status: "draft" | "ready" | "published" | "archived" };
+type Props = { id: string; initial: InviteData; initialTemplate: string; status: "draft" | "ready" | "published" | "archived"; guest?: boolean };
 type Errors = Partial<Record<"name1" | "date" | "time" | "venueName", string>>;
 
 function useWide() {
@@ -84,7 +85,7 @@ function Stepper({ value, min, max, onChange, label }: { value: number; min: num
 
 /* ----------------------------------------------------------------- editor */
 
-export function Editor({ id, initial, initialTemplate, status }: Props) {
+export function Editor({ id, initial, initialTemplate, status, guest = false }: Props) {
   const [data, setData] = useState<InviteData>(initial);
   const [templateSlug, setTemplateSlug] = useState(initialTemplate);
   const [step, setStep] = useState<StepKey>("names");
@@ -100,6 +101,63 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
   const template = getTemplate(templateSlug)!;
   const set = useCallback(<K extends keyof InviteData>(key: K, value: InviteData[K]) => setData((d) => ({ ...d, [key]: value })), []);
   const setRsvp = <K extends keyof InviteData["rsvp"]>(key: K, value: InviteData["rsvp"][K]) => setData((d) => ({ ...d, rsvp: { ...d.rsvp, [key]: value } }));
+
+  /* ---- keep the current step's chip in view on phones ---- */
+  useEffect(() => {
+    const row = document.querySelector<HTMLElement>(".ed-steps");
+    const el = row?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (row && el) row.scrollTo({ left: el.offsetLeft - row.clientWidth / 2 + el.clientWidth / 2, behavior: "smooth" });
+  }, [step]);
+
+  /* ---- undo and redo: quick runs of changes (typing a word) count as one step ---- */
+  type Snap = { data: InviteData; templateSlug: string };
+  const hist = useRef<{ past: Snap[]; future: Snap[]; prev: Snap; last: number; skip: boolean }>({
+    past: [], future: [], prev: { data: initial, templateSlug: initialTemplate }, last: 0, skip: false,
+  });
+  const [, setHistTick] = useState(0);
+  useEffect(() => {
+    const h = hist.current;
+    const cur = { data, templateSlug };
+    if (h.skip) {
+      h.skip = false;
+      h.prev = cur;
+      return;
+    }
+    if (cur.data === h.prev.data && cur.templateSlug === h.prev.templateSlug) return;
+    const now = Date.now();
+    if (now - h.last > 700) {
+      h.past.push(h.prev);
+      if (h.past.length > 50) h.past.shift();
+    }
+    h.last = now;
+    h.future = [];
+    h.prev = cur;
+    setHistTick((n) => n + 1);
+  }, [data, templateSlug]);
+  const travel = useCallback((dir: "undo" | "redo") => {
+    const h = hist.current;
+    const to = dir === "undo" ? h.past.pop() : h.future.pop();
+    if (!to) return;
+    (dir === "undo" ? h.future : h.past).push(h.prev);
+    h.skip = true;
+    h.last = 0;
+    setData(to.data);
+    setTemplateSlug(to.templateSlug);
+    setHistTick((n) => n + 1);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const el = e.target as HTMLElement | null;
+      /* inside a text box the browser's own undo applies */
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); travel("undo"); }
+      else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); travel("redo"); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [travel]);
 
   /* ---- step in the address bar, so refresh and Back behave ---- */
   useEffect(() => {
@@ -232,7 +290,8 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
   const back = async () => {
     if (index > 0) return go(STEPS[index - 1].key);
     await flush();
-    window.location.assign(published ? `/invites/${id}` : "/dashboard");
+    /* a guest has no dashboard yet; their draft stays on this device's session */
+    window.location.assign(published ? `/invites/${id}` : guest ? `/templates/${templateSlug}` : "/dashboard");
   };
 
   /* ---- uploads ---- */
@@ -243,12 +302,12 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
     for (const [i, file] of list.entries()) {
       setUploading(kind === "gallery" && list.length > 1 ? `Uploading ${i + 1} of ${list.length}…` : "Uploading…");
       try {
-        if (kind === "music" && file.size > 4_000_000) throw new Error("That audio file is too large. Use an MP3 under 4 MB.");
+        if (kind === "music" && file.size > 4_000_000) throw new Error("That audio file is too large. Use an MP3, M4A or AAC under 4 MB.");
         const blob = kind === "music" ? file : await shrinkImage(file);
         const res = await fetch(`/api/invitations/${id}/media?kind=${kind}`, { method: "POST", body: blob });
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(out.error || "That file could not be uploaded.");
-        setData((d) => ({ ...d, portrait: out.portrait, gallery: out.gallery, music: out.music }));
+        setData((d) => ({ ...d, portrait: out.portrait, gallery: out.gallery, music: out.music, ...(kind === "music" ? { musicSource: "upload" as const, musicName: file.name.slice(0, 120) } : {}) }));
       } catch (e) {
         setUploadError((e as Error).message);
         break;
@@ -258,7 +317,7 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
   };
 
   /* ---- events ---- */
-  const addEvent = () => set("events", [...data.events, { id: Math.random().toString(36).slice(2, 10), title: "", date: data.date, time: "", place: data.venueName, note: "" }]);
+  const addEvent = () => set("events", [...data.events, { id: Math.random().toString(36).slice(2, 10), title: "", date: data.date, time: "", place: data.venueName, note: "", dressCode: "", private: false }]);
   const patchEvent = (eid: string, p: Partial<InviteEventInput>) => set("events", data.events.map((e) => (e.id === eid ? { ...e, ...p } : e)));
 
   const changeType = (type: InviteData["eventType"]) => {
@@ -278,6 +337,14 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
           <div className="ed-title">
             <b>{template.name}</b>
             <span>Step {stepNo} of {TOTAL}</span>
+          </div>
+          <div className="ed-hist">
+            <button type="button" className="ed-hist-btn" onClick={() => travel("undo")} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl or ⌘ + Z)">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            <button type="button" className="ed-hist-btn" onClick={() => travel("redo")} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl or ⌘ + Shift + Z)">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
           </div>
           <span className="ed-save" data-state={save} role="status">{save === "saved" ? "Saved" : save === "saving" ? "Saving…" : "Not saved. Retrying"}</span>
         </div>
@@ -421,10 +488,40 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                       <Field label="Time"><input type="time" value={e.time} onChange={(ev) => patchEvent(e.id, { time: ev.target.value })} /></Field>
                     </div>
                     <Field label="Place"><input type="text" value={e.place} onChange={(ev) => patchEvent(e.id, { place: ev.target.value })} maxLength={120} /></Field>
-                    <Field label="Note" hint="For example a dress code."><input type="text" value={e.note} onChange={(ev) => patchEvent(e.id, { note: ev.target.value })} maxLength={160} /></Field>
+                    <Field label="Dress code" hint="Optional. Shown under this function."><input type="text" value={e.dressCode} onChange={(ev) => patchEvent(e.id, { dressCode: ev.target.value })} maxLength={80} placeholder="Traditional, pastel colours…" /></Field>
+                    <Field label="Note" hint="Optional. Anything else guests should know."><input type="text" value={e.note} onChange={(ev) => patchEvent(e.id, { note: ev.target.value })} maxLength={160} /></Field>
+                    <Switch label="Only for guests you choose" hint="Hidden from the general link. Tick it for each family in your guest list." checked={e.private} onChange={(v) => patchEvent(e.id, { private: v })} />
                   </div>
                 ))}
                 {data.events.length < 8 && <button type="button" className="btn btn-quiet btn-block" onClick={addEvent}>+ Add an event</button>}
+              </div>
+              <div className="ed-group">
+                <p className="ed-group-h">Update for guests</p>
+                <Field label="Message" hint="Optional. Shown in a band at the top of the invitation, for example a changed time or venue. Leave empty to hide it.">
+                  <textarea value={data.notice} onChange={(e) => set("notice", e.target.value)} maxLength={200} rows={2} placeholder="The Sangeet now starts at 8 pm." />
+                </Field>
+              </div>
+              <div className="ed-group">
+                <p className="ed-group-h">Where to stay</p>
+                <p className="hint">Optional. Suggest up to 4 hotels or homestays for guests travelling in.</p>
+                {data.stays.map((st, i) => {
+                  const patchStay = (p: Partial<typeof st>) => set("stays", data.stays.map((x, k) => (k === i ? { ...x, ...p } : x)));
+                  return (
+                    <div key={i} className="event-card">
+                      <div className="event-card-head">
+                        <span>Place {i + 1}</span>
+                        <button type="button" className="btn btn-sm btn-danger" onClick={() => set("stays", data.stays.filter((_, k) => k !== i))}>Remove</button>
+                      </div>
+                      <Field label="Name"><input type="text" value={st.name} onChange={(e) => patchStay({ name: e.target.value })} maxLength={80} placeholder="Hotel Lake View" /></Field>
+                      <Field label="Note" hint="Distance, price range, a booking code…"><input type="text" value={st.note} onChange={(e) => patchStay({ note: e.target.value })} maxLength={160} /></Field>
+                      <div className="row2">
+                        <Field label="Website or booking link"><input type="url" value={st.url} onChange={(e) => patchStay({ url: e.target.value })} maxLength={600} placeholder="https://" inputMode="url" /></Field>
+                        <Field label="Phone"><input type="tel" value={st.phone} onChange={(e) => patchStay({ phone: e.target.value })} maxLength={24} inputMode="tel" /></Field>
+                      </div>
+                    </div>
+                  );
+                })}
+                {data.stays.length < 4 && <button type="button" className="btn btn-quiet btn-block" onClick={() => set("stays", [...data.stays, { name: "", note: "", url: "", phone: "" }])}>+ Add a place to stay</button>}
               </div>
             </>
           )}
@@ -448,6 +545,11 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                       <small>The most people one reply can bring. You can set a different limit for each family in your guest list.</small>
                     </div>
                   </div>
+                  {data.events.filter((e) => e.title).length > 1 && (
+                    <div className="ed-group">
+                      <Switch label="Separate reply for each function" hint="Guests say how many are coming to each function. Your dashboard shows a head count for each." checked={data.rsvp.perEvent} onChange={(v) => setRsvp("perEvent", v)} />
+                    </div>
+                  )}
                   <div className="ed-group">
                     <p className="ed-group-h">What to ask</p>
                     <div>
@@ -460,6 +562,46 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                       <Field label="Meal choices" hint="Separate with commas. Up to 6.">
                         <input type="text" defaultValue={data.rsvp.mealOptions.join(", ")} onBlur={(e) => setRsvp("mealOptions", e.target.value.split(",").map((s) => s.trim().slice(0, 30)).filter(Boolean).slice(0, 6))} />
                       </Field>
+                    )}
+                  </div>
+                  <div className="ed-group">
+                    <p className="ed-group-h">Your own questions</p>
+                    <p className="hint">Optional. Asked of everyone who is coming. Up to 6.</p>
+                    {data.rsvp.questions.map((q) => {
+                      const patchQ = (p: Partial<typeof q>) => setRsvp("questions", data.rsvp.questions.map((x) => (x.id === q.id ? { ...x, ...p } : x)));
+                      return (
+                        <div key={q.id} className="event-card">
+                          <div className="event-card-head">
+                            <span>Question</span>
+                            <button type="button" className="btn btn-sm btn-danger" onClick={() => setRsvp("questions", data.rsvp.questions.filter((x) => x.id !== q.id))}>Remove</button>
+                          </div>
+                          <Field label="Question"><input type="text" value={q.label} onChange={(e) => patchQ({ label: e.target.value })} maxLength={80} /></Field>
+                          <Field label="Answer type">
+                            <select value={q.kind} onChange={(e) => patchQ({ kind: e.target.value as typeof q.kind })}>
+                              <option value="text">Short answer</option>
+                              <option value="yesno">Yes or no</option>
+                              <option value="choice">Pick one option</option>
+                            </select>
+                          </Field>
+                          {q.kind === "choice" && (
+                            <Field label="Options" hint="Separate with commas. Up to 6.">
+                              <input type="text" defaultValue={q.options.join(", ")} onBlur={(e) => patchQ({ options: e.target.value.split(",").map((o) => o.trim().slice(0, 40)).filter(Boolean).slice(0, 6) })} />
+                            </Field>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {data.rsvp.questions.length < 6 && (
+                      <div className="chips">
+                        {([
+                          ["Dietary needs", "Any dietary needs or allergies?", "text"],
+                          ["Transport", "Do you need transport to the venue?", "yesno"],
+                          ["Accommodation", "Do you need a place to stay?", "yesno"],
+                          ["+ Custom question", "", "text"],
+                        ] as const).filter(([, label]) => !label || !data.rsvp.questions.some((x) => x.label === label)).map(([chip, label, kind]) => (
+                          <button key={chip} type="button" className="btn btn-quiet btn-sm" onClick={() => setRsvp("questions", [...data.rsvp.questions, { id: Math.random().toString(36).slice(2, 10), label, kind, options: [] }])}>{chip}</button>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <div className="ed-group">
@@ -494,24 +636,40 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                 </Field>
               </div>
               <div className="ed-group">
-                <p className="ed-group-h">Music</p>
-                <p className="hint">Optional. Plays when a guest opens the invitation, with a button to pause. MP3 or M4A, up to 4 MB. Use music you have the right to share.</p>
-                <div className="chips">
-                  <label className="btn btn-quiet btn-sm file-btn">
-                    {data.music ? "Replace music" : "Choose audio file"}
-                    <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a" onChange={(e) => { void upload("music", e.target.files); e.target.value = ""; }} />
-                  </label>
-                  {data.music && <button type="button" className="btn btn-sm btn-danger" onClick={() => set("music", null)}>Remove</button>}
+                <div>
+                  <p className="ed-group-h">Background music</p>
+                  <p className="hint">Choose a track from our curated library or upload your own.</p>
                 </div>
-                {data.music && <audio controls preload="none" src={mediaUrl(data.music)} style={{ width: "100%" }} />}
-                <p className="hint" role="status">{uploading || " "}</p>
-                {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
+                <MusicPicker
+                  templateSlug={templateSlug}
+                  music={data.music}
+                  musicSource={data.musicSource}
+                  musicTrack={data.musicTrack}
+                  musicName={data.musicName}
+                  musicVolume={data.musicVolume}
+                  musicStart={data.musicStart}
+                  onPatch={(p) => setData((d) => ({ ...d, ...p }))}
+                  onUpload={(files) => void upload("music", files)}
+                  uploading={uploading}
+                  uploadError={uploadError}
+                />
               </div>
               <div className="ed-group">
                 <div>
                   <Switch label="Countdown" hint="A live countdown to your date." checked={data.countdown} onChange={(v) => set("countdown", v)} />
                   <Switch label="Let guests share the invitation" hint="Shows a share button at the end." checked={data.allowShare} onChange={(v) => set("allowShare", v)} />
+                  <Switch label="Guestbook" hint="Guests can leave wishes for everyone to read. You can hide any of them." checked={data.guestbook} onChange={(v) => set("guestbook", v)} />
+                  {data.guestbook && <Switch label="Guests can add a photo" hint="Each wish can include one photo, great after the event. You can hide or delete any of them." checked={data.guestPhotos} onChange={(v) => set("guestPhotos", v)} />}
                 </div>
+              </div>
+              <div className="ed-group">
+                <p className="ed-group-h">After the event</p>
+                <Switch label="Thank-you mode" hint="Turns the invitation into a thank-you page: replies close and the countdown hides. The guestbook stays open." checked={data.thanksOn} onChange={(v) => set("thanksOn", v)} />
+                {data.thanksOn && (
+                  <Field label="Thank-you message">
+                    <textarea value={data.thanks} onChange={(e) => set("thanks", e.target.value)} maxLength={300} rows={3} placeholder="Thank you for celebrating with us. Your love and blessings made our day." />
+                  </Field>
+                )}
               </div>
               <div className="ed-group">
                 <p className="ed-group-h">Contact details</p>
@@ -574,7 +732,7 @@ export function Editor({ id, initial, initialTemplate, status }: Props) {
                   </div>
                 ))}
               </div>
-              {!published && <p className="hint" style={{ marginTop: 14 }}>Next is payment: {PRICE_LABEL}, once. Your invitation is published as soon as it goes through.</p>}
+              {!published && <p className="hint" style={{ marginTop: 14 }}>{guest ? `Next: sign in or create an account to save your invitation, then pay ${PRICE_LABEL} once.` : `Next is payment: ${PRICE_LABEL}, once.`} Your invitation is published as soon as it goes through.</p>}
             </>
           )}
         </main>

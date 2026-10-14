@@ -1,11 +1,14 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CATEGORIES, FEATURED, TEMPLATES, getTemplate } from "@/data/templates";
 import { PRICE_LABEL, SUPPORT_WHATSAPP } from "@/config/site";
 import { PreviewButton } from "@/components/preview/PreviewProvider";
 import { CustomizeLink } from "./Actions";
 import { HeroStage, RsvpDemoCard } from "./Client";
+import { DashboardDemo } from "./DashboardDemo";
 import { InvitationPhoneMockup } from "./InvitationPhoneMockup";
 import { Price } from "./Price";
+import { Logo } from "@/components/Logo";
 
 export function Hero() {
   const centre = getTemplate("scenic-romance")!;
@@ -15,15 +18,16 @@ export function Hero() {
     <section className="hero">
       <div className="wrap hero-in">
         <div className="hero-copy">
+          <p className="eyebrow">Premium digital invitations</p>
           <h1>Invitations worth opening.</h1>
-          <p className="hero-sub">Create a beautiful digital invitation, personalize every detail, and know exactly who’s coming.</p>
+          <p className="hero-sub">Create, personalize and share a beautiful invitation — and know exactly who’s coming.</p>
           <div className="hero-cta">
             <a className="btn btn-solid" href="#templates">Explore Templates</a>
             <a className="btn btn-line" href="/create">Create Invitation</a>
           </div>
           <p className="hero-note">Every template {PRICE_LABEL} • RSVP included</p>
         </div>
-        <HeroStage>
+        <HeroStage screens={[left, right, centre].map((t) => `/thumbs/${t.slug}.webp`)}>
           <PreviewButton slug={left.slug} className="hp hp-l" label={`Preview ${left.name}`}><InvitationPhoneMockup t={left} priority shadow="deep" sizes="(max-width: 720px) 38vw, 212px" /></PreviewButton>
           <PreviewButton slug={right.slug} className="hp hp-r" label={`Preview ${right.name}`}><InvitationPhoneMockup t={right} priority shadow="deep" sizes="(max-width: 720px) 38vw, 212px" /></PreviewButton>
           <PreviewButton slug={centre.slug} className="hp hp-c" label={`Preview ${centre.name}`}><InvitationPhoneMockup t={centre} priority shadow="deep" sizes="(max-width: 720px) 44vw, 250px" /></PreviewButton>
@@ -46,8 +50,7 @@ export function Featured() {
             <article key={t.slug} className="feat-row">
               <PreviewButton slug={t.slug} className="feat-art" label={`Preview ${t.name}`}>
                 <span className="feat-plinth" style={{ background: t.theme.plinth }} aria-hidden="true" />
-                <InvitationPhoneMockup t={t} variant="alt" className="feat-phone-b" sizes="(max-width: 720px) 34vw, 220px" />
-                <InvitationPhoneMockup t={t} className="feat-phone-a" shadow="deep" sizes="(max-width: 720px) 38vw, 250px" />
+                <Image className="feat-render" src={`/renders/${t.slug}.webp`} alt={`${t.name} invitation shown on two phones`} width={710} height={831} sizes="(max-width: 720px) 70vw, 420px" />
               </PreviewButton>
               <div className="feat-copy">
                 <p className="feat-cat">{t.category}</p>
@@ -149,7 +152,57 @@ export function RsvpDemo() {
   );
 }
 
-const INCLUDES = ["Interactive invitation", "RSVP", "Gallery", "Google Maps", "Countdown", "Music", "Guest tracking", "Shareable link"];
+const INCLUDES = ["Interactive invitation", "RSVP for each function", "Personal links", "QR codes", "Guestbook & photos", "Gallery", "Google Maps", "Countdown", "Music", "Live headcount", "CSV export", "Shareable link"];
+
+const FOR_GUESTS = [
+  "An animated invitation that opens like a real card",
+  "Their own name on a personal link",
+  "RSVP in seconds, for each function",
+  "Directions, add to calendar and a live countdown",
+  "Music, your story and photo gallery",
+  "A guestbook for wishes and photos",
+  "Where to stay, and updates if plans change",
+];
+const FOR_YOU = [
+  "A dashboard with live headcounts",
+  "Head count for every function",
+  "Guest list with WhatsApp sending and QR codes",
+  "Meal, dietary and your own questions",
+  "Private functions for chosen families",
+  "Export everything to a spreadsheet",
+  "Thank-you mode and a shareable picture",
+];
+
+/** A tap-through demo of the host dashboard, and exactly what one payment includes. */
+export function WhatYouGet() {
+  return (
+    <section className="band get" aria-labelledby="get-h">
+      <div className="wrap get-in">
+        <div className="get-copy">
+          <p className="eyebrow">Included with every invitation</p>
+          <h2 id="get-h">Your own dashboard.</h2>
+          <p>Try it: tap through replies, guests, wishes and sharing. These are sample guests; yours appear here once you publish.</p>
+        </div>
+        <DashboardDemo />
+        <div className="get-lists">
+          <div className="get-list">
+            <h3>For your guests</h3>
+            <ul>{FOR_GUESTS.map((x) => <li key={x}>{x}</li>)}</ul>
+          </div>
+          <div className="get-list">
+            <h3>For you</h3>
+            <ul>{FOR_YOU.map((x) => <li key={x}>{x}</li>)}</ul>
+          </div>
+          <div className="get-price">
+            <p><b><Price /></b> once, when you publish. No subscription, no per-guest fees.</p>
+            <a className="btn btn-solid btn-block" href="#templates">Choose your design</a>
+            <small>Customizing is free. You only pay when you are happy with it.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Pricing() {
   return (
@@ -184,7 +237,7 @@ export function Footer() {
     <footer className="foot">
       <div className="wrap foot-in">
         <div>
-          <Link href="/" className="logo">YoureIn</Link>
+          <Link href="/" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
           <p className="foot-tag">Invitations worth opening.</p>
         </div>
         <nav aria-label="Categories" className="foot-links">

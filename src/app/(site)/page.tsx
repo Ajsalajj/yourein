@@ -2,7 +2,7 @@ import { TEMPLATES } from "@/data/templates";
 import { PRICE, SITE_NAME, SITE_URL } from "@/config/site";
 import { Catalog } from "@/components/site/Catalog";
 import { LiveShowcase } from "@/components/showcase/LiveShowcase";
-import { Featured, FinalCta, Hero, HowItWorks, Pricing, RsvpDemo, Why } from "@/components/site/Sections";
+import { Featured, FinalCta, Hero, HowItWorks, Pricing, RsvpDemo, WhatYouGet, Why } from "@/components/site/Sections";
 
 export default function Home() {
   const jsonLd = {
@@ -37,8 +37,9 @@ export default function Home() {
       <Catalog />
       <LiveShowcase />
       <HowItWorks />
-      <Why />
       <RsvpDemo />
+      <WhatYouGet />
+      <Why />
       <Pricing />
       <FinalCta />
     </>
