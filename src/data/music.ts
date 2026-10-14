@@ -38,6 +38,8 @@ export const TRACKS: Track[] = [
   t("taaj", "Taaj", "Regal", "Instrumental · Lost Stories", "Nikah · Reception", ["Elegant", "Cinematic"], "1:30"),
   t("lover-remix", "Lover (Remix)", "Warm", "Pop · Taylor Swift ft. Shawn Mendes", "Wedding · Anniversary", ["Romantic"], "1:30"),
   t("ordinary", "Ordinary", "Heartfelt", "Pop Ballad · Alex Warren", "Wedding · Engagement", ["Romantic", "Minimal"], "1:30"),
+  t("golden-hour-violin", "Golden Hour (Violin)", "Elegant", "Cinematic Violin Cover · ItsAMoney", "Wedding · Reception", ["Elegant", "Romantic", "Cinematic"], "1:30"),
+  t("love-story-violin", "Love Story (Violin)", "Timeless", "Instrumental Violin · ViOLiNiA", "Wedding · Anniversary", ["Elegant", "Cinematic", "Romantic"], "1:30"),
   t("hoor", "Hoor", "Dreamy", "Indian Electronica · Lost Stories", "Nikah · Reception", ["Traditional", "Cinematic"], "1:30"),
   t("inaam", "Inaam", "Joyful", "Punjabi Pop · Jasleen Royal ft. Badshah", "Sangeet · Celebration", ["Traditional"], "1:30"),
   /* Retired: kept so invitations that already use them keep playing. */
@@ -58,21 +60,21 @@ export const getTrack = (id: string | null | undefined) => (id ? TRACKS.find((x)
 /** Tracks suggested first for each design. */
 export const RECOMMENDED: Record<string, string[]> = {
   "moonlit-mahal": ["taaj", "hoor", "pesamale"],
-  "velvet-opera": ["taaj", "taaj", "lover-remix"],
+  "velvet-opera": ["taaj", "love-story-violin", "lover-remix"],
   "ivory-wax-seal": ["her", "ordinary"],
   "rose-garden": ["her", "ordinary", "lover-remix"],
   "jasmine-moon": ["hoor", "taaj"],
   "royal-emerald": ["taaj", "hoor", "sahiba"],
   "scenic-romance": ["ordinary", "her"],
-  "botanical-vow": ["lover-remix", "ordinary"],
-  "celestial-veil": ["taaj", "her"],
-  "cherry-blossom": ["lover-remix", "ordinary"],
+  "botanical-vow": ["lover-remix", "golden-hour-violin"],
+  "celestial-veil": ["love-story-violin", "taaj"],
+  "cherry-blossom": ["golden-hour-violin", "lover-remix"],
   "garden-swing": ["lover-remix", "pesamale"],
   "golden-palace": ["sahiba", "inaam"],
   "kerala-ivory": ["pesamale", "her"],
   "marigold-celebration": ["inaam", "sahiba"],
-  "pearl-vellum": ["her", "taaj"],
-  "silk-ribbon": ["taaj", "lover-remix"],
+  "pearl-vellum": ["golden-hour-violin", "her"],
+  "silk-ribbon": ["love-story-violin", "lover-remix"],
   "temple-heritage": ["pesamale", "hoor", "sahiba"],
 };
 
