@@ -18,6 +18,9 @@ const base = process.env.BASE || "http://localhost:3001";
 const KEY_ID = process.env.RAZORPAY_KEY_ID || "rzp_test_local";
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "local_key_secret";
 const HOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "local_hook_secret";
+/* The price the site is running with, in paise. Start the site and this script with the same NEXT_PUBLIC_PRICE_INR (default 1). */
+const PRICE_RS = Number(process.env.NEXT_PUBLIC_PRICE_INR) || 1;
+const AMOUNT = PRICE_RS * 100;
 const hmac = (secret, text) => createHmac("sha256", secret).update(text).digest("hex");
 
 let fail = 0;
@@ -59,7 +62,7 @@ await call("POST", "/api/auth/signup", { name: "Pay Check", email: `pay${Date.no
 /* ---- checkout path ---- */
 const a = await ready("Mira", "Jai");
 const o1 = await call("POST", "/api/pay/order", { invitationId: a });
-ok("order is created through the Razorpay Orders API for ₹999 in paise", o1.status === 200 && o1.body.mode === "razorpay" && o1.body.keyId === KEY_ID && seen.at(-1)?.amount === 99900 && seen.at(-1)?.currency === "INR", JSON.stringify(seen.at(-1) ?? o1.body).slice(0, 120));
+ok(`order is created through the Razorpay Orders API for ₹${PRICE_RS} in paise`, o1.status === 200 && o1.body.mode === "razorpay" && o1.body.keyId === KEY_ID && seen.at(-1)?.amount === AMOUNT && seen.at(-1)?.currency === "INR", JSON.stringify(seen.at(-1) ?? o1.body).slice(0, 120));
 ok("the key secret never reaches the browser", !JSON.stringify(o1.body).includes(KEY_SECRET));
 ok("the simulated gateway is off once live keys are set", (await call("POST", "/api/pay/test", { orderId: o1.body.orderId })).status === 403);
 
@@ -81,16 +84,36 @@ const o3 = await call("POST", "/api/pay/order", { invitationId: b });
 const hook = (event, entity) => JSON.stringify({ event, payload: { payment: { entity } } });
 const send = (raw, sig) => call("POST", "/api/pay/webhook", raw, { "Content-Type": "application/json", "X-Razorpay-Signature": sig, Origin: "https://api.razorpay.com", Cookie: "" });
 
-const unsigned = hook("payment.captured", { id: "pay_mock_hook1", order_id: o3.body.orderId, status: "captured", amount: 99900 });
+const unsigned = hook("payment.captured", { id: "pay_mock_hook1", order_id: o3.body.orderId, status: "captured", amount: AMOUNT });
 ok("webhook with a bad signature is refused", (await send(unsigned, "nope")).status === 400 && (await status(b)) === "ready");
-const short = hook("payment.captured", { id: "pay_mock_short", order_id: o3.body.orderId, status: "captured", amount: 100 });
+const short = hook("payment.captured", { id: "pay_mock_short", order_id: o3.body.orderId, status: "captured", amount: AMOUNT - 1 });
 ok("webhook for less than the price is ignored", (await send(short, hmac(HOOK_SECRET, short))).body.ignored === true && (await status(b)) === "ready");
-const other = hook("payment.failed", { id: "pay_mock_failed", order_id: o3.body.orderId, status: "failed", amount: 99900 });
-ok("webhook for a failed payment is ignored", (await send(other, hmac(HOOK_SECRET, other))).body.ignored === true && (await status(b)) === "ready");
+const other = hook("payment.failed", { id: "pay_mock_failed", order_id: o3.body.orderId, status: "failed", amount: AMOUNT, error_description: "Card declined" });
+const failedRes = await send(other, hmac(HOOK_SECRET, other));
+ok("webhook for a failed payment is recorded but publishes nothing", failedRes.body.recorded === "failed" && (await status(b)) === "ready", JSON.stringify(failedRes.body));
+ok("a failed payment webhook can be replayed safely", (await send(other, hmac(HOOK_SECRET, other))).status === 200 && (await status(b)) === "ready");
 const first = await send(unsigned, hmac(HOOK_SECRET, unsigned));
 ok("a signed payment.captured webhook publishes without the browser", first.status === 200 && (await status(b)) === "published", JSON.stringify(first.body));
 const replay = await send(unsigned, hmac(HOOK_SECRET, unsigned));
 ok("a replayed webhook changes nothing", replay.status === 200 && (await status(b)) === "published");
+
+/* ---- refunds arrive by webhook and never unpublish ---- */
+const refundHook = (id, amount) => JSON.stringify({ event: "refund.processed", payload: { refund: { entity: { id, payment_id: "pay_mock_hook1", amount } }, payment: { entity: { id: "pay_mock_hook1" } } } });
+const half = refundHook("rfnd_mock_1", Math.max(1, Math.floor(AMOUNT / 2)));
+const r1 = await send(half, hmac(HOOK_SECRET, half));
+ok(AMOUNT > 1 ? "a partial refund is recorded as partly refunded" : "a refund is recorded", r1.body.recorded === (AMOUNT > 1 ? "partially_refunded" : "refunded"), JSON.stringify(r1.body));
+const rest = refundHook("rfnd_mock_2", AMOUNT);
+const r2 = await send(rest, hmac(HOOK_SECRET, rest));
+ok("refunds adding up to the full amount mark it refunded", r2.body.recorded === "refunded", JSON.stringify(r2.body));
+ok("a refund does not unpublish the invitation", (await status(b)) === "published");
+const unknown = refundHook("rfnd_x", 10).replace("pay_mock_hook1", "pay_does_not_exist").replace("pay_mock_hook1", "pay_does_not_exist");
+ok("a refund for an unknown payment is ignored", (await send(unknown, hmac(HOOK_SECRET, unknown))).body.ignored === true);
+
+/* ---- an attempt that fails and is never retried stays visible as failed ---- */
+const c = await ready("Zed", "Yara");
+const o5 = await call("POST", "/api/pay/order", { invitationId: c });
+const lone = hook("payment.failed", { id: "pay_mock_lonely_fail", order_id: o5.body.orderId, status: "failed", amount: AMOUNT, error_description: "Insufficient funds" });
+ok("a failed payment that is never retried is recorded", (await send(lone, hmac(HOOK_SECRET, lone))).body.recorded === "failed" && (await status(c)) === "ready");
 
 mock.close();
 console.log(fail ? `\n${fail} FAILED` : "\nall passed");

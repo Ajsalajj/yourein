@@ -12,7 +12,7 @@ import { SEO_ORIGIN } from "@/seo/url";
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/dashboard", "/invites", "/guests", "/account", "/edit/", "/pay/", "/success/", "/start/", "/signin", "/reset", "/shot/"] }],
+    rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/admin", "/dashboard", "/invites", "/guests", "/account", "/edit/", "/pay/", "/success/", "/start/", "/signin", "/reset", "/shot/"] }],
     sitemap: `${SEO_ORIGIN}/sitemap.xml`,
   };
 }

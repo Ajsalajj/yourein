@@ -21,6 +21,13 @@ export type Provider = "razorpay" | "test";
 
 const razorpayKeys = () => (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET ? { id: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET } : null);
 
+/** "test" for rzp_test_ keys, "live" for rzp_live_ keys, null when Razorpay is not configured. */
+export function razorpayKeyMode(): "test" | "live" | null {
+  const k = razorpayKeys();
+  if (!k) return null;
+  return k.id.startsWith("rzp_live_") ? "live" : "test";
+}
+
 export function paymentMode(): Provider | "off" {
   if (razorpayKeys()) return "razorpay";
   if (process.env.NODE_ENV !== "production" || process.env.YOUREIN_TEST_PAYMENTS === "1") return "test";
@@ -36,7 +43,7 @@ function sameSignature(a: string, b: string) {
 }
 
 export type Checkout =
-  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string } }
+  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean }
   | { mode: "test"; orderId: string; amount: number; currency: string }
   | { mode: "published"; slug: string };
 
@@ -80,6 +87,7 @@ export async function createOrder(user: User, invitationId: string): Promise<Che
     return {
       mode, keyId: razorpayKeys()!.id, orderId: providerOrderId, amount: AMOUNT, currency: CURRENCY, name: SITE_NAME,
       description: `${template?.name ?? "Invitation"} for ${namesOf(inv.data)}`, prefill: { name: user.name, email: user.email },
+      testKeys: razorpayKeyMode() === "test",
     };
   }
   return { mode, orderId: providerOrderId, amount: AMOUNT, currency: CURRENCY };
@@ -110,7 +118,7 @@ export async function verifyAndPublish(user: User | null, input: { orderId?: unk
     await sql`update orders set status = 'failed' where id = ${order.id} and status = 'created'`;
     throw new ApiError(400, "We could not verify this payment. If money left your account, contact us with your payment ID.", "bad-signature");
   }
-  return settle(order, paymentId, signature, { source: "checkout" });
+  return settle(order, paymentId, signature, { source: "checkout", keyMode: order.provider === "razorpay" ? razorpayKeyMode() : "simulated" });
 }
 
 type OrderRow = { id: string; invitation_id: string; amount: number; currency: string; status: string };
@@ -137,11 +145,49 @@ export async function handleWebhook(rawBody: string, signature: string | null) {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!secret) throw new ApiError(503, "Webhook secret is not configured.");
   if (!signature || !sameSignature(sign(secret, rawBody), signature)) throw new ApiError(400, "Bad webhook signature.");
-  const event = JSON.parse(rawBody) as { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string; status?: string; amount?: number } } } };
+  const event = JSON.parse(rawBody) as WebhookEvent;
   const p = event.payload?.payment?.entity;
+
+  if (event.event === "payment.failed") return recordFailedPayment(p);
+  if (event.event === "refund.processed") return recordRefund(event.payload?.refund?.entity, p);
+
   if (!p?.id || !p.order_id || (event.event !== "payment.captured" && event.event !== "order.paid")) return { ignored: true };
   const rows = await sql<OrderRow>`select id, invitation_id, amount, currency, status from orders where provider_order_id = ${p.order_id} and provider = 'razorpay'`;
   if (!rows[0] || (p.amount ?? 0) < rows[0].amount) return { ignored: true };
-  await settle(rows[0], p.id, "", { source: "webhook", event: event.event });
+  await settle(rows[0], p.id, "", { source: "webhook", event: event.event, keyMode: razorpayKeyMode() });
   return { ok: true };
+}
+
+type PaymentEntity = { id?: string; order_id?: string; status?: string; amount?: number; method?: string; error_description?: string; error_reason?: string };
+type WebhookEvent = { event?: string; payload?: { payment?: { entity?: PaymentEntity }; refund?: { entity?: { id?: string; payment_id?: string; amount?: number } } } };
+
+/**
+ * A failed attempt is kept so the admin dashboard can see it. It never publishes anything and never marks the order
+ * as failed: the customer can retry on the same order. A payment that already succeeded is never overwritten.
+ */
+async function recordFailedPayment(p: PaymentEntity | undefined) {
+  if (!p?.id || !p.order_id) return { ignored: true };
+  const rows = await sql<OrderRow>`select id, invitation_id, amount, currency, status from orders where provider_order_id = ${p.order_id} and provider = 'razorpay'`;
+  if (!rows[0]) return { ignored: true };
+  const raw = JSON.stringify({ source: "webhook", event: "payment.failed", keyMode: razorpayKeyMode(), method: p.method ?? null, reason: p.error_description ?? p.error_reason ?? null });
+  await sql`insert into payments (id, order_id, provider_payment_id, amount, currency, status, signature, raw)
+    values (${randomUUID()}, ${rows[0].id}, ${p.id}, ${p.amount ?? rows[0].amount}, ${rows[0].currency}, 'failed', '', ${raw}::jsonb)
+    on conflict (provider_payment_id) do nothing`;
+  return { recorded: "failed" };
+}
+
+/** Marks a payment refunded (or partially refunded). The invitation stays published: taking it down is a decision for a person. */
+async function recordRefund(refund: { id?: string; payment_id?: string; amount?: number } | undefined, p: PaymentEntity | undefined) {
+  const paymentId = refund?.payment_id ?? p?.id;
+  if (!refund?.id || !paymentId) return { ignored: true };
+  return transaction(async (q) => {
+    const rows = await q<{ id: string; amount: number; raw: Record<string, unknown> }>`select id, amount, raw from payments where provider_payment_id = ${paymentId} for update`;
+    const pay = rows[0];
+    if (!pay) return { ignored: true };
+    const refunds = { ...((pay.raw.refunds as Record<string, number> | undefined) ?? {}), [refund.id!]: refund.amount ?? 0 };
+    const total = Object.values(refunds).reduce((n, x) => n + x, 0);
+    const status = total >= pay.amount ? "refunded" : "partially_refunded";
+    await q`update payments set status = ${status}, raw = ${JSON.stringify({ ...pay.raw, refunds })}::jsonb where id = ${pay.id}`;
+    return { recorded: status };
+  });
 }
