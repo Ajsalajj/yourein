@@ -232,23 +232,33 @@ export function FinalCta() {
   );
 }
 
+const FOOT: { heading: string; links: [string, string][] }[] = [
+  { heading: "Invitations", links: [["Wedding", "/wedding-invitations"], ["Nikah", "/nikah-invitations"], ["Engagement", "/engagement-invitations"], ["All designs", "/create"]] },
+  { heading: "Styles", links: [["Floral", "/wedding-invitations/floral"], ["Royal", "/wedding-invitations/royal"], ["Minimal", "/wedding-invitations/minimal"], ["Indian", "/wedding-invitations/indian"], ["Kerala", "/india/kerala"]] },
+  { heading: "Features", links: [["RSVP", "/features/rsvp"], ["Guest tracking", "/features/guest-tracking"], ["Music", "/features/music"], ["QR codes", "/features/qr-code"], ["Personal links", "/features/personal-links"]] },
+  { heading: "Resources", links: [["Guides", "/guides"], ["Pricing", "/#pricing"], ["About", "/about"], ["Contact", "/contact"], ["Privacy", "/privacy"], ["Terms", "/terms"]] },
+];
+
 export function Footer() {
   return (
     <footer className="foot">
       <div className="wrap foot-in">
-        <div>
+        <div className="foot-brand">
           <Link href="/" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
           <p className="foot-tag">Invitations worth opening.</p>
+          <p className="foot-acct">
+            <Link href="/create">Create an invitation</Link> · <a href="/dashboard">My invitations</a> · <a href="/signin">Sign in</a>
+            {SUPPORT_WHATSAPP && <> · <a href={`https://wa.me/${SUPPORT_WHATSAPP.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">Help on WhatsApp</a></>}
+          </p>
         </div>
-        <nav aria-label="Categories" className="foot-links">
-          {CATEGORIES.map((c) => <Link key={c} href={`/?category=${encodeURIComponent(c)}#templates`}>{c}</Link>)}
-        </nav>
-        <nav aria-label="Account" className="foot-links">
-          <a href="/create">Create an invitation</a>
-          <a href="/dashboard">My invitations</a>
-          <a href="/signin">Sign in</a>
-          {SUPPORT_WHATSAPP && <a href={`https://wa.me/${SUPPORT_WHATSAPP.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">Help on WhatsApp</a>}
-        </nav>
+        {FOOT.map((col) => (
+          <nav key={col.heading} aria-label={col.heading} className="foot-col">
+            <h2 className="foot-h">{col.heading}</h2>
+            <ul className="foot-links">
+              {col.links.map(([label, href]) => <li key={href}><Link href={href}>{label}</Link></li>)}
+            </ul>
+          </nav>
+        ))}
       </div>
       <div className="wrap foot-base">
         <p>© {new Date().getFullYear()} YoureIn. {TEMPLATES.length} animated invitation designs, {PRICE_LABEL} each.</p>

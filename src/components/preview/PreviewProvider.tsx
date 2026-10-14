@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { track } from "@/seo/analytics";
 
 /* The overlay and the whole invitation engine load only when a preview is first opened. */
 const PreviewOverlay = dynamic(() => import("./PreviewOverlay"), { ssr: false });
@@ -17,6 +18,7 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
   const opener = useRef<HTMLElement | null>(null);
 
   const open = useCallback((s: string) => {
+    track("template_preview", { template: s });
     opener.current = document.activeElement as HTMLElement | null;
     setEverOpened(true);
     setSlug((cur) => {

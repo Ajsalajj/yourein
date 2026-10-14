@@ -8,6 +8,9 @@ import { Logo } from "@/components/Logo";
 
 const LINKS: Category[] = ["Wedding", "Engagement", "Nikah", "Birthday", "Baby Shower", "Other"];
 
+/** Categories with their own landing page link straight to it, so the links work without JavaScript. */
+const HUB: Partial<Record<Category, string>> = { Wedding: "/wedding-invitations", Nikah: "/nikah-invitations", Engagement: "/engagement-invitations" };
+
 /** Ask the catalog on the home page to show one category. */
 export function pickCategory(c: Category | "All") {
   window.dispatchEvent(new CustomEvent("yourein:category", { detail: c }));
@@ -49,7 +52,7 @@ export function Nav() {
         <Link href="/" className="logo" aria-label="YoureIn, home"><Logo alt="" /></Link>
         <nav className="nav-links" aria-label="Invitation categories">
           {LINKS.map((c) => (
-            <Link key={c} href={`/?category=${encodeURIComponent(c)}#templates`} onClick={(e) => onPick(e, c)}>{c}</Link>
+            <Link key={c} href={HUB[c] ?? `/?category=${encodeURIComponent(c)}#templates`} onClick={HUB[c] ? () => setMenu(false) : (e) => onPick(e, c)}>{c}</Link>
           ))}
         </nav>
         <div className="nav-right">
@@ -65,7 +68,7 @@ export function Nav() {
       {menu && (
         <nav id="nav-sheet" className="nav-sheet" aria-label="Invitation categories">
           {LINKS.map((c) => (
-            <Link key={c} href={`/?category=${encodeURIComponent(c)}#templates`} onClick={(e) => onPick(e, c)}>{c}</Link>
+            <Link key={c} href={HUB[c] ?? `/?category=${encodeURIComponent(c)}#templates`} onClick={HUB[c] ? () => setMenu(false) : (e) => onPick(e, c)}>{c}</Link>
           ))}
         </nav>
       )}

@@ -14,14 +14,14 @@ const SLUG = /^[a-z0-9-]{1,80}$/;
 
 export async function invitationMetadata(slug: string): Promise<Metadata> {
   const inv = SLUG.test(slug) ? await getPublished(slug) : null;
-  if (!inv || inv.status !== "published") return { title: "Invitation", robots: { index: false, follow: false } };
+  if (!inv || inv.status !== "published") return { title: "Invitation", robots: { index: false, follow: true } };
   const names = namesOf(inv.data);
   const title = `${names}: ${eventTitleOf(inv.data)} invitation`;
   const description = [formatDate(inv.data.date), inv.data.venueName].filter(Boolean).join(" at ");
   return {
     title: { absolute: title },
     description,
-    robots: { index: false, follow: false },
+    robots: { index: false, follow: true },
     openGraph: { title, description, images: [{ url: `/thumbs/${inv.templateSlug}.webp`, width: 780, height: 1688 }] },
   };
 }

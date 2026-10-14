@@ -95,6 +95,103 @@ Plain PostgreSQL tables, created by `src/server/schema.ts`:
 
 Email + password (scrypt) and Google. Sessions are random tokens stored hashed, in an HttpOnly, SameSite=Lax cookie. Every route that changes something checks the request's origin. Sign-in, sign-up, reset and RSVP are rate limited per address (in memory, so per server instance).
 
+## Search (SEO)
+
+The SEO system lives in `src/seo/` and `src/components/seo/`. It is deliberately small: a hand-approved set of landing pages, each with its own search intent, real designs on it and copy of its own. Nothing is generated as a combination of keywords.
+
+### How it is organised
+
+```
+src/seo/
+  url.ts                 canonical origin (www.yourein.in) and canonical URL rules
+  pages.ts               every landing page: occasion hubs, style collections, features, Kerala, trust pages (one typed list)
+  guides.ts              the guide articles
+  template-profiles.ts   unique copy and style tags for each design (used by template pages and collections)
+  select.ts              which designs a page shows; related designs and pages
+  indexable.ts           the quality gates: isTemplateIndexable, isPageIndexable
+  metadata.ts            buildMetadata(): title, description, canonical, robots, Open Graph, Twitter, in one place
+  page-metadata.ts       metadata for a landing page, noindexed automatically if it fails its gate
+  jsonld.ts              Organization, WebSite, BreadcrumbList, CollectionPage, Product, Article
+  sitemap.ts             what each sitemap lists (only canonical, indexable pages)
+  analytics.ts           marketing-safe events and UTM capture
+  og-card.tsx            1200 x 630 social cards (/og/template/<slug>, /og/page/<id>)
+  screenshots.ts         real product screenshots used on the feature pages
+```
+
+| Pages | URLs |
+| --- | --- |
+| Occasions | `/wedding-invitations`, `/nikah-invitations`, `/engagement-invitations` |
+| Styles | `/wedding-invitations/floral`, `/royal`, `/minimal`, `/indian` |
+| Location | `/india/kerala` |
+| Features | `/features`, `/features/rsvp`, `music`, `guest-tracking`, `personal-links`, `qr-code`, `photo-gallery`, `countdown`, `multiple-events` |
+| Guides | `/guides` and five articles |
+| Trust | `/about`, `/contact`, `/privacy`, `/terms` |
+| Designs | `/templates/<slug>` |
+
+`docs/seo-keyword-map.md` lists each page's primary and secondary keywords, intent, title, H1, related pages and designs. Regenerate it with `npm run seo:audit -- --map --write`.
+
+### Rules the code enforces
+
+- **One canonical per page.** Every public page sets its own canonical through `buildMetadata`. Filters, sorting, `utm_*`, preview and other query strings never change it, so `/?category=Wedding` and `/wedding-invitations?utm_source=x` are not separate pages. There is no site-wide default canonical.
+- **Quality gate.** A landing page is indexed only if it shows at least its minimum number of real designs, has copy of its own and is not switched off. Otherwise it returns `noindex, follow` and is left out of every sitemap. A design page is indexed only if `isTemplateIndexable` passes: published, a stable slug, a preview picture, unique copy and not a duplicate.
+- **Guest invitations are never indexed.** `/i/...` pages send `noindex, follow` in their metadata and in an `X-Robots-Tag` header. They are deliberately not blocked in `robots.txt`: a crawler can only obey a noindex it is allowed to read. Letting a host opt in to indexing would need a new setting in the database, so it has not been built.
+- **Private routes** (`/dashboard`, `/invites`, `/guests`, `/account`, `/edit`, `/pay`, `/success`, `/start`, `/signin`, `/reset`, `/api`) are disallowed in `robots.txt` and send `X-Robots-Tag: noindex`. `/create` repeats the catalog and is `noindex, follow`.
+- **No invented data.** No ratings, reviews, stock, discounts, customer numbers, offices or social profiles. Product markup carries only the real name, picture and price. FAQ sections are plain visible text, with no FAQ rich-result markup.
+- **Unknown URLs are real 404s.** `/wedding-invitations/<anything else>`, `/features/<anything else>` and `/guides/<anything else>` return 404. `/templates` redirects (301) to the catalog at `/create`.
+
+### Sitemaps
+
+`/sitemap.xml` is an index of `/sitemap-pages.xml`, `/sitemap-collections.xml`, `/sitemap-templates.xml` and `/sitemap-blog.xml`. Empty ones are left out. Design entries carry an image with descriptive text. `lastmod` is the page's real update date from `pages.ts`, and is omitted where no meaningful date exists. There is no `priority` or `changefreq`.
+
+### Adding or changing a page
+
+1. Add it to `src/seo/pages.ts` (or `guides.ts`), with its own primary keyword, a unique title, description and H1, and links to related pages.
+2. If it shows designs, check they genuinely match. Style tags are in `template-profiles.ts`.
+3. Add its route under `src/app/(site)/` (copy a neighbour). Use `dynamicParams = false` for dynamic routes.
+4. Run `npm run test:seo` and `npm run seo:audit`. Both must pass.
+
+To add a design, also add its profile in `template-profiles.ts`: a design without one is `noindex` and is not listed in the sitemap.
+
+### Checks
+
+```bash
+npm run test:seo                                   # logic tests: canonicals, titles, robots, sitemaps, indexability, schema
+npm run seo:audit                                  # static audit of titles, descriptions, links, duplicates, sitemap eligibility
+npm run seo:audit -- --live http://localhost:3000  # also fetches every sitemap URL and checks the real HTML
+npm run seo:screens                                # re-captures the feature-page screenshots (needs npm run dev)
+```
+
+### Before you go live
+
+Set these in the environment (see `.env.example`):
+
+- `NEXT_PUBLIC_SITE_URL=https://www.yourein.in` so canonicals, sitemaps and invitation links use the live domain.
+- `NEXT_PUBLIC_SUPPORT_EMAIL` (or `SUPPORT_WHATSAPP` in `src/config/site.ts`). Until a contact method exists, `/contact` is `noindex` and says support is being set up.
+- Optional: `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
+
+Have the privacy policy and terms read by someone qualified, and add a refund and cancellation policy: they describe what the product does today but are not legal advice, and no refund terms have been invented.
+
+### Google Search Console
+
+1. Add a **Domain property** for `yourein.in` (this covers `www` and `https`).
+2. Verify with the DNS TXT record Google gives you. If you prefer the HTML tag, set `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
+3. Under **Sitemaps**, submit `https://www.yourein.in/sitemap.xml`.
+4. Watch **Pages** (indexing) for "Crawled, currently not indexed", "Duplicate" and "Excluded by noindex". The only noindex pages should be `/create`, `/contact` (until configured), guest invitations and private routes.
+5. Watch **Core Web Vitals** for mobile and desktop.
+6. Use **Performance** to see which queries bring people to which pages, and compare with the keyword map.
+7. Check **Enhancements** for breadcrumb and product errors.
+8. Use **URL Inspection** on the home page, one occasion page, one style page, one feature page, one design and one guide, and select **Request indexing**.
+
+### Bing Webmaster Tools
+
+Add the site (or import it from Search Console), verify with DNS or `NEXT_PUBLIC_BING_SITE_VERIFICATION`, and submit the same `sitemap.xml`. Bing also reads the `Sitemap:` line in `robots.txt`.
+
+### Analytics
+
+`src/seo/analytics.ts` records `template_view`, `template_preview` and `template_customize`, plus the first landing page and `utm_source`, `utm_medium`, `utm_campaign` of each visit. Events go to `window.dataLayer` (Google Tag Manager or GA4). With `NEXT_PUBLIC_GA_MEASUREMENT_ID` set, GA4 is loaded after the page is interactive; with it unset, no analytics script is loaded. Events carry only a design slug: never guest names, replies, phone numbers, venues or any invitation content.
+
+`signup_start`, `signup_complete`, `payment_start`, `payment_complete` and `invitation_publish` are defined but not yet fired, because they live inside the sign-in and payment code. Add `track("payment_complete")` calls there when you are ready to change those screens.
+
 ## Changing things
 
 - **Add or edit a design:** add an entry in `src/data/templates.ts`, a scene in `src/invite/art/scenes/`, register it in `src/invite/art/index.ts`, then regenerate catalog images (below).
@@ -118,6 +215,7 @@ The site has to be running. Tests use simulated payments, so run them against `n
 npm run test:flow  [screenshot-folder]    # the full journey at 390 px wide
 npm run test:paths [screenshot-folder]    # everything around it, at 360 px wide
 npm run test:pay                          # see the header of scripts/dev/pay-live-path.mjs for how to start the site
+npm run test:seo                          # SEO logic tests, no site needed
 ```
 
 `scripts/dev/seed-and-shoot.mjs <folder> [width] [height]` creates a published invitation with guests and replies and screenshots every signed-in screen at that size.
