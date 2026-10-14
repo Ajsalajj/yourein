@@ -18,6 +18,12 @@ export const TAGLINE = "Invitations worth opening.";
 export const SUPPORT_WHATSAPP: string = "";
 
 /**
+ * Public support email, shown on the Contact page. Set NEXT_PUBLIC_SUPPORT_EMAIL (or edit here).
+ * Until a contact method exists the Contact page is kept out of search results.
+ */
+export const SUPPORT_EMAIL: string = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
+
+/**
  * Public URL of the deployed site, used for SEO tags and invitation links.
  * On Vercel this is picked up automatically; set NEXT_PUBLIC_SITE_URL to use your own domain.
  */

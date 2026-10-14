@@ -24,7 +24,7 @@ export function HeroPhones3D({ stage, screens }: { stage: RefObject<HTMLDivEleme
     let disposed = false;
     let cleanup = () => {};
 
-    (async () => {
+    const start = async () => {
       const THREE = await import("three");
       const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
       const { MeshoptDecoder } = await import("three/examples/jsm/libs/meshopt_decoder.module.js");
@@ -220,10 +220,33 @@ export function HeroPhones3D({ stage, screens }: { stage: RefObject<HTMLDivEleme
         canvas.remove();
         delete el.dataset.three;
       };
-    })();
+    };
+
+    /*
+     * Start only once the page has loaded and the browser is idle, so downloading three.js and the model
+     * never competes with the first paint or the first tap. The flat mockups are already on screen meanwhile.
+     * Visitors with Data Saver on keep the flat mockups and skip the download altogether.
+     */
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    let idle = 0;
+    let timer = 0;
+    const run = () => {
+      if (!disposed) void start();
+    };
+    const schedule = () => {
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(run, { timeout: 3000 });
+      else timer = window.setTimeout(run, 1500);
+    };
+    if (!saveData) {
+      if (document.readyState === "complete") schedule();
+      else window.addEventListener("load", schedule, { once: true });
+    }
 
     return () => {
       disposed = true;
+      window.removeEventListener("load", schedule);
+      if (idle) window.cancelIdleCallback(idle);
+      if (timer) window.clearTimeout(timer);
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

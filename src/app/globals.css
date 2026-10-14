@@ -420,8 +420,13 @@ h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: bal
 .foot { background: var(--surface); padding-top: 32px; border-top: 1px solid var(--line); }
 .foot-in { display: grid; gap: 20px; }
 .foot-tag { margin-top: 8px; color: var(--ink-2); }
-.foot-links { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; }
-.foot-links a { text-decoration: none; padding: 10px 0; font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
+.foot-in { grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+.foot-brand { grid-column: 1 / -1; margin-bottom: 8px; }
+.foot-acct { margin-top: 10px; font-size: 0.92rem; color: var(--ink-2); }
+.foot-acct a { text-underline-offset: 4px; }
+.foot-h { font-family: var(--f-body, inherit); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-top: 8px; }
+.foot-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.foot-links a { display: block; text-decoration: none; padding: 9px 0; font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
 .foot-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .foot-base { margin-top: 20px; padding-block: 16px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); font-size: 0.86rem; color: var(--ink-2); }
 
@@ -495,7 +500,7 @@ h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: bal
   .how-list { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .how-list li { grid-template-columns: 120px 1fr; padding: 18px; }
   .how-vis { height: 120px; }
-  .foot-in { grid-template-columns: 1.1fr 1fr; }
+  .foot-in { grid-template-columns: repeat(4, 1fr); gap: 8px 24px; }
   .tpl-in { grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
   .tpl-art { position: sticky; top: calc(var(--nav-h) + 24px); }
   .tpl-bar, .tpl-pad { display: none; }
@@ -544,7 +549,8 @@ h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: bal
   .tpl-list { columns: 2; column-gap: 32px; }
   .feat-rows { gap: 96px; }
   .feat-row { gap: 88px; }
-  .foot-in { grid-template-columns: 1.1fr 1fr 1fr; }
+  .foot-in { grid-template-columns: 1.5fr repeat(4, 1fr); }
+  .foot-brand { grid-column: auto; margin-bottom: 0; }
 
   .pv-side { display: block; position: absolute; z-index: 3; right: calc(50% + 250px); top: calc((100dvh - var(--bar-h)) / 2); translate: 0 -50%; width: min(300px, 24vw); text-align: right; }
   .pv-no { font-size: 0.86rem; color: #9c9588; }
