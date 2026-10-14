@@ -37,6 +37,9 @@ export const TRACKS: Track[] = [
   t("sahiba", "Sahiba", "Passionate", "Hindi Pop · Jasleen Royal", "Indian wedding", ["Romantic", "Traditional"], "1:30"),
   t("taaj", "Taaj", "Regal", "Instrumental · Lost Stories", "Nikah · Reception", ["Elegant", "Cinematic"], "1:30"),
   t("lover-remix", "Lover (Remix)", "Warm", "Pop · Taylor Swift ft. Shawn Mendes", "Wedding · Anniversary", ["Romantic"], "1:30"),
+  t("ordinary", "Ordinary", "Heartfelt", "Pop Ballad · Alex Warren", "Wedding · Engagement", ["Romantic", "Minimal"], "1:30"),
+  t("hoor", "Hoor", "Dreamy", "Indian Electronica · Lost Stories", "Nikah · Reception", ["Traditional", "Cinematic"], "1:30"),
+  t("inaam", "Inaam", "Joyful", "Punjabi Pop · Jasleen Royal ft. Badshah", "Sangeet · Celebration", ["Traditional"], "1:30"),
   /* Retired: kept so invitations that already use them keep playing. */
   r("golden-vows", "Golden Vows", "Romantic", "Piano & Strings", "Wedding · Engagement", ["Romantic", "Elegant"], "1:22"),
   r("moonlit-promise", "Moonlit Promise", "Dreamy", "Piano, Pads & Strings", "Nikah · Wedding", ["Romantic", "Cinematic"], "1:30"),
@@ -54,23 +57,23 @@ export const getTrack = (id: string | null | undefined) => (id ? TRACKS.find((x)
 
 /** Tracks suggested first for each design. */
 export const RECOMMENDED: Record<string, string[]> = {
-  "moonlit-mahal": ["taaj", "pesamale"],
-  "velvet-opera": ["taaj", "lover-remix"],
-  "ivory-wax-seal": ["her", "lover-remix"],
-  "rose-garden": ["her", "lover-remix"],
-  "jasmine-moon": ["taaj", "her"],
-  "royal-emerald": ["taaj", "sahiba"],
-  "scenic-romance": ["her", "lover-remix"],
-  "botanical-vow": ["lover-remix", "her"],
+  "moonlit-mahal": ["taaj", "hoor", "pesamale"],
+  "velvet-opera": ["taaj", "taaj", "lover-remix"],
+  "ivory-wax-seal": ["her", "ordinary"],
+  "rose-garden": ["her", "ordinary", "lover-remix"],
+  "jasmine-moon": ["hoor", "taaj"],
+  "royal-emerald": ["taaj", "hoor", "sahiba"],
+  "scenic-romance": ["ordinary", "her"],
+  "botanical-vow": ["lover-remix", "ordinary"],
   "celestial-veil": ["taaj", "her"],
-  "cherry-blossom": ["lover-remix", "her"],
+  "cherry-blossom": ["lover-remix", "ordinary"],
   "garden-swing": ["lover-remix", "pesamale"],
-  "golden-palace": ["sahiba", "taaj"],
+  "golden-palace": ["sahiba", "inaam"],
   "kerala-ivory": ["pesamale", "her"],
-  "marigold-celebration": ["sahiba", "pesamale"],
+  "marigold-celebration": ["inaam", "sahiba"],
   "pearl-vellum": ["her", "taaj"],
-  "silk-ribbon": ["lover-remix", "taaj"],
-  "temple-heritage": ["pesamale", "sahiba"],
+  "silk-ribbon": ["taaj", "lover-remix"],
+  "temple-heritage": ["pesamale", "hoor", "sahiba"],
 };
 
 /** Host-facing volume steps; the number is what the invitation fades up to (out of 100). */
