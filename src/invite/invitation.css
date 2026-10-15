@@ -216,9 +216,13 @@
 .sec-flora-bl { bottom: -3em; left: -3.4em; }
 .sec-flora-br2 { bottom: -3em; right: -3.4em; scale: -1 1; }
 .sec > :not(.sec-flora) { position: relative; z-index: 1; }
+/* keep the corner flowers clear of the lettering: smaller in the corners next to text, more room under the date,
+   and a soft wash behind the date line so it always reads even where a sprig reaches it */
+.sec-message .sec-flora-br { width: 8.4em; height: 8.4em; bottom: -2.6em; right: -2.8em; }
+.sec-closing .sec-flora { width: 9.2em; height: 9.2em; }
 
 /* message */
-.sec-message { padding-top: 5.6em; padding-bottom: 5.6em; }
+.sec-message { padding-top: 5.6em; padding-bottom: 6.8em; }
 .msg-invocation { margin: 0 auto 1.6em; font-style: italic; font-size: 1.05em; max-width: 17em; color: var(--accent); }
 .msg-hosts { margin: 0 auto 1.5em; max-width: 24em; font-size: 0.68em; line-height: 2.1; }
 .msg-request { margin: 0 auto 0.5em; max-width: 17em; font-style: italic; font-size: 1.2em; line-height: 1.45; }
@@ -227,7 +231,7 @@
 .msg-dear { margin: 0 0 0.3em; font-family: var(--f-script); font-size: calc(2.1em * var(--script-scale, 1)); line-height: 1.15; }
 .msg-dear-line { margin: 0; font-style: italic; font-size: 1.1em; line-height: 1.45; }
 .msg-names span, .closing-names span { font-size: 0.6em; opacity: 0.8; }
-.msg-date { margin: 0; font-size: 0.72em; color: var(--accent); }
+.msg-date { display: inline-block; margin: 0; padding: 0.4em 1em; border-radius: 999px; font-size: 0.72em; color: var(--accent); background: color-mix(in srgb, var(--bg) 82%, transparent); }
 
 /* frames */
 .frame { position: relative; margin: 0 auto 2.2em; width: 80%; aspect-ratio: 3 / 4; overflow: hidden; background: var(--bg-alt); box-shadow: 0 0 0 1px var(--accent), 0 0 0 0.42em var(--bg), 0 0 0 calc(0.42em + 1px) color-mix(in srgb, var(--accent) 55%, transparent), 0 1.6em 2.6em -1.4em rgba(0, 0, 0, 0.35); }
@@ -386,7 +390,7 @@
 .contacts p { margin: 0; }
 .contacts-h { font-family: var(--f-caps); font-size: 0.64em; letter-spacing: var(--caps-track, 0.3em); text-transform: uppercase; color: var(--accent); margin-bottom: 0.5em !important; }
 .contacts a { color: inherit; text-underline-offset: 3px; }
-.made-by { margin: 3.4em 0 0; font-size: 0.52em; letter-spacing: 0.3em; opacity: 0.75; }
+.made-by { display: inline-block; margin: 3.4em 0 0; padding: 0.5em 1.2em; border-radius: 999px; font-size: 0.52em; letter-spacing: 0.3em; opacity: 0.75; background: color-mix(in srgb, var(--bg) 82%, transparent); }
 
 /* ---------------------------------------------------- cinematic mid-section */
 
