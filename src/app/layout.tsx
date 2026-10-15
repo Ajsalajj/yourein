@@ -5,6 +5,7 @@ import "./globals.css";
 import { SITE_NAME, TAGLINE } from "@/config/site";
 import { HOME_TITLE } from "@/seo/metadata";
 import { SEO_ORIGIN } from "@/seo/url";
+import { MetaTracking } from "@/components/meta/MetaTracking";
 
 const description =
   "Create an animated digital invitation that opens like the real thing. Personalize it, share one link and track RSVPs. Wedding, Nikah and engagement designs.";
@@ -48,7 +49,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN">
-      <body>{children}</body>
+      <body>
+        {children}
+        <MetaTracking />
+      </body>
     </html>
   );
 }

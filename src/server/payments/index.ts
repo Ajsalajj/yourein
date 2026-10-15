@@ -16,6 +16,7 @@ import { appSecret, type User } from "../auth";
 import { sql, transaction } from "../db";
 import { ApiError } from "../http";
 import { getOwned, publishInvitation, updateInvitation } from "../invitations";
+import { adContextFor, deliverSoon, queuePurchase, trackInitiateCheckout, type Attribution, type Visit } from "../meta/events";
 
 export type Provider = "razorpay" | "test";
 
@@ -43,12 +44,15 @@ function sameSignature(a: string, b: string) {
 }
 
 export type Checkout =
-  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean }
-  | { mode: "test"; orderId: string; amount: number; currency: string }
+  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean; metaEventId: string | null }
+  | { mode: "test"; orderId: string; amount: number; currency: string; metaEventId: string | null }
   | { mode: "published"; slug: string };
 
-/** Step 1: create an order for this invitation. */
-export async function createOrder(user: User, invitationId: string): Promise<Checkout> {
+/**
+ * Step 1: create an order for this invitation. `ads` carries the visitor's consent and campaign tags for Meta
+ * measurement; with no consent nothing about the visit is stored.
+ */
+export async function createOrder(user: User, invitationId: string, ads?: { visit: Visit; attribution: Attribution }): Promise<Checkout> {
   let inv = await getOwned(invitationId, user.id);
   if ((inv.status === "published" || inv.status === "archived") && inv.slug) return { mode: "published", slug: inv.slug };
   if (missingFields(inv.data).length) throw new ApiError(400, `Still needed: ${missingFields(inv.data).join(", ").toLowerCase()}.`, "incomplete");
@@ -80,17 +84,23 @@ export async function createOrder(user: User, invitationId: string): Promise<Che
     providerOrderId = `order_test_${randomBytes(9).toString("hex")}`;
   }
 
-  await sql`insert into orders (id, invitation_id, user_id, amount, currency, provider, provider_order_id)
-    values (${randomUUID()}, ${inv.id}, ${user.id}, ${AMOUNT}, ${CURRENCY}, ${mode}, ${providerOrderId})`;
+  const orderRowId = randomUUID();
+  const adContext = ads ? adContextFor(ads.visit, ads.attribution) : null;
+  await sql`insert into orders (id, invitation_id, user_id, amount, currency, provider, provider_order_id, ad_context)
+    values (${orderRowId}, ${inv.id}, ${user.id}, ${AMOUNT}, ${CURRENCY}, ${mode}, ${providerOrderId}, ${adContext ? JSON.stringify(adContext) : null}::jsonb)`;
+  const metaEventId = trackInitiateCheckout(
+    { id: orderRowId, amount: AMOUNT, currency: CURRENCY, templateSlug: inv.templateSlug, provider: mode, keyMode: mode === "razorpay" ? razorpayKeyMode() : null },
+    user, adContext,
+  );
 
   if (mode === "razorpay") {
     return {
       mode, keyId: razorpayKeys()!.id, orderId: providerOrderId, amount: AMOUNT, currency: CURRENCY, name: SITE_NAME,
       description: `${template?.name ?? "Invitation"} for ${namesOf(inv.data)}`, prefill: { name: user.name, email: user.email },
-      testKeys: razorpayKeyMode() === "test",
+      testKeys: razorpayKeyMode() === "test", metaEventId,
     };
   }
-  return { mode, orderId: providerOrderId, amount: AMOUNT, currency: CURRENCY };
+  return { mode, orderId: providerOrderId, amount: AMOUNT, currency: CURRENCY, metaEventId };
 }
 
 /** Test mode only: stands in for the gateway and returns what Razorpay's checkout would return. */
@@ -124,7 +134,9 @@ export async function verifyAndPublish(user: User | null, input: { orderId?: unk
 type OrderRow = { id: string; invitation_id: string; amount: number; currency: string; status: string };
 
 async function settle(order: OrderRow, paymentId: string, signature: string, raw: object) {
-  return transaction(async (q) => {
+  let metaEventId: string | null = null;
+  const out = await transaction(async (q) => {
+    const prev = await q<{ status: string; provider: Provider }>`select status, provider from orders where id = ${order.id} for update`;
     const done = await q<{ id: string }>`select id from payments where provider_payment_id = ${paymentId}`;
     if (!done[0]) {
       await q`insert into payments (id, order_id, provider_payment_id, amount, currency, status, signature, paid_at, raw)
@@ -132,8 +144,22 @@ async function settle(order: OrderRow, paymentId: string, signature: string, raw
     }
     await q`update orders set status = 'paid' where id = ${order.id}`;
     const slug = await publishInvitation(q, order.invitation_id);
+    /* the first time this order becomes paid, queue its one Purchase for Meta. A savepoint keeps any tracking
+       error from undoing the payment or the publishing. */
+    if (prev[0] && prev[0].status !== "paid") {
+      await q`savepoint meta_purchase`;
+      try {
+        metaEventId = await queuePurchase(q, order.id, prev[0].provider === "razorpay" ? razorpayKeyMode() : null);
+        await q`release savepoint meta_purchase`;
+      } catch (e) {
+        await q`rollback to savepoint meta_purchase`;
+        console.warn("[yourein] Meta Purchase could not be queued:", (e as Error).message);
+      }
+    }
     return { slug, invitationId: order.invitation_id };
   });
+  deliverSoon(metaEventId);
+  return out;
 }
 
 /**

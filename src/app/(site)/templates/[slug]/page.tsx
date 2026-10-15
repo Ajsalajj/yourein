@@ -61,7 +61,7 @@ export default async function TemplatePage({ params }: Props) {
   return (
     <>
       {product && <JsonLd data={product} />}
-      <TemplateViewEvent slug={t.slug} />
+      <TemplateViewEvent slug={t.slug} name={t.name} category={t.category} />
       <section className="tpl">
         <div className="wrap tpl-in">
           <PreviewButton slug={t.slug} className="feat-art tpl-art" label={`Preview ${t.name}`}>

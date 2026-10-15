@@ -155,8 +155,8 @@ export async function signIn(emailIn: unknown, passwordIn: unknown): Promise<Use
   return toUser(user);
 }
 
-/** Sign in with a verified Google identity, creating or linking the account. */
-export async function googleUser(sub: string, emailIn: string, name: string): Promise<User> {
+/** Sign in with a verified Google identity, creating or linking the account. `created` is true only for a brand-new account. */
+export async function googleUser(sub: string, emailIn: string, name: string): Promise<User & { created?: boolean }> {
   const email = normalEmail(emailIn);
   const bySub = await sql<UserRow>`select id, email, name, password_hash, google_sub from users where google_sub = ${sub}`;
   if (bySub[0]) return toUser(bySub[0]);
@@ -167,7 +167,7 @@ export async function googleUser(sub: string, emailIn: string, name: string): Pr
   }
   const id = randomUUID();
   await sql`insert into users (id, email, name, google_sub) values (${id}, ${email}, ${name.slice(0, 80)}, ${sub})`;
-  return { id, email, name, hasPassword: false, google: true, guest: false };
+  return { id, email, name, hasPassword: false, google: true, guest: false, created: true };
 }
 
 /** Returns a one-hour reset token for the account, or null when there is none. */

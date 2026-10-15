@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CATEGORIES, FEATURED, TEMPLATES, getTemplate } from "@/data/templates";
 import { PRICE_LABEL, SUPPORT_WHATSAPP } from "@/config/site";
 import { PreviewButton } from "@/components/preview/PreviewProvider";
+import { AdSettingsLink } from "@/components/meta/MetaTracking";
 import { CustomizeLink } from "./Actions";
 import { HeroStage, RsvpDemoCard } from "./Client";
 import { DashboardDemo } from "./DashboardDemo";
@@ -248,6 +249,7 @@ export function Footer() {
           <p className="foot-tag">Invitations worth opening.</p>
           <p className="foot-acct">
             <Link href="/create">Create an invitation</Link> · <a href="/dashboard">My invitations</a> · <a href="/signin">Sign in</a>
+            <AdSettingsLink />
             {SUPPORT_WHATSAPP && <> · <a href={`https://wa.me/${SUPPORT_WHATSAPP.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">Help on WhatsApp</a></>}
           </p>
         </div>

@@ -216,6 +216,13 @@ Add the site (or import it from Search Console), verify with DNS or `NEXT_PUBLIC
 
 `signup_start`, `signup_complete`, `payment_start`, `payment_complete` and `invitation_publish` are defined but not yet fired, because they live inside the sign-in and payment code. Add `track("payment_complete")` calls there when you are ready to change those screens.
 
+## Meta ads tracking
+
+Meta Pixel plus the Conversions API, with a consent banner, browser/server deduplication and a Purchase outbox, so a
+verified payment is reported exactly once. Off until `NEXT_PUBLIC_META_PIXEL_ID` is set; nothing is sent for a visitor
+until they allow advertising cookies. Setup, testing and troubleshooting: [docs/meta-ads-tracking-setup.md](docs/meta-ads-tracking-setup.md).
+Tests: `npm run test:meta` and `npm run test:meta:browser`.
+
 ## Changing things
 
 - **Add or edit a design:** add an entry in `src/data/templates.ts`, a scene in `src/invite/art/scenes/`, register it in `src/invite/art/index.ts`, then regenerate catalog images (below).
