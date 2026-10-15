@@ -572,3 +572,13 @@ h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: bal
   .hp .pm, .grid { animation: none; }
   .card, .hp, .pm-screen img { transition: none; }
 }
+
+/* advertising-cookie choice (only shown when the Meta Pixel is configured) */
+.ad-consent { position: fixed; z-index: 90; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); margin-inline: auto; max-width: 560px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: var(--r-md, 10px); background: var(--surface, #fff); color: var(--ink); box-shadow: 0 18px 40px -18px rgba(23, 22, 20, 0.35); font-size: 0.92rem; line-height: 1.5; }
+.ad-consent p { margin: 0 0 12px; }
+.ad-consent a { text-underline-offset: 3px; }
+.ad-consent-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.ad-consent-btns .btn { min-height: 44px; padding: 0 18px; }
+/* never on top of a page's own bottom bar (design page, editor, dashboard) or the full-screen preview (z-index 100) */
+body:has(.tpl-bar, .ed-bar, .tabbar) .ad-consent { bottom: calc(88px + env(safe-area-inset-bottom)); }
+.foot-cookie { font-size: inherit; color: inherit; text-decoration-color: currentColor; }

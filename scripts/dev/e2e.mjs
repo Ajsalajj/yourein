@@ -21,6 +21,14 @@ if (shots) mkdirSync(shots, { recursive: true });
 let fail = 0, n = 0;
 const ok = (name, cond, extra = "") => { if (!cond) fail++; console.log(cond ? "PASS" : "FAIL", name, extra ? `(${extra})` : ""); };
 const browser = await chromium.launch({ slowMo: Number(process.env.SLOWMO || 0) });
+/* With Meta tracking configured, every visitor here has already answered the cookie question, so the banner stays out of
+   the way of these journeys. The banner itself is tested by scripts/dev/e2e-meta.mjs. */
+const openContext = browser.newContext.bind(browser);
+browser.newContext = async (opts) => {
+  const c = await openContext(opts);
+  await c.addCookies([{ name: "yi_ads_consent", value: "denied", url: base }]);
+  return c;
+};
 const phone = { viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, ...(process.env.VIDEO ? { recordVideo: { dir: process.env.VIDEO, size: { width: W, height: H } } } : {}) };
 const host = await browser.newContext(phone);
 const page = await host.newPage();

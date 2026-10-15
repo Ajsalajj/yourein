@@ -181,4 +181,24 @@ create table if not exists analytics (
   created_at timestamptz not null default now()
 );
 create index if not exists analytics_invitation_idx on analytics (invitation_id, type);
+
+/* Meta ads measurement. The visit details needed for a later Purchase are kept on the order only when the customer
+   allowed advertising cookies, and cleared once the Purchase is queued. meta_events is the Purchase outbox:
+   one row per order (event_id "purchase_<order id>"), so a payment can only ever be reported once. */
+alter table orders add column if not exists ad_context jsonb;
+create table if not exists meta_events (
+  event_id text primary key,
+  event_name text not null,
+  invitation_id uuid references invitations(id) on delete cascade,
+  payload jsonb not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
+  attempts int not null default 0,
+  last_error text not null default '',
+  claimed_at timestamptz,
+  browser_claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+create index if not exists meta_events_pending_idx on meta_events (status, created_at);
+create index if not exists meta_events_invitation_idx on meta_events (invitation_id);
 `;

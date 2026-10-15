@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
+import { trackServerEvent } from "@/lib/meta-pixel";
 
 type Mode = "choose" | "signup" | "signin" | "forgot";
 
@@ -15,7 +16,7 @@ const ERRORS: Record<string, string> = {
 async function post(url: string, data: object) {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
   const out = await res.json().catch(() => ({}));
-  return { ok: res.ok, ...out } as { ok: boolean; error?: string; code?: string; sent?: boolean; unavailable?: boolean; devLink?: string | null };
+  return { ok: res.ok, ...out } as { ok: boolean; error?: string; code?: string; sent?: boolean; unavailable?: boolean; devLink?: string | null; metaEventId?: string | null };
 }
 
 /** `saving`: a guest who has customized a draft and now needs an account to keep it and pay. */
@@ -46,6 +47,11 @@ export function AuthScreen({ next, template, error, saving = false, startMode = 
         setMsg(out.error || "Something went wrong. Please try again.");
         if (out.code === "exists") setMode("signin");
         return;
+      }
+      if (mode === "signup" && out.metaEventId) {
+        /* the server already reported the new account; the Pixel reports it with the same id, given a moment to send */
+        trackServerEvent("CompleteRegistration", out.metaEventId);
+        await new Promise((r) => setTimeout(r, 300));
       }
       window.location.assign(next);
     } catch {

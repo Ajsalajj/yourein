@@ -886,7 +886,15 @@ export const TRUST_PAGES: SeoPage[] = [
       {
         heading: "Cookies",
         body: [
-          "We use a sign-in cookie to keep you signed in and a small non-secret cookie that tells the page whether you are signed in. We do not use advertising cookies on the invitations your guests open.",
+          "We use a sign-in cookie to keep you signed in and a small non-secret cookie that tells the page whether you are signed in. A cookie also remembers your choice about advertising cookies. We do not use advertising cookies on the invitations your guests open.",
+        ],
+      },
+      {
+        heading: "Advertising measurement",
+        body: [
+          "We advertise on Facebook and Instagram. If you choose Allow when we ask about advertising cookies, our website uses the Meta Pixel and sends Meta a small number of events, both from your browser and from our server, so we can see which ads bring people to YoureIn: pages you visit on our website, designs you view, preview or start customizing, creating an account, starting checkout and a completed purchase with its amount.",
+          "With those events Meta may receive your IP address, browser details, Meta's own cookies, and a scrambled (hashed) form of your email address and account number, which lets Meta match the event to an ad without receiving the email itself. We never send the contents of your invitation, names, dates, venues, photographs, your guest list, or guests' replies and wishes.",
+          "If you choose No thanks, or do not choose, none of this is sent. You can change your mind at any time with Cookie settings at the bottom of any page. Signing in does not count as agreeing. Meta's use of this data is described in Meta's own privacy policy.",
         ],
       },
       {

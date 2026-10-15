@@ -4,10 +4,12 @@ import Image from "next/image";
 import { useState } from "react";
 import { PRICE_LABEL } from "@/config/site";
 import { api } from "./client";
+import { captureAttribution } from "@/seo/analytics";
+import { trackServerEvent } from "@/lib/meta-pixel";
 
 type Checkout =
-  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean }
-  | { mode: "test"; orderId: string }
+  | { mode: "razorpay"; keyId: string; orderId: string; amount: number; currency: string; name: string; description: string; prefill: { name: string; email: string }; testKeys: boolean; metaEventId?: string | null }
+  | { mode: "test"; orderId: string; amount: number; currency: string; metaEventId?: string | null }
   | { mode: "published"; slug: string };
 
 type RazorpayResponse = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
@@ -51,11 +53,14 @@ export function PayScreen({ id, templateSlug, templateName, names, eventLine, mo
     setError("");
     setState("starting");
     try {
-      const co = await api<Checkout>("POST", "/api/pay/order", { invitationId: id });
+      /* campaign tags of this visit go with the order; the server keeps them only with advertising consent */
+      const co = await api<Checkout>("POST", "/api/pay/order", { invitationId: id, attribution: captureAttribution() });
       if (co.mode === "published") {
         window.location.assign(`/success/${id}`);
         return;
       }
+      /* only when the server reported InitiateCheckout for this order; same event_id, server's amount */
+      trackServerEvent("InitiateCheckout", co.metaEventId, { value: co.amount / 100, currency: co.currency, content_ids: [templateSlug], content_type: "product", num_items: 1 });
       if (co.mode === "test") {
         setTestOrder(co.orderId);
         setState("test");
