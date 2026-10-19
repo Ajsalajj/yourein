@@ -18,11 +18,14 @@ export async function invitationMetadata(slug: string): Promise<Metadata> {
   const names = namesOf(inv.data);
   const title = `${names}: ${eventTitleOf(inv.data)} invitation`;
   const description = [formatDate(inv.data.date), inv.data.venueName].filter(Boolean).join(" at ");
+  const shareImage = `/og/invite/${inv.slug}?v=${new Date(inv.updatedAt).getTime().toString(36)}`;
   return {
     title: { absolute: title },
     description,
     robots: { index: false, follow: true },
-    openGraph: { title, description, images: [{ url: `/thumbs/${inv.templateSlug}.webp`, width: 780, height: 1688 }] },
+    /* the couple's own card (names, occasion, date), not the design's sample picture; the version changes with every edit */
+    openGraph: { type: "website", title, description, images: [{ url: shareImage, width: 1200, height: 630, alt: title }] },
+    twitter: { card: "summary_large_image", title, description, images: [shareImage] },
   };
 }
 
