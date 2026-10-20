@@ -12,12 +12,13 @@ import { useMeta, useSeek, useSourceDuration } from "./context";
 import { cn } from "@/lib/cn";
 
 const GUTTER = 84;
-const H = { ruler: 24, video: 42, audio: 40, cap: 34, fx: 28, sfx: 24, music: 24 };
+const H = { ruler: 24, video: 42, audio: 40, cap: 34, fx: 28, broll: 28, sfx: 24, music: 24 };
 
 type Drag =
   | { kind: "scrub" }
   | { kind: "range"; anchor: number }
   | { kind: "cap-move" | "cap-l" | "cap-r"; id: string; x0: number; orig: import("@/lib/project").Caption }
+  | { kind: "broll-move" | "broll-l" | "broll-r"; id: string; x0: number; orig: import("@/lib/edit-schema").BrollClip }
   | { kind: "sfx-move"; id: string; x0: number; orig: number }
   | { kind: "zoom-move" | "zoom-l" | "zoom-r"; id: string; x0: number; orig: import("@/lib/project").Zoom };
 
@@ -88,6 +89,15 @@ export function Timeline() {
           if (drag.kind === "cap-move") return ops.shiftCaption([drag.orig], c.id, delta)[0];
           return ops.resizeCaption([drag.orig], c.id, drag.kind === "cap-l" ? "start" : "end", (drag.kind === "cap-l" ? drag.orig.startMs : drag.orig.endMs) + delta)[0];
         }), `drag:${drag.id}`);
+      } else if (drag.kind === "broll-move" || drag.kind === "broll-l" || drag.kind === "broll-r") {
+        const delta = ((px - drag.x0) / pps) * 1000;
+        const o = drag.orig, len = o.endMs - o.startMs;
+        st.setBroll((l) => l.map((c) => {
+          if (c.id !== drag.id) return c;
+          if (drag.kind === "broll-move") { const s0 = Math.max(0, Math.min(duration - len, o.startMs + delta)); return { ...o, startMs: s0, endMs: s0 + len }; }
+          if (drag.kind === "broll-l") return { ...o, startMs: Math.max(0, Math.min(o.endMs - 500, o.startMs + delta)) };
+          return { ...o, endMs: Math.min(duration, Math.max(o.startMs + 500, o.endMs + delta)) };
+        }), `drag:${drag.id}`);
       } else if (drag.kind === "sfx-move") {
         const delta = ((px - drag.x0) / pps) * 1000;
         st.setSfx((l) => l.map((c) => (c.id === drag.id ? { ...c, srcMs: Math.max(0, Math.min(duration, drag.orig + delta)), syncWordId: null } : c)), `drag:${drag.id}`);
@@ -127,6 +137,7 @@ export function Timeline() {
       if (e.key.toLowerCase() === "s" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); splitAtPlayhead(); }
       if (e.key === "Delete" || e.key === "Backspace") {
         if (st.selection.cutId) { st.removeCut(st.selection.cutId); st.select({ cutId: null }); }
+        else if (st.selection.brollId) { const id = st.selection.brollId; st.setBroll((l) => l.filter((q) => q.id !== id)); st.select({ brollId: null }); }
         else if (st.selection.sfxId) { const id = st.selection.sfxId; st.setSfx((l) => l.filter((q) => q.id !== id)); st.select({ sfxId: null }); }
         else if (st.selection.zoomId) { const id = st.selection.zoomId; st.setZooms((z) => z.filter((q) => q.id !== id)); st.select({ zoomId: null }); }
         else if (st.selection.captionId) { const id = st.selection.captionId; st.setCaptions((c) => ops.deleteCaption(c, id)); st.select({ captionId: null }); }
@@ -147,10 +158,10 @@ export function Timeline() {
   }, [pps, duration]);
 
   const st = useEditor.getState;
-  const rowTop = { ruler: 0, video: H.ruler, audio: H.ruler + H.video, cap: H.ruler + H.video + H.audio, fx: H.ruler + H.video + H.audio + H.cap, sfx: H.ruler + H.video + H.audio + H.cap + H.fx, music: H.ruler + H.video + H.audio + H.cap + H.fx + H.sfx };
+  const rowTop = { ruler: 0, video: H.ruler, audio: H.ruler + H.video, cap: H.ruler + H.video + H.audio, fx: H.ruler + H.video + H.audio + H.cap, broll: H.ruler + H.video + H.audio + H.cap + H.fx, sfx: H.ruler + H.video + H.audio + H.cap + H.fx + H.broll, music: H.ruler + H.video + H.audio + H.cap + H.fx + H.broll + H.sfx };
   const hasMusic = !!project.audio.music;
   const total = rowTop.music + (hasMusic ? H.music : 0);
-  const labels: [string, number, number][] = [["Ruler", rowTop.ruler, H.ruler], ["Video", rowTop.video, H.video], ["Audio", rowTop.audio, H.audio], ["Captions", rowTop.cap, H.cap], ["Effects", rowTop.fx, H.fx], ["SFX", rowTop.sfx, H.sfx], ...(hasMusic ? [["Music", rowTop.music, H.music] as [string, number, number]] : [])];
+  const labels: [string, number, number][] = [["Ruler", rowTop.ruler, H.ruler], ["Video", rowTop.video, H.video], ["Audio", rowTop.audio, H.audio], ["Captions", rowTop.cap, H.cap], ["Effects", rowTop.fx, H.fx], ["B-roll", rowTop.broll, H.broll], ["SFX", rowTop.sfx, H.sfx], ...(hasMusic ? [["Music", rowTop.music, H.music] as [string, number, number]] : [])];
 
   if (!duration) return null;
   return (
@@ -181,7 +192,7 @@ export function Timeline() {
               if ((e.target as HTMLElement).closest("[data-block]")) return;
               const px = localX(e); const ms = toMs(px);
               const y = e.clientY - e.currentTarget.getBoundingClientRect().top;
-              st().select({ captionId: null, zoomId: null, cutId: null, sfxId: null });
+              st().select({ captionId: null, zoomId: null, cutId: null, sfxId: null, brollId: null });
               if (y >= rowTop.video && y < rowTop.audio) { setRange(null); setDrag({ kind: "range", anchor: ms }); }
               else { setDrag({ kind: "scrub" }); seek.fromSource(ms); }
             }}>
@@ -190,7 +201,7 @@ export function Timeline() {
               {ticks.out.map((t) => <div key={t} className="absolute top-0 h-full border-l border-line pl-1 text-[10px] text-mute" style={{ left: x(t * 1000) }}>{t < 60 ? `${t}s` : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, "0")}`}</div>)}
             </div>
             {/* lanes */}
-            {[rowTop.video, rowTop.audio, rowTop.cap, rowTop.fx, rowTop.sfx].map((t, i) => <div key={i} className="absolute inset-x-0 border-b border-line/60" style={{ top: t, height: [H.video, H.audio, H.cap, H.fx, H.sfx][i] }} />)}
+            {[rowTop.video, rowTop.audio, rowTop.cap, rowTop.fx, rowTop.broll, rowTop.sfx].map((t, i) => <div key={i} className="absolute inset-x-0 border-b border-line/60" style={{ top: t, height: [H.video, H.audio, H.cap, H.fx, H.broll, H.sfx][i] }} />)}
 
             {/* video lane: kept footage + removed regions */}
             <div className="absolute rounded bg-accent/25 ring-1 ring-accent/40" style={{ left: 0, width, top: rowTop.video + 4, height: H.video - 8 }} />
@@ -235,6 +246,22 @@ export function Timeline() {
                   <span className="pointer-events-none">{z.scale.toFixed(2)}× {z.source === "auto" ? "auto" : ""}</span>
                   <span data-block className="absolute inset-y-0 left-0 w-2 cursor-ew-resize" onPointerDown={(e) => { e.stopPropagation(); setDrag({ kind: "zoom-l", id: z.id, x0: localX(e), orig: z }); st().select({ zoomId: z.id }); }} />
                   <span data-block className="absolute inset-y-0 right-0 w-2 cursor-ew-resize" onPointerDown={(e) => { e.stopPropagation(); setDrag({ kind: "zoom-r", id: z.id, x0: localX(e), orig: z }); st().select({ zoomId: z.id }); }} />
+                </div>
+              );
+            })}
+
+            {/* B-roll lane */}
+            {project.broll.map((c) => {
+              const active = sel.brollId === c.id;
+              const name = project.assets[c.assetId]?.filename ?? "clip";
+              return (
+                <div key={c.id} data-block role="button" tabIndex={0} aria-label={`B-roll ${name}`} aria-pressed={active}
+                  onPointerDown={(e) => { e.stopPropagation(); st().select({ brollId: c.id, sfxId: null, captionId: null, zoomId: null, cutId: null }); setDrag({ kind: "broll-move", id: c.id, x0: localX(e), orig: c }); }}
+                  className={cn("absolute cursor-grab overflow-hidden rounded border px-1.5 text-[10px] leading-[22px] text-white", active ? "border-white bg-[#c0457a]" : "border-[#c0457a]/70 bg-[#c0457a]/80")}
+                  style={{ left: x(c.startMs), width: Math.max(10, x(c.endMs - c.startMs)), top: rowTop.broll + 3, height: H.broll - 6 }} title={`${name} · ${c.mode}`}>
+                  <span className="pointer-events-none block truncate">{c.mode === "full" ? "" : `${c.mode} · `}{name}</span>
+                  <span data-block className="absolute inset-y-0 left-0 w-2 cursor-ew-resize" onPointerDown={(e) => { e.stopPropagation(); st().select({ brollId: c.id }); setDrag({ kind: "broll-l", id: c.id, x0: localX(e), orig: c }); }} />
+                  <span data-block className="absolute inset-y-0 right-0 w-2 cursor-ew-resize" onPointerDown={(e) => { e.stopPropagation(); st().select({ brollId: c.id }); setDrag({ kind: "broll-r", id: c.id, x0: localX(e), orig: c }); }} />
                 </div>
               );
             })}

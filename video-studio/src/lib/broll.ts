@@ -97,7 +97,7 @@ export interface SuggestOptions {
  * (so it never straddles a cut), spaced >= minGapMs and limited to maxCoverage of the output.
  */
 export function suggestBroll(project: Project, segs: Segment[], opts: SuggestOptions = {}): BrollSuggestion[] {
-  const minScore = opts.minScore ?? 0.5, clipMs = opts.clipMs ?? 2600, gap = opts.minGapMs ?? 3500, cov = opts.maxCoverage ?? 0.4, skip = opts.skipFirstMs ?? 1500;
+  const minScore = opts.minScore ?? 0.5, clipMs = opts.clipMs ?? 2600, gap = opts.minGapMs ?? 1500, cov = opts.maxCoverage ?? 0.4, skip = opts.skipFirstMs ?? 1500;
   const totalOut = segs.length ? segs[segs.length - 1].outEndMs : 0;
   const cand: BrollSuggestion[] = [];
   for (const s of sentencesOf(project.captions)) {

@@ -6,7 +6,7 @@ import { CaptionsPanel } from "./panels/CaptionsPanel";
 import { TemplatesPanel } from "./panels/TemplatesPanel";
 import { TextPanel } from "./panels/TextPanel";
 import { AudioPanel } from "./panels/AudioPanel";
-import { BrollPanel } from "./panels/PlannedPanel";
+import { BrollPanel } from "./panels/BrollPanel";
 import { TransitionsPanel } from "./panels/TransitionsPanel";
 import { EffectsPanel } from "./panels/EffectsPanel";
 import { AiPanel } from "./panels/AiPanel";

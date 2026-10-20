@@ -19,10 +19,11 @@ export const httpGenerator = (fetchFn: Fetch, env: Record<string, string | undef
       let r = await fetchFn(endpoint, { method: "POST", headers, body: JSON.stringify(req) });
       if (!r.ok) throw new Error(`Generator returned ${r.status}`);
       let j: { downloadUrl?: string; statusUrl?: string; status?: string } = await r.json();
+      const statusUrl = j.statusUrl;
       for (let i = 0; i < 120 && !j.downloadUrl; i++) {
-        if (!j.statusUrl) throw new Error("Generator response has neither downloadUrl nor statusUrl");
+        if (!statusUrl) throw new Error("Generator response has neither downloadUrl nor statusUrl");
         await sleep(2000);
-        r = await fetchFn(j.statusUrl, { headers });
+        r = await fetchFn(statusUrl, { headers });
         j = await r.json();
         if (j.status === "failed") throw new Error("Generator reported failure");
       }
