@@ -51,7 +51,8 @@ export interface VisionJobResult { [k: string]: unknown }
 export interface VisionJob { id: string; status: "queued" | "running" | "done" | "failed"; progress: number; stage: string; error?: string | null; result?: VisionJobResult | null }
 
 export const ai = {
-  startSegment: (body: { path: string; out_dir: string; fps: number }) => call<{ id: string }>("/v1/jobs/segment", { method: "POST", body: JSON.stringify(body) }),
+  startSegment: (body: { path: string; out_dir: string; fps: number; opts?: Record<string, unknown> }) => call<{ id: string }>("/v1/jobs/segment", { method: "POST", body: JSON.stringify(body) }),
+  startRefine: (body: { path: string; raw_dir: string; out_dir: string; fps: number; opts: Record<string, unknown> }) => call<{ id: string }>("/v1/jobs/matte-refine", { method: "POST", body: JSON.stringify(body) }),
   startTrack: (body: { path: string; fps: number; start_ms: number; end_ms?: number | null; roi: { x: number; y: number; w: number; h: number } }) => call<{ id: string }>("/v1/jobs/track", { method: "POST", body: JSON.stringify(body) }),
   startFaces: (body: { path: string; sample_fps?: number; max_ms?: number | null }) => call<{ id: string }>("/v1/jobs/faces", { method: "POST", body: JSON.stringify(body) }),
   visionJob: (id: string) => call<VisionJob>(`/v1/jobs/${encodeURIComponent(id)}`),

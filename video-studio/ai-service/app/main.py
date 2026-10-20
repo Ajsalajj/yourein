@@ -88,6 +88,7 @@ class SegmentIn(BaseModel):
     path: str
     out_dir: str
     fps: float = Field(default=30, ge=1, le=60)
+    opts: dict = Field(default_factory=dict)
 
 
 class TrackIn(BaseModel):
@@ -133,7 +134,26 @@ def _submit(kind: str, fn):
 def start_segment(req: SegmentIn):
     src = confined(req.path)
     out = confined_dir(req.out_dir)
-    return _submit("segment", lambda progress: vision.segment_video(src, out, req.fps, progress))
+    return _submit("segment", lambda progress: vision.segment_video(src, out, req.fps, progress, opts={k: v for k, v in req.opts.items() if k in ("guided", "temporal", "feather", "grow")}))
+
+
+class RefineIn(BaseModel):
+    path: str
+    raw_dir: str
+    out_dir: str
+    fps: float = Field(default=30, ge=1, le=60)
+    opts: dict = Field(default_factory=dict)
+
+
+@app.post("/v1/jobs/matte-refine", dependencies=[Depends(auth)])
+def start_refine(req: RefineIn):
+    from .matte import MatteOpts
+    src = confined(req.path)
+    raw, out = confined_dir(req.raw_dir), confined_dir(req.out_dir)
+    if not (raw / "raw.npy").exists():
+        raise HTTPException(409, "No stored network output for this matte - run the subject analysis first")
+    allowed = {k: v for k, v in req.opts.items() if k in ("guided", "temporal", "feather", "grow")}
+    return _submit("refine", lambda progress: vision.refine_mattes(src, raw, out, req.fps, progress, MatteOpts(**allowed)))
 
 
 @app.post("/v1/jobs/track", dependencies=[Depends(auth)])

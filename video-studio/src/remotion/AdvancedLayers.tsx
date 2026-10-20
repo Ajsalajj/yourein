@@ -3,6 +3,10 @@ import { measureText } from "@remotion/layout-utils";
 import { continueRender, delayRender, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Project, TextLayer } from "../lib/project";
 import { followTrack } from "../lib/tracking";
+import { layoutOnCircle } from "../lib/glyphpath";
+import { buildShards, shardClip, shardPose } from "../lib/shatter";
+import { sceneToScreen } from "../lib/spatial";
+import { graphemes } from "../lib/captions/text";
 import { frameToMs, outputToSource, type Segment } from "../lib/timeline";
 import { applyTransform } from "./textTransform";
 import { primaryFamily, stack } from "./fontStacks";
@@ -75,7 +79,9 @@ export const SubjectCutout: React.FC<{ src: string; segments: Segment[]; mask: M
 
 const ANIM_EXIT_MS = 280;
 
-const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Segment[]; layerFromFrame: number }> = ({ layer, project, segments, layerFromFrame }) => {
+export interface SceneCtx { rectAt?: (outFrame: number) => { left: number; top: number; width: number; height: number }; zoomAt?: (outFrame: number) => { scale: number; fx: number; fy: number } }
+
+const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Segment[]; layerFromFrame: number; scene?: SceneCtx }> = ({ layer, project, segments, layerFromFrame, scene }) => {
   const local = useCurrentFrame();
   const { fps, width, height, durationInFrames } = useVideoConfig();
   const frame = local + layerFromFrame;
@@ -106,9 +112,23 @@ const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Se
     x = f.x; y = f.y; ts = layer.trackScale ? f.scale : 1;
   }
 
+  // scene-anchored: x/y are a point of the SOURCE picture; follow smart zoom / the face-aware camera
+  if (layer.anchor === "scene" && srcAsset?.width && srcAsset.height) {
+    const sc = sceneToScreen({ px: layer.x, py: layer.y, geo: { srcW: srcAsset.width, srcH: srcAsset.height, outW: width, outH: height }, parallax: layer.parallax, rect: scene?.rectAt?.(frame) ?? null, zoom: scene?.zoomAt?.(frame) });
+    x = sc.x; y = sc.y; ts *= sc.scale;
+  }
+
   const since = outMs - layer.startMs;
   const until = layer.endMs - outMs;
-  const exit = clamp(1 - until / ANIM_EXIT_MS);
+  // shatter: break progress (0 = intact, 1 = gone). "in" assembles from pieces, "out" breaks apart at the end.
+  const sh = layer.shatter;
+  let breakP = 0;
+  if (sh) {
+    const inP = sh.mode === "out" ? 0 : 1 - clamp(since / sh.durationMs);
+    const outP = sh.mode === "in" ? 0 : clamp(1 - until / sh.durationMs);
+    breakP = Math.max(inP, outP);
+  }
+  const exit = sh && sh.mode !== "in" ? 0 : clamp(1 - until / ANIM_EXIT_MS);
   const p = easeOutCubic(since / layer.animMs);
   const spr = makeSpring(frame, fps, layer.animMs)(since);
   let opacity = 1 - easeInOutCubic(exit);
@@ -123,23 +143,71 @@ const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Se
     default: break;
   }
   const persp = layer.perspective;
-  const tf = `translate(-50%, -50%)${persp ? ` perspective(${persp.depth}px) rotateX(${persp.rotateX}deg) rotateY(${persp.rotateY}deg) rotateZ(${persp.rotateZ}deg)` : ""} scale(${ts})${tx}`;
   const sw = layer.strokeWidth * scale;
+  const fontPx = layer.fontSize * scale * fit;
+  const textStyle: React.CSSProperties = {
+    fontFamily: family, fontWeight: layer.fontWeight, fontSize: fontPx, color: layer.color, fontStyle: layer.italic ? "italic" : "normal", letterSpacing,
+    background: layer.backgroundColor, padding: layer.backgroundColor === "transparent" ? 0 : "0.15em 0.4em", borderRadius: 12 * scale, whiteSpace: "pre", textAlign: "center", lineHeight: 1.05,
+    WebkitTextStroke: sw > 0 ? `${sw * 2}px ${layer.strokeColor}` : undefined, paintOrder: "stroke fill",
+  };
+  const anchor: React.CSSProperties = { position: "absolute", left: `${x * 100}%`, top: `${y * 100}%`, transformOrigin: "50% 50%" };
+  const persp3d = persp ? ` perspective(${persp.depth}px) rotateX(${persp.rotateX}deg) rotateY(${persp.rotateY}deg) rotateZ(${persp.rotateZ}deg)` : "";
+
+  // ── text on a circle: glyphs placed by measured advance, rotated to the tangent ──
+  if (layer.path) {
+    const glyphs = graphemes(text.replace(/\n/g, " "));
+    const R = layer.path.radius * Math.min(width, height);
+    let widths = glyphs.map((g) => fontPx * 0.56 * (g === " " ? 0.6 : 1));
+    if (fontsReady && typeof document !== "undefined") {
+      try { widths = glyphs.map((g) => measureText({ text: g === " " ? "\u00a0" : g, fontFamily: family, fontSize: fontPx, fontWeight: String(layer.fontWeight), letterSpacing, fontStyle: layer.italic ? "italic" : "normal" } as never).width); } catch { /* keep estimates */ }
+    }
+    const placed = layoutOnCircle(widths, { radius: R, startDeg: layer.path.startDeg, sweepDeg: layer.path.sweepDeg, direction: layer.path.direction, inside: layer.path.inside });
+    const spin = layer.path.spinDegPerSec * (outMs / 1000);
+    return (
+      <div style={{ ...anchor, transform: `translate(-50%, -50%)${persp3d} scale(${ts})${tx}`, width: 0, height: 0, opacity }}>
+        <div style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, transform: `rotate(${spin}deg)` }}>
+          {glyphs.map((g, i) => (
+            <span key={i} style={{ ...textStyle, background: "transparent", padding: 0, position: "absolute", left: placed[i].x, top: placed[i].y, transform: `translate(-50%, -50%) rotate(${placed[i].rotateDeg}deg)`, letterSpacing: 0 }}>{g}</span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── shatter: the same text drawn once per triangular shard, each clipped to its polygon and flying on its own path ──
+  if (sh && breakP > 0) {
+    const lines = text.split("\n");
+    let bw = fontPx * 0.56 * Math.max(...lines.map((l) => graphemes(l).length)), bh = fontPx * 1.05 * lines.length;
+    if (fontsReady && typeof document !== "undefined") {
+      try { bw = Math.max(...lines.map((l) => measureText({ text: l, fontFamily: family, fontSize: fontPx, fontWeight: String(layer.fontWeight), letterSpacing, fontStyle: layer.italic ? "italic" : "normal" } as never).width)); } catch { /* keep estimate */ }
+    }
+    const padX = layer.backgroundColor === "transparent" ? 0 : fontPx * 0.8, padY = layer.backgroundColor === "transparent" ? 0 : fontPx * 0.3;
+    const box = { w: Math.ceil(bw + padX + fontPx * 0.3), h: Math.ceil(bh + padY + fontPx * 0.3) };
+    const [cols, rows] = sh.detail === "low" ? [6, 2] : sh.detail === "high" ? [16, 4] : [10, 3];
+    const shards = buildShards(box.w, box.h, cols, rows, sh.seed);
+    const prm = { spread: sh.spread, impact: { x: 0.5, y: 0.5 }, seed: sh.seed };
+    return (
+      <div style={{ ...anchor, transform: `translate(-50%, -50%)${persp3d} scale(${ts})${tx}`, width: box.w, height: box.h, opacity }}>
+        {shards.map((s) => {
+          const pose = shardPose(s, breakP, box, prm);
+          return (
+            <div key={s.id} style={{ position: "absolute", left: 0, top: 0, width: box.w, height: box.h, clipPath: shardClip(s), transformOrigin: `${s.cx}px ${s.cy}px`, transform: `translate(${pose.tx}px, ${pose.ty}px) rotate(${pose.rotate}deg) scale(${pose.scale})`, opacity: pose.opacity, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ ...textStyle, letterSpacing }}>{text}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{
-        position: "absolute", left: `${x * 100}%`, top: `${y * 100}%`, transform: tf, transformOrigin: "50% 50%",
-        fontFamily: family, fontWeight: layer.fontWeight, fontSize: layer.fontSize * scale * fit, color: layer.color, fontStyle: layer.italic ? "italic" : "normal", letterSpacing,
-        background: layer.backgroundColor, padding: layer.backgroundColor === "transparent" ? 0 : "0.15em 0.4em", borderRadius: 12 * scale, whiteSpace: "pre", textAlign: "center", lineHeight: 1.05,
-        opacity, clipPath: clip, WebkitTextStroke: sw > 0 ? `${sw * 2}px ${layer.strokeColor}` : undefined, paintOrder: "stroke fill",
-      }}
-    >
+    <div style={{ ...anchor, transform: `translate(-50%, -50%)${persp3d} scale(${ts})${tx}`, ...textStyle, opacity, clipPath: clip }}>
       {text}
     </div>
   );
 };
 
-export const TextLayers: React.FC<{ layers: TextLayer[]; project: Project; segments: Segment[] }> = ({ layers, project, segments }) => {
+export const TextLayers: React.FC<{ layers: TextLayer[]; project: Project; segments: Segment[]; scene?: SceneCtx }> = ({ layers, project, segments, scene }) => {
   const { fps, durationInFrames } = useVideoConfig();
   const items = useMemo(() => layers.map((l) => {
     const from = Math.max(0, Math.round((l.startMs * fps) / 1000));
@@ -150,7 +218,7 @@ export const TextLayers: React.FC<{ layers: TextLayer[]; project: Project; segme
     <>
       {items.map(({ l, from, dur }) => (
         <Sequence key={l.id} from={from} durationInFrames={Math.max(1, dur)} layout="none" name={`text ${l.text.slice(0, 16)}`}>
-          <TextLayerView layer={l} project={project} segments={segments} layerFromFrame={from} />
+          <TextLayerView layer={l} project={project} segments={segments} layerFromFrame={from} scene={scene} />
         </Sequence>
       ))}
     </>

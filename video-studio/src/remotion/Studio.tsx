@@ -99,6 +99,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
     const t = frameToMs(f, fps);
     return videoRect(camPath.at(outputToSource(t, meta.segments)), geom, zoomAt(outZooms, t).scale);
   } : undefined;
+  const sceneCtx = { rectAt, zoomAt: (f: number) => zoomAt(outZooms, frameToMs(f, fps)) };
   const baseRect = rectAt;
   const placedBroll = useMemo(() => placeBroll(project.broll, meta.segments, fps), [project.broll, meta.segments, fps]);
   const brollDurations = useMemo(() => Object.fromEntries(project.broll.map((b) => [b.assetId, project.assets[b.assetId]?.durationMs ?? 0])), [project.broll, project.assets]);
@@ -138,7 +139,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
       {src ? <BrollLayer placed={placedBroll} mediaUrls={mediaUrls} durations={brollDurations} main={{ src, maxFrame: maxSrcFrame, segments: meta.segments, rectAt }} /> : null}
 
       {/* BEHIND the speaker: text first, then the person cut out of the same video on top of it */}
-      <TextLayers layers={behindLayers} project={project} segments={meta.segments} />
+      <TextLayers layers={behindLayers} project={project} segments={meta.segments} scene={sceneCtx} />
       {captionsBehind ? captions : null}
       {canCut && !fullBroll && !split && (behindLayers.length > 0 || captionsBehind) ? (
         <AbsoluteFill style={rectAt ? undefined : { transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
@@ -147,7 +148,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
       ) : null}
 
       {captionsBehind ? null : captions}
-      <TextLayers layers={frontLayers} project={project} segments={meta.segments} />
+      <TextLayers layers={frontLayers} project={project} segments={meta.segments} scene={sceneCtx} />
 
       {music && musicSrc ? (
         <Audio

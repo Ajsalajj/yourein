@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { api } from "@/lib/client";
 import type { Project } from "@/lib/project";
 import { useEditor } from "./editor";
+import type { MatteOptsInput } from "@/lib/matte-opts";
 
 type Phase = "idle" | "running" | "done" | "error";
 export interface Roi { x: number; y: number; w: number; h: number }
@@ -17,7 +18,8 @@ interface State {
   roi: Roi | null;
   setPicking: (b: boolean) => void;
   setRoi: (r: Roi | null) => void;
-  segment: (projectId: string) => Promise<void>;
+  segment: (projectId: string, opts?: MatteOptsInput) => Promise<void>;
+  refineMatte: (projectId: string, opts: MatteOptsInput) => Promise<void>;
   analyseFaces: (projectId: string) => Promise<void>;
   removeFaces: (projectId: string) => Promise<void>;
   removeSegmentation: (projectId: string) => Promise<void>;
@@ -42,16 +44,33 @@ export const useVision = create<State>((set) => ({
   setPicking: (picking) => set({ picking }),
   setRoi: (roi) => set({ roi }),
 
-  segment: async (projectId) => {
+  segment: async (projectId, opts) => {
     set({ seg: { phase: "running", progress: 0, stage: "starting", error: null } });
     try {
-      const { jobId, maskId } = await api<{ jobId: string; maskId: string }>(`/api/projects/${projectId}/segment`, { method: "POST" });
+      const { jobId, maskId } = await api<{ jobId: string; maskId: string }>(`/api/projects/${projectId}/segment`, { method: "POST", body: JSON.stringify(opts ?? {}) });
       for (;;) {
         const s = await api<{ status: string; progress: number; stage: string; error: string | null }>(`/api/projects/${projectId}/segment?jobId=${jobId}&maskId=${maskId}`);
         if (s.status === "failed") throw new Error(s.error ?? "Segmentation failed");
         set({ seg: { phase: "running", progress: s.progress, stage: s.stage, error: null } });
         if (s.status === "done") break;
         await sleep(700);
+      }
+      await refreshAnalysis(projectId);
+      set({ seg: { phase: "done", progress: 1, stage: "done", error: null } });
+    } catch (e) {
+      set({ seg: { phase: "error", progress: 0, stage: "", error: (e as Error).message } });
+    }
+  },
+  refineMatte: async (projectId, opts) => {
+    set({ seg: { phase: "running", progress: 0, stage: "refining edges", error: null } });
+    try {
+      const { jobId, maskId } = await api<{ jobId: string; maskId: string }>(`/api/projects/${projectId}/segment/refine`, { method: "POST", body: JSON.stringify(opts) });
+      for (;;) {
+        const s = await api<{ status: string; progress: number; stage: string; error: string | null }>(`/api/projects/${projectId}/segment?jobId=${jobId}&maskId=${maskId}`);
+        if (s.status === "failed") throw new Error(s.error ?? "Refinement failed");
+        set({ seg: { phase: "running", progress: s.progress, stage: s.stage, error: null } });
+        if (s.status === "done") break;
+        await sleep(500);
       }
       await refreshAnalysis(projectId);
       set({ seg: { phase: "done", progress: 1, stage: "done", error: null } });

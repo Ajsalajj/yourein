@@ -209,6 +209,13 @@ export const textLayerSchema = z.object({
   trackScale: z.boolean().default(false),
   perspective: perspectiveSchema.nullable().default(null),
   animation: z.enum(["none", "fade-up", "tracking-in", "scale-in", "mask-reveal"]).default("none"),
+  /** Text along a circle: radius is a fraction of the short side; sweep 0 = natural spacing; spin rotates the whole ring. */
+  path: z.object({ radius: z.number().min(0.05).max(0.9), startDeg: z.number().min(-360).max(360), sweepDeg: z.number().min(0).max(360), direction: z.enum(["cw", "ccw"]), inside: z.boolean(), spinDegPerSec: z.number().min(-720).max(720).default(0) }).nullable().default(null),
+  /** Break the text into shards on the way in ("in" = assemble) and/or out. */
+  shatter: z.object({ mode: z.enum(["in", "out", "both"]), durationMs: z.number().min(200).max(2500).default(800), spread: z.number().min(0.1).max(1.5).default(0.8), detail: z.enum(["low", "medium", "high"]).default("medium"), seed: z.number().int().min(0).max(9999).default(1) }).nullable().default(null),
+  /** "scene": x/y are a point of the SOURCE picture and the layer follows smart zoom / the face-aware camera (parallax 1 = locked to the picture). */
+  anchor: z.enum(["screen", "scene"]).default("screen"),
+  parallax: z.number().min(0).max(1).default(1),
   animMs: z.number().min(100).max(3000).default(600),
 });
 export type TextLayer = z.infer<typeof textLayerSchema>;
@@ -239,6 +246,8 @@ export const segmentationSchema = z.object({
   height: z.number().int().positive(),
   frames: z.number().int().positive(),
   method: z.string(),
+  /** how the matte was refined (feather px, grow px, temporal weight, guided filter) - see ai-service/app/matte.py */
+  params: z.object({ guided: z.boolean(), temporal: z.number(), feather: z.number(), grow: z.number() }).nullable().default(null),
   sourceAssetId: z.string(),
   createdAt: z.string(),
 });

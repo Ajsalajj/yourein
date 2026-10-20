@@ -8,6 +8,7 @@ import { useVision } from "@/store/vision";
 import { useSeek, useSourceDuration } from "../context";
 import { useState } from "react";
 import { fmtTime } from "@/lib/client";
+import { DEFAULT_MATTE } from "@/lib/matte-opts";
 
 function FaceFraming() {
   const project = useEditor((s) => s.project)!;
@@ -61,6 +62,7 @@ function SubjectAndTracking() {
   const seek = useSeek();
   const startMs = Math.round(seek.sourceNow(frame));
   const [label, setLabel] = useState("Tracked region");
+  const [mo, setMo] = useState({ ...DEFAULT_MATTE });
   return (
     <>
       <Section title="Subject masking (behind the speaker)">
@@ -71,6 +73,17 @@ function SubjectAndTracking() {
         <Button className="w-full" variant={seg ? "secondary" : "primary"} disabled={vision.seg.phase === "running" || !project.sourceAssetId} onClick={() => void vision.segment(project.id)}>{vision.seg.phase === "running" ? "Analysing…" : seg ? "Analyse again" : "Analyse subject"}</Button>
         {vision.seg.phase === "running" ? <div role="status" className="space-y-1"><div className="h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full bg-accent transition-[width]" style={{ width: `${vision.seg.progress * 100}%` }} /></div><p className="text-[11px] text-mute">{vision.seg.stage}</p></div> : null}
         {vision.seg.phase === "error" ? <p role="alert" className="text-[12px] text-danger">{vision.seg.error}</p> : null}
+        {seg ? (
+          <div className="space-y-2 rounded-md border border-line p-2">
+            <p className="text-[12px] font-medium">Matte edges</p>
+            <Switch label="Snap edges to the video (guided filter)" checked={mo.guided} onChange={(v) => setMo({ ...mo, guided: v })} />
+            <Slider label="Feather" value={mo.feather} min={0} max={8} step={0.5} onChange={(v) => setMo({ ...mo, feather: v })} format={(v) => `${v} px`} />
+            <Slider label="Grow / shrink" value={mo.grow} min={-6} max={6} step={1} onChange={(v) => setMo({ ...mo, grow: v })} format={(v) => (v === 0 ? "off" : v > 0 ? `+${v} px` : `${v} px`)} />
+            <Slider label="Temporal smoothing" value={Math.round(mo.temporal * 100)} min={0} max={90} onChange={(v) => setMo({ ...mo, temporal: v / 100 })} format={(v) => `${v}%`} />
+            <Button size="sm" variant="secondary" disabled={vision.seg.phase === "running"} onClick={() => void vision.refineMatte(project.id, mo)}>Apply to matte (a few seconds)</Button>
+            {seg.params ? <p className="text-[10px] text-mute">Current: feather {seg.params.feather}px · grow {seg.params.grow}px · temporal {Math.round(seg.params.temporal * 100)}% · guided {seg.params.guided ? "on" : "off"}</p> : <p className="text-[10px] text-mute">Older matte: press Analyse again once to enable these controls.</p>}
+          </div>
+        ) : null}
         <Switch label="Captions behind the speaker" checked={project.captionsBehindSubject && !!seg} onChange={(v) => useEditor.getState().commit((p) => ({ ...p, captionsBehindSubject: v && !!p.analysis.segmentation }))} />
         {!seg ? <p className="text-[10px] text-mute">Enable after analysis. Per-layer “Behind the speaker” is in the Text tab.</p> : <Button size="sm" variant="ghost" onClick={() => void vision.removeSegmentation(project.id)}>Remove matte</Button>}
         <p className="text-[10px] leading-snug text-mute">Quality note: the model is small (256×256) and works best for a single, clearly visible person; hair and hands can be soft and props held in front may be partly missed.</p>

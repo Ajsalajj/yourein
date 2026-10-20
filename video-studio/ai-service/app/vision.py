@@ -61,6 +61,24 @@ class Segmenter:
         self.i = self.it.get_input_details()[0]["index"]
         self.o = self.it.get_output_details()[0]["index"]
 
+    @staticmethod
+    def upsample(m: np.ndarray, w: int, h: int) -> np.ndarray:
+        """Cropped network output (letterbox removed) -> frame size, bicubic."""
+        return cv2.resize(m, (w, h), interpolation=cv2.INTER_CUBIC).clip(0, 1)
+
+    def raw(self, bgr: np.ndarray) -> np.ndarray:
+        """Cropped (letterbox removed) network output, float32 0..1, at network resolution."""
+        h, w = bgr.shape[:2]
+        k = 256 / max(w, h)
+        nw, nh = max(1, round(w * k)), max(1, round(h * k))
+        small = cv2.resize(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), (nw, nh), interpolation=cv2.INTER_AREA)
+        canvas = np.zeros((256, 256, 3), np.uint8)
+        x0, y0 = (256 - nw) // 2, (256 - nh) // 2
+        canvas[y0:y0 + nh, x0:x0 + nw] = small
+        self.it.set_tensor(self.i, canvas[None].astype(np.float32) / 255.0)
+        self.it.invoke()
+        return self.it.get_tensor(self.o)[0, :, :, 0][y0:y0 + nh, x0:x0 + nw].astype(np.float32).clip(0, 1)
+
     def matte(self, bgr: np.ndarray) -> np.ndarray:
         """float32 matte 0..1 at the frame's own size (letterboxed into the 256x256 network input)."""
         h, w = bgr.shape[:2]
@@ -76,31 +94,55 @@ class Segmenter:
         return cv2.resize(m, (w, h), interpolation=cv2.INTER_CUBIC).clip(0, 1)
 
 
-def segment_video(path: Path, out_dir: Path, fps: float, progress: Progress, longest: int = 480) -> dict:
+def _raw_path(d: Path) -> Path:
+    return d / "raw.npy"
+
+
+def segment_video(path: Path, out_dir: Path, fps: float, progress: Progress, longest: int = 720, opts: Optional[dict] = None) -> dict:
+    """Stage 1: run the network on every frame and keep its raw 256x256 output (raw.npy). Stage 2: refine into per-frame alpha PNGs."""
+    from .matte import MatteOpts
     w, h, src_fps = _probe(path)
     ow, oh = _target_size(w, h, longest)
     out_dir.mkdir(parents=True, exist_ok=True)
     seg = Segmenter()
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)], capture_output=True, text=True).stdout.strip() or 0)
     total = max(1, int(dur * fps))
-    prev: Optional[np.ndarray] = None
+    raws = []
+    for n, frame in enumerate(_frames(path, fps, ow, oh)):
+        raws.append((seg.raw(frame) * 255).astype(np.uint8))
+        if n % 10 == 0:
+            progress(min(0.6, 0.6 * n / total), f"segmenting frame {n}/{total}")
+    if not raws:
+        raise RuntimeError("no frames could be decoded")
+    np.save(_raw_path(out_dir), np.stack(raws))
+    return refine_mattes(path, out_dir, out_dir, fps, progress, MatteOpts(**(opts or {})), longest, base=0.6)
+
+
+def refine_mattes(path: Path, raw_dir: Path, out_dir: Path, fps: float, progress: Progress, opts, longest: int = 720, base: float = 0.0) -> dict:
+    """Re-run only the cheap part of the pipeline (upsample, guided filter, temporal, edge curve, grow, feather) from the stored raw network output."""
+    import shutil
+    from .matte import MatteRefiner
+    w, h, _ = _probe(path)
+    ow, oh = _target_size(w, h, longest)
+    raw = np.load(_raw_path(raw_dir))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if raw_dir.resolve() != out_dir.resolve():
+        shutil.copyfile(_raw_path(raw_dir), _raw_path(out_dir))
+    ref = MatteRefiner(opts)
     n = 0
     for frame in _frames(path, fps, ow, oh):
-        m = seg.matte(frame)
-        if prev is not None:
-            m = 0.65 * m + 0.35 * prev               # temporal smoothing: calms flicker
-        prev = m
-        # sharpen the soft sigmoid edge, then feather by ~1px so cut-outs do not look jagged
-        t = ((m - 0.35) / 0.3).clip(0, 1)
-        a = cv2.GaussianBlur(t * t * (3 - 2 * t), (0, 0), 1.2)
-        rgba = np.dstack([np.full_like(frame, 255), (a * 255).astype(np.uint8)])
+        if n >= len(raw):
+            break
+        m = Segmenter.upsample(raw[n].astype(np.float32) / 255.0, ow, oh)
+        a = ref.step(frame, m)
+        rgba = np.dstack([np.full_like(frame, 255), (a * 255 + 0.5).astype(np.uint8)])
         cv2.imwrite(str(out_dir / f"{n:06d}.png"), rgba, [cv2.IMWRITE_PNG_COMPRESSION, 3])
         n += 1
         if n % 10 == 0:
-            progress(min(0.98, n / total), f"segmenting frame {n}/{total}")
+            progress(min(0.98, base + (1 - base) * n / len(raw)), f"refining edges {n}/{len(raw)}")
     if n == 0:
-        raise RuntimeError("no frames could be decoded")
-    return {"fps": fps, "width": ow, "height": oh, "frames": n, "method": "mediapipe-selfie-segmentation (TFLite, Apache-2.0)", "sourceWidth": w, "sourceHeight": h}
+        raise RuntimeError("no frames could be refined")
+    return {"fps": fps, "width": ow, "height": oh, "frames": n, "method": "mediapipe-selfie-segmentation (TFLite, Apache-2.0) + guided-filter edge refinement + motion-compensated temporal smoothing", "sourceWidth": w, "sourceHeight": h, "params": ref.o.dict()}
 
 
 def track_region(path: Path, roi: dict, start_ms: int, fps: float, progress: Progress, max_ms: Optional[int] = None, longest: int = 640) -> dict:
