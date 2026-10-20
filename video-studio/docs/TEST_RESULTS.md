@@ -42,3 +42,27 @@ All 42 templates were rendered as stills (4 frames each) over the demo video and
 ## Not tested
 
 Real Whisper transcription; any non-English recognition; HEVC/ProRes sources; videos longer than ~15 s; 60 fps export; GPU rendering; Safari/Firefox; screen readers.
+
+## Phase 2 - reference-driven caption engine
+
+Run date: see git history. Commands: `npm run typecheck`, `npm run lint`, `npm test` (**82 TS tests pass**: 72 earlier + new `tests/wordstyle.test.ts`, animations now asserts all **54** behaviours), `npm run ai:test` (**12 pass**), `node scripts/dev/ui-check.mjs` (all checks pass, including *new*: preview exposes stable `data-word-id`, clicking a preview word opens the Type FX panel, selected word gets an outline).
+
+### Visual comparison (real MP4 export, `scripts/validate-phase2.ts`)
+One 9:16 export (1080×1920, 30 fps, person sample) with five captions, one per style: white bold kinetic, green italic emphasis, purple 3D, neon glow, cinematic yellow - plus an identical no-caption control render. "Ink" = pixels that differ between the two MP4s, so every number below is from **rendered output**, not React state.
+
+| Style | first ink after caption start | ink before start | ink after exit | overshoot (peak/settled, after last word) | clipped when settled |
+|---|---|---|---|---|---|
+| white-kinetic | 33 ms | 0 | 0 | 1.55 | no |
+| green-italic | 0 ms | 0 | 0 | 1.07 | no |
+| purple-3d | 33 ms | 0 | 0 | 1.12 | no |
+| neon-glow | 0 ms | 0 | 0 | 0.92 (glow breathes; no overshoot) | no |
+| cinematic-yellow | 100 ms | 0 | 0 | 1.24 | no |
+
+* **Per-word style independence:** a single word in caption 1 was restyled (`#ff2d55`, 1.15×). 12 958 px of that colour appear in its caption window, 5 px (noise) anywhere else - the style did not leak to other words or captions.
+* Frames at *before / entry / peak / settled / exit* are in `docs/screens/phase2-comparison-contact-sheet.png`; the full export is `docs/demo/demo-phase2-style-families.mp4`; raw numbers in `docs/demo/phase2-validation-report.json`.
+* The overshoot ratio is an **ink-area** proxy: it shows motion exists and is bounded, not that a curve equals a specific reference's curve.
+* Caveats seen in the review of the sheet: the *neon-glow* text is low-contrast over the sample's collar area (placement, not a renderer fault); "IT BIG" briefly shows a collapsed space mid-animation in *purple-3d*.
+* An earlier run of the same script flagged `clipped` for purple-3d (entry deliberately starts huge) and showed ink after "exit" (next caption was 100 ms behind); the harness was corrected (clip judged once settled; 300 ms gaps) rather than the renderer.
+
+### Not re-verified in this phase
+Behind-subject rendering was verified in the earlier phase (`docs/ADVANCED_EFFECTS.md`) and is unchanged; the `behind-person-typography` template was not separately exported. 16:9 and 1:1 exports of the comparison project were not rendered (`ASPECT=16:9 npx tsx scripts/validate-phase2.ts` runs them).

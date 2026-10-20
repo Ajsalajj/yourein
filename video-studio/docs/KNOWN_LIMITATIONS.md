@@ -21,3 +21,13 @@
 * Safe-zone guides are approximate, not platform-exact.
 * Accessibility: controls are labelled and keyboard reachable, but a full screen-reader/keyboard audit of the timeline (pointer-driven drag) was not done; keyboard equivalents exist for split/delete/undo/seek only.
 * Remotion licence: free for individuals / ≤3-person companies; larger companies need a licence.
+
+## Phase 2 additions - honest status
+
+**Complete (verified on rendered output):** per-word styles with stable ids that survive text edits/split/merge; click-a-word-in-the-preview to style it; Typography & Effects panel (font, weight, size, spacing, case, gradient with animation/shine, outline, multiple shadows, glow, extrusion, background, rotation/skew/perspective, per-word motion curve/spring/delay/duration, saved word-style presets); licensed font upload with a licence confirmation; 18 new motion engines (54 total) and 22 new templates (73 total) in four families; frame-driven springs/overshoot/bounce; entry blur; optional temporal motion blur (`@remotion/motion-blur`, slows preview/export).
+
+**Needs a matte or track (works only after the Effects panel's analysis has run):** text behind the speaker (`behind-person-typography`, `kinetic-scatter` used around a subject); tracked callouts.
+
+**Not built:** text on a circular/curved path; per-glyph shatter ("Broken" in reference 3); real 3D-geometry letters (extrusion is stacked shadows, perspective is CSS 3D); radial zoom-blur *transitions between video clips* (the zoom-blur on outgoing words is implemented); a font-identity match to the reference videos (impossible from the files - see `REFERENCE_STYLE_ANALYSIS.md`); 16:9 / 1:1 comparison exports were not rendered in this phase.
+
+**Caveats:** motion blur multiplies render cost by its sample count (6-16×) for the caption layer; Indic scripts with per-character animations rely on grapheme splitting and were verified in phase 1, not re-rendered against every phase-2 template.

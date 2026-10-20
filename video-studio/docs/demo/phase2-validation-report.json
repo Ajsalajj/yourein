@@ -1,0 +1,86 @@
+{
+ "fps": 30.0,
+ "frames": 226,
+ "size": [
+  1080,
+  1920
+ ],
+ "captions": [
+  {
+   "key": "white-kinetic",
+   "template": "bold-white-kinetic",
+   "ink_before": 0,
+   "ink_peak": 33582,
+   "ink_settled": 21680.5,
+   "first_ink_after_start_ms": 33,
+   "peak_frame_offset_ms": 533,
+   "overshoot_ratio_after_last_word": 1.55,
+   "ink_after_exit": 0,
+   "present": true,
+   "clipped": false,
+   "motion_present": true
+  },
+  {
+   "key": "green-italic",
+   "template": "green-italic-impact",
+   "ink_before": 0,
+   "ink_peak": 80097,
+   "ink_settled": 74657.0,
+   "first_ink_after_start_ms": 0,
+   "peak_frame_offset_ms": 567,
+   "overshoot_ratio_after_last_word": 1.07,
+   "ink_after_exit": 0,
+   "present": true,
+   "clipped": false,
+   "motion_present": true
+  },
+  {
+   "key": "purple-3d",
+   "template": "purple-3d-punch",
+   "ink_before": 0,
+   "ink_peak": 51088,
+   "ink_settled": 45662.0,
+   "first_ink_after_start_ms": 33,
+   "peak_frame_offset_ms": 500,
+   "overshoot_ratio_after_last_word": 1.12,
+   "ink_after_exit": 0,
+   "present": true,
+   "clipped": false,
+   "motion_present": true
+  },
+  {
+   "key": "neon-glow",
+   "template": "neon-cyan-glow",
+   "ink_before": 0,
+   "ink_peak": 64787,
+   "ink_settled": 62437.5,
+   "first_ink_after_start_ms": 0,
+   "peak_frame_offset_ms": 633,
+   "overshoot_ratio_after_last_word": 0.92,
+   "ink_after_exit": 0,
+   "present": true,
+   "clipped": false,
+   "motion_present": true
+  },
+  {
+   "key": "cinematic-yellow",
+   "template": "cinematic-giant-headline",
+   "ink_before": 0,
+   "ink_peak": 224997,
+   "ink_settled": 182032.0,
+   "first_ink_after_start_ms": 100,
+   "peak_frame_offset_ms": 533,
+   "overshoot_ratio_after_last_word": 1.24,
+   "ink_after_exit": 0,
+   "present": true,
+   "clipped": false,
+   "motion_present": true
+  }
+ ],
+ "per_word_style": {
+  "red_px_in_styled_caption_max": 12958,
+  "red_px_elsewhere_max": 5,
+  "pass": true
+ },
+ "pass": true
+}
