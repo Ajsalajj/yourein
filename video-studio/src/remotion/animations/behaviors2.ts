@@ -97,7 +97,7 @@ export const punch: Behavior = {
       extrudeK: clamp(t / 170),
       style: {
         opacity: c.revealed ? Math.min(1, t / 50) * (1 - c.exit) : 0,
-        transform: `translate(${shake}px, ${-Math.cos(t / 11) * px(c, 6) * decay * c.k}px) scale(${1 + 1.1 * c.sk * (1 - Math.min(s, 1)) + Math.max(0, s - 1) * 0.5}) rotateY(${(1 - Math.min(s, 1)) * 38}deg) rotate(${(1 - Math.min(s, 1)) * -5}deg)`,
+        transform: `translate(${shake}px, ${-Math.cos(t / 11) * px(c, 6) * decay * c.k}px) scale(${1 + 0.42 * c.sk * (1 - Math.min(s, 1)) + Math.max(0, s - 1) * 0.3}) rotateY(${(1 - Math.min(s, 1)) * 38}deg) rotate(${(1 - Math.min(s, 1)) * -5}deg)`,
         filter: t < 120 ? `blur(${px(c, 10) * (1 - t / 120)}px)` : undefined,
       },
     };

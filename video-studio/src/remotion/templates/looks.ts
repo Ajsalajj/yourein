@@ -29,19 +29,22 @@ export const LOOKS = {
   neonCyan: {
     gradient: { angle: 180, size: 100, animate: "none", speed: 0, stops: [{ color: "#e9ffff", pos: 0 }, { color: "#38d8f8", pos: 0.42 }, { color: "#0a7ff0", pos: 1 }], shine: { color: "#ffffff", width: 20, speed: 70, angle: 24, intensity: 0.9 } },
     glow: { color: "#00cfff", blur: 28, strength: 3, pulse: 0.22, hz: 1.1 },
+    // dark edge + contact shadow: a bright cyan tube over bright footage has almost no luminance contrast on its own
+    stroke: { color: "#03233f", width: 3.5 },
+    shadows: [soft(0.75, 8, 2), soft(0.45, 26, 6)],
   } satisfies WordStyle,
 
   /** Reference 3 "Hero Text"/"Smooth Cross": pink -> violet gradient that slides while the word pops */
   pinkPop: {
     gradient: { angle: 100, size: 300, animate: "slide", speed: 130, shine: null, stops: [{ color: "#ff5ea8", pos: 0 }, { color: "#ff9a5e", pos: 0.25 }, { color: "#c13bff", pos: 0.55 }, { color: "#ff5ea8", pos: 1 }] },
     glow: { color: "#ff4fa0", blur: 22, strength: 2, pulse: 0, hz: 1 },
-    shadows: [soft(0.4, 18, 6)],
+    shadows: [soft(0.65, 8, 2), soft(0.4, 18, 6)],
   } satisfies WordStyle,
 
   rainbow: {
     gradient: { angle: 100, size: 350, animate: "slide", speed: 150, stops: ["#ff3b3b", "#ffb000", "#ffee00", "#3bff6a", "#00c8ff", "#6a5cff", "#ff3bd0", "#ff3b3b"].map((color, i, a) => ({ color, pos: i / (a.length - 1) })), shine: { color: "#ffffff", width: 14, speed: 120, angle: 18, intensity: 0.9 } },
     glow: { color: "#ffffff", blur: 14, strength: 1, pulse: 0.2, hz: 0.8 },
-    shadows: [soft(0.45, 16, 6)],
+    shadows: [soft(0.65, 8, 2), soft(0.45, 16, 6)],
   } satisfies WordStyle,
 
   /** Reference 3 "Metallic Text": banded silver with specular sweep and dark edge */

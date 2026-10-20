@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { customFontSchema, wordStyleSchema } from "./wordstyle";
 
+import { brollSchema, reframeSchema, sfxClipSchema, sfxSettingsSchema, transitionSchema } from "./edit-schema";
 export const SCHEMA_VERSION = 1 as const;
 export const DEFAULT_FPS = 30;
 
@@ -143,6 +144,8 @@ export const stylePropsSchema = z.object({
   emphasis: z.object({ mode: z.enum(["off", "auto"]), maxPerGroup: z.number().int().min(1).max(4), minLength: z.number().int().min(2).max(12) }).optional(),
   /** Shutter fraction of real (sub-frame) motion blur on captions: 0 = off. Costs render time. */
   motionBlur: z.number().min(0).max(1).optional(),
+  /** Space between words in em (default 0.28). Extrusion depth is added automatically so 3D letters never visually touch. */
+  wordGap: z.number().min(0).max(1.5).optional(),
 });
 export type StyleProps = z.infer<typeof stylePropsSchema>;
 
@@ -285,6 +288,11 @@ export const projectSchema = z.object({
   /** Fonts uploaded by the user (asset kind "font"). */
   fonts: z.array(customFontSchema).default([]),
   analysis: analysisSchema.default({ segmentation: null, tracks: {} }),
+  sfx: z.array(sfxClipSchema).default([]),
+  sfxSettings: sfxSettingsSchema.default({ enabled: true, volume: 1, duckUnderSpeech: 0 }),
+  transitions: z.array(transitionSchema).default([]),
+  broll: z.array(brollSchema).default([]),
+  reframe: reframeSchema.default({ mode: "off", tightness: 0.3, smoothMs: 700, overrides: [] }),
   audio: audioSchema.default({ originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null }),
 });
 export type Project = z.infer<typeof projectSchema>;
@@ -322,6 +330,11 @@ export function newProject(opts: { id: string; name: string; aspect?: AspectId; 
     fonts: [],
     analysis: { segmentation: null, tracks: {} },
     audio: { originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null },
+    sfx: [],
+    sfxSettings: { enabled: true, volume: 1, duckUnderSpeech: 0 },
+    transitions: [],
+    broll: [],
+    reframe: { mode: "off", tightness: 0.3, smoothMs: 700, overrides: [] },
   };
 }
 

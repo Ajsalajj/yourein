@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { continueRender, delayRender, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import { measureText } from "@remotion/layout-utils";
 import type { CaptionStyleState, StyleProps } from "../lib/project";
+import { wordGapEm } from "../lib/wordstyle";
 import type { OutCaption } from "../lib/timeline";
 import { balanceLines, graphemes, isComplexScript } from "../lib/captions/text";
 import { DEFAULT_EMPHASIS, extrudeShadows, glowShadows, gradientCss, gradientHue, mergeWordStyles, pickEmphasis, shadowLayers, staticTransform, type WordStyle } from "../lib/wordstyle";
@@ -95,7 +96,7 @@ function computeLayout(words: WordLayoutInput[], style: StyleProps, behavior: Be
         const ws = words[i].style;
         return measureText({ text: texts[i], fontFamily: ws.fontFamily.includes(",") ? ws.fontFamily : primaryFamily(ws.fontFamily), fontSize: size * words[i].sizeScale, fontWeight: String(ws.fontWeight), letterSpacing: `${isComplexScript(texts[i]) ? 0 : ws.letterSpacing}em` }).width;
       };
-      const gap = basePx * 0.28;
+      const gap = basePx * wordGapEm(style);
       const pad = (behavior.wordPadEm ?? 0) * basePx;
       let widest = 0;
       if (layoutKind === "flow") {
@@ -112,7 +113,7 @@ function computeLayout(words: WordLayoutInput[], style: StyleProps, behavior: Be
     }
   }
   const fs = basePx * fit;
-  const gapPx = fs * 0.28;
+  const gapPx = fs * wordGapEm(style);
   const padPx = (behavior.wordPadEm ?? 0) * fs;
   // Word rectangles relative to the caption block (used by behaviours that draw between words, e.g. a sliding box).
   const w = (widths ?? texts.map((t, i) => graphemes(t).length * fs * 0.56 * words[i].sizeScale + padPx)).map((x) => x * fit);
@@ -248,7 +249,7 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState, wordStyles, f
   const layoutKind = behavior.layout ?? "flow";
   const fs = layout.fontPx;
   const fitK = fs / (style.fontSize * scale);
-  const gap = fs * 0.28;
+  const gap = fs * wordGapEm(style);
 
   /** CSS for one word: base typography, then the behaviour's motion, then the look (paint / depth / geometry). */
   const renderWord = (i: number, floating: boolean): { node: React.ReactNode; place?: { x: number; y: number } } | null => {

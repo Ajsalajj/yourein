@@ -262,3 +262,14 @@ export function pickEmphasis(words: { id: string; text: string }[], opts: Emphas
   }
   return out;
 }
+
+/**
+ * Gap between words in em. The default 0.28 em, plus the horizontal reach of any extrusion on the caption look
+ * (stacked-shadow depth is painted to the right of each glyph and visually eats the space: "IT BIG" read as "ITBIG").
+ */
+export function wordGapEm(style: { fontSize: number; wordGap?: number; look?: { extrude?: { depth: number; angle: number } } }): number {
+  const ex = style.look?.extrude;
+  const reach = ex ? (ex.depth * Math.max(0, Math.cos((ex.angle * Math.PI) / 180))) / Math.max(1, style.fontSize) : 0;
+  return (style.wordGap ?? 0.28) + reach;
+}
+
