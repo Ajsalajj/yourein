@@ -42,7 +42,7 @@ export function rejectOutliers(d: Det[], maxJump = 0.18): Det[] {
   });
 }
 
-export interface Target { cx: number; cy: number; h: number; /** 0..1 how much we trust "a face is here" */ conf: number }
+export interface Target { cx: number; cy: number; h: number; /** 0..1 how much we trust "a face is here" */ conf: number; /** face velocity in normalised units per ms (for look-ahead) */ vx?: number; vy?: number }
 export interface CleanOptions { bridgeMs?: number; holdMs?: number; fadeMs?: number }
 
 /** Face centre/size at time t from the cleaned detections: interpolate across short gaps, hold on longer ones, fade confidence to 0 afterwards. */
@@ -52,14 +52,20 @@ export function faceAt(d: Det[], t: number, o: CleanOptions = {}): Target | null
   let lo = -1;
   for (let i = 0; i < d.length; i++) { if (d[i].t <= t) lo = i; else break; }
   const prev = lo >= 0 ? d[lo] : null, next = d[lo + 1] ?? null;
+  // velocity from detections ~0.4 s apart (robust against the 10 Hz detector jitter)
+  const vel = (i: number) => {
+    const a = d[Math.max(0, i - 2)], b = d[Math.min(d.length - 1, i + 2)];
+    const dt = b.t - a.t;
+    return dt > 0 && dt <= 900 ? { vx: (b.cx - a.cx) / dt, vy: (b.cy - a.cy) / dt } : { vx: 0, vy: 0 };
+  };
   if (prev && next && next.t - prev.t <= bridge) {
     const u = (t - prev.t) / Math.max(1, next.t - prev.t);
-    return { cx: prev.cx + (next.cx - prev.cx) * u, cy: prev.cy + (next.cy - prev.cy) * u, h: prev.h + (next.h - prev.h) * u, conf: 1 };
+    return { cx: prev.cx + (next.cx - prev.cx) * u, cy: prev.cy + (next.cy - prev.cy) * u, h: prev.h + (next.h - prev.h) * u, conf: 1, ...vel(lo) };
   }
   // before the first / after the last / inside a long gap: hold the nearest then lose confidence
   const near = !prev ? next! : !next ? prev : t - prev.t <= next.t - t ? prev : next;
   const dist = Math.abs(t - near.t);
-  if (dist <= hold) return { cx: near.cx, cy: near.cy, h: near.h, conf: 1 };
+  if (dist <= hold) return { cx: near.cx, cy: near.cy, h: near.h, conf: 1, vx: 0, vy: 0 };
   const c = 1 - clamp((dist - hold) / fade, 0, 1);
   return c > 0 ? { cx: near.cx, cy: near.cy, h: near.h, conf: c } : null;
 }
@@ -68,14 +74,16 @@ export interface CamOptions { stepMs?: number }
 const EYE_LINE = 0.42;
 
 /** Unsmoothed camera the operator would like at time t. */
-export function desiredCam(tgt: Target | null, g: Geometry, r: Pick<ReframeSettings, "tightness">): Cam {
+export function desiredCam(tgt: Target | null, g: Geometry, r: Pick<ReframeSettings, "tightness"> & { smoothMs?: number }): Cam {
   const cw = coverWindow(g);
   if (!tgt) return { cx: 0.5, cy: 0.5, z: 1 };
   // window height (source-normalised) so that the face is `tightness` of the OUTPUT height
   const hn = clamp(tgt.h / r.tightness, 0.05, cw.h);
   const z = clamp(cw.h / hn, 1, 4);
   const hNow = cw.h / z;
-  const want: Cam = { cx: tgt.cx, cy: tgt.cy + (0.5 - EYE_LINE) * hNow, z };
+  // look-ahead: a critically damped follower lags a moving target by ~smoothTime x velocity; aim that far ahead so the face stays centred
+  const lead = (r.smoothMs ?? 0) * 0.85;
+  const want: Cam = { cx: tgt.cx + (tgt.vx ?? 0) * lead, cy: tgt.cy + (tgt.vy ?? 0) * lead + (0.5 - EYE_LINE) * hNow, z };
   // lose confidence -> drift to the centre fallback
   return { cx: want.cx * tgt.conf + 0.5 * (1 - tgt.conf), cy: want.cy * tgt.conf + 0.5 * (1 - tgt.conf), z: 1 + (z - 1) * tgt.conf };
 }

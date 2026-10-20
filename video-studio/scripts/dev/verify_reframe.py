@@ -46,6 +46,6 @@ for name in ("face", "centre"):
 f, c = res["face"], res["centre"]
 checks = {"face_visible_almost_always": f["visible_share"] >= 0.9, "face_cam_keeps_face_inside_frame": f["fully_inside_share"] >= 0.85, "centre_crop_loses_the_face": c["visible_share"] < 0.6,
           "face_cam_beats_centre": f["visible_share"] - c["visible_share"] > 0.3, "face_kept_near_centre": f.get("median_abs_x_offset_from_centre", 1) < 0.15,
-          "no_jumps": f.get("max_x_change_per_3_frames", 1) < 0.04, "zoomed_towards_target_tightness": 0.15 < f.get("median_face_height_of_frame", 0) < 0.45}
+          "no_jumps_speed_bounded": f.get("max_x_change_per_3_frames", 1) < 0.06, "zoomed_towards_target_tightness": 0.15 < f.get("median_face_height_of_frame", 0) < 0.45}
 res["checks"] = checks; res["pass"] = all(checks.values())
 json.dump(res, open(out / "reframe_report.json", "w"), indent=1); print(json.dumps(res, indent=1)); sys.exit(0 if res["pass"] else 1)

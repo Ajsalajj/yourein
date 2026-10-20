@@ -47,6 +47,11 @@ test("following a moving face: always inside the central 70 % of the window once
   let worst = 0;
   for (let t = 1500; t <= 10000; t += 100) { const c = p.at(t), half = w / c.z / 2; worst = Math.max(worst, Math.abs(c.cx - (0.25 + (0.5 * t) / 10000)) / half); }
   assert.ok(worst < 0.7, `face reached ${(worst * 100).toFixed(0)} % of the half-window`);
+  // look-ahead: at constant speed the steady-state lag must stay small (a plain damped follower trails by ~smoothTime x speed)
+  const slow = buildCameraPath(f, LAND, settings({ smoothMs: 700 }), 10000);
+  let lag = 0;
+  for (let t = 4000; t <= 9500; t += 100) { const c = slow.at(t), half = w / c.z / 2; lag = Math.max(lag, Math.abs(c.cx - (0.25 + (0.5 * t) / 10000)) / half); }
+  assert.ok(lag < 0.3, `steady-state lag ${(lag * 100).toFixed(0)} % of the half-window`);
   const loose = buildCameraPath(faces(() => face(0.5, 0.4, 0.12)), LAND, settings({ tightness: 0.2 }), 3000).at(3000).z;
   const tight = buildCameraPath(faces(() => face(0.5, 0.4, 0.12)), LAND, settings({ tightness: 0.5 }), 3000).at(3000).z;
   assert.ok(tight > loose + 0.3);

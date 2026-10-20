@@ -123,13 +123,26 @@ class FaceDetector:
 
 
 def _nms(faces: list[dict], thr: float = 0.35) -> list[dict]:
+    """IoU NMS, then drop any box that CONTAINS another confident box: one face never contains a second face, so the larger box is
+    the head+shoulders/helmet false positive that big search windows produce around a small real face."""
     faces = sorted(faces, key=lambda f: -f["score"])
     keep: list[dict] = []
     for f in faces:
         b = np.array([f["x"], f["y"], f["x"] + f["w"], f["y"] + f["h"]])
         if all(_iou(b, np.array([k["x"], k["y"], k["x"] + k["w"], k["y"] + k["h"]])) <= thr for k in keep):
             keep.append(f)
-    return keep
+
+    def inside(small: dict, big: dict) -> float:
+        x0, y0 = max(small["x"], big["x"]), max(small["y"], big["y"])
+        x1, y1 = min(small["x"] + small["w"], big["x"] + big["w"]), min(small["y"] + small["h"], big["y"] + big["h"])
+        return max(0.0, x1 - x0) * max(0.0, y1 - y0) / (small["w"] * small["h"] + 1e-9)
+
+    out = []
+    for f in keep:
+        contains = any(o is not f and o["w"] * o["h"] < 0.6 * f["w"] * f["h"] and inside(o, f) > 0.8 and o["score"] >= 0.55 * f["score"] for o in keep)
+        if not contains:
+            out.append(f)
+    return out
 
 
 def _associate(prev: Optional[dict], faces: list[dict], gate: float) -> Optional[dict]:
@@ -145,7 +158,7 @@ def _associate(prev: Optional[dict], faces: list[dict], gate: float) -> Optional
                 best, bd = f, d
         if best is not None and bd <= gate:
             return best
-    return max(faces, key=lambda f: f["w"] * f["h"] * f["score"])
+    return max(faces, key=lambda f: f["score"] ** 3 * (f["w"] * f["h"]) ** 0.5)  # confidence first, size as tie-break
 
 
 def analyse_faces(path: Path, progress: Progress, sample_fps: float = 10.0, longest: int = 960, max_ms: Optional[int] = None) -> dict:

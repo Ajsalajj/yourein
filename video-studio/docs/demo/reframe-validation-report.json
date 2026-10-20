@@ -1,0 +1,34 @@
+{
+ "face": {
+  "samples_with_face_in_source": 105,
+  "face_detected_in_output": 105,
+  "face_fully_inside_frame": 93,
+  "visible_share": 1.0,
+  "fully_inside_share": 0.886,
+  "median_abs_x_offset_from_centre": 0.117,
+  "max_abs_x_offset": 0.257,
+  "median_face_height_of_frame": 0.301,
+  "max_x_change_per_3_frames": 0.0407
+ },
+ "centre": {
+  "samples_with_face_in_source": 105,
+  "face_detected_in_output": 58,
+  "face_fully_inside_frame": 47,
+  "visible_share": 0.552,
+  "fully_inside_share": 0.448,
+  "median_abs_x_offset_from_centre": 0.193,
+  "max_abs_x_offset": 0.428,
+  "median_face_height_of_frame": 0.203,
+  "max_x_change_per_3_frames": 0.2792
+ },
+ "checks": {
+  "face_visible_almost_always": true,
+  "face_cam_keeps_face_inside_frame": true,
+  "centre_crop_loses_the_face": true,
+  "face_cam_beats_centre": true,
+  "face_kept_near_centre": true,
+  "no_jumps_speed_bounded": true,
+  "zoomed_towards_target_tightness": true
+ },
+ "pass": true
+}
