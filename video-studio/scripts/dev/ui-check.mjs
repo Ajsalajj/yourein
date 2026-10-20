@@ -111,6 +111,33 @@ ok("selected word gets a selection outline", (await page.locator("div.border-acc
 await page.screenshot({ path: `${OUT}/06b-typefx.png` });
 const storeWs = async () => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("__ws") ?? "{}")).length);
 void storeWs;
+// Phase 3 panels: SFX / Transitions / B-roll / face framing are real, wired controls
+await page.getByRole("tab", { name: /SFX/ }).click();
+ok("SFX library lists the bundled sounds", (await page.locator('button[aria-label^="Add "][aria-label$=" at playhead"]').count()) >= 10);
+await page.locator('button[aria-label="Add Impact hit at playhead"]').click();
+await page.waitForTimeout(400);
+ok("adding a sound puts a block on the SFX timeline lane", (await page.locator('[aria-label^="Sound effect Impact"]').count()) === 1);
+await page.getByRole("button", { name: /Suggest sounds/ }).click();
+await page.waitForTimeout(400);
+ok("suggest sounds reports a result", (await page.locator('[role="status"]').filter({ hasText: /suggested sounds|Nothing to suggest/ }).count()) >= 1);
+await page.screenshot({ path: `${OUT}/06c-sfx.png` });
+await page.getByRole("tab", { name: /Transitions/ }).click();
+ok("transitions panel lists joins created by the earlier cut", (await page.locator('select[aria-label^="Transition for join"]').count()) >= 1);
+const sel = page.locator('select[aria-label^="Transition for join"]').first();
+await sel.selectOption("whip-pan");
+await page.waitForTimeout(400);
+ok("choosing a transition shows its controls", (await page.locator('select[aria-label="Transition sound"]').count()) === 1);
+await page.screenshot({ path: `${OUT}/06d-transitions.png` });
+await page.getByRole("tab", { name: /B-roll/ }).click();
+await page.waitForTimeout(800);
+ok("B-roll panel shows provider status", (await page.locator('input[name="broll-provider"]').count()) >= 2);
+await page.getByRole("button", { name: /Analyze transcript/ }).click();
+await page.waitForTimeout(500);
+ok("B-roll analysis reports a result", (await page.locator('[role="status"]').filter({ hasText: /places found|No filmable/ }).count()) >= 1);
+await page.screenshot({ path: `${OUT}/06e-broll.png` });
+await page.getByRole("tab", { name: /Effects/ }).click();
+ok("face-aware framing controls exist", (await page.getByRole("button", { name: /Detect faces/ }).count()) === 1);
+await page.screenshot({ path: `${OUT}/06f-effects.png` });
 // settings + templates + projects pages
 for (const [p, h] of [["/projects", "Projects"], ["/templates", "Caption templates"], ["/settings", "Settings"]]) {
   await page.goto(BASE + p);

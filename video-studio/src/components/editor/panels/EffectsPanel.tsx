@@ -80,7 +80,7 @@ function SubjectAndTracking() {
             <Slider label="Feather" value={mo.feather} min={0} max={8} step={0.5} onChange={(v) => setMo({ ...mo, feather: v })} format={(v) => `${v} px`} />
             <Slider label="Grow / shrink" value={mo.grow} min={-6} max={6} step={1} onChange={(v) => setMo({ ...mo, grow: v })} format={(v) => (v === 0 ? "off" : v > 0 ? `+${v} px` : `${v} px`)} />
             <Slider label="Temporal smoothing" value={Math.round(mo.temporal * 100)} min={0} max={90} onChange={(v) => setMo({ ...mo, temporal: v / 100 })} format={(v) => `${v}%`} />
-            <Button size="sm" variant="secondary" disabled={vision.seg.phase === "running"} onClick={() => void vision.refineMatte(project.id, mo)}>Apply to matte (a few seconds)</Button>
+            <Button size="sm" variant="secondary" disabled={vision.seg.phase === "running"} onClick={() => void vision.refineMatte(project.id, mo)}>Apply to matte (≈3 s of processing per second of video)</Button>
             {seg.params ? <p className="text-[10px] text-mute">Current: feather {seg.params.feather}px · grow {seg.params.grow}px · temporal {Math.round(seg.params.temporal * 100)}% · guided {seg.params.guided ? "on" : "off"}</p> : <p className="text-[10px] text-mute">Older matte: press Analyse again once to enable these controls.</p>}
           </div>
         ) : null}

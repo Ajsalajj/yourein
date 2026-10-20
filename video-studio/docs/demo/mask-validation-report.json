@@ -1,0 +1,140 @@
+{
+ "behind_default": [
+  {
+   "frame": 60,
+   "text_px": 119033,
+   "text_px_over_subject_core": 45983,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9997,
+   "text_px_in_edge_band": 3672,
+   "edge_band_visible_share": 0.571,
+   "subject_area_px": 781135
+  },
+  {
+   "frame": 120,
+   "text_px": 118927,
+   "text_px_over_subject_core": 46991,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9997,
+   "text_px_in_edge_band": 3378,
+   "edge_band_visible_share": 0.499,
+   "subject_area_px": 907636
+  },
+  {
+   "frame": 180,
+   "text_px": 119078,
+   "text_px_over_subject_core": 48894,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9995,
+   "text_px_in_edge_band": 3983,
+   "edge_band_visible_share": 0.515,
+   "subject_area_px": 838526
+  }
+ ],
+ "behind_hard": [
+  {
+   "frame": 60,
+   "text_px": 119033,
+   "text_px_over_subject_core": 47099,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9997,
+   "text_px_in_edge_band": 1575,
+   "edge_band_visible_share": 0.656,
+   "subject_area_px": 781694
+  },
+  {
+   "frame": 120,
+   "text_px": 118927,
+   "text_px_over_subject_core": 48224,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9995,
+   "text_px_in_edge_band": 1179,
+   "edge_band_visible_share": 0.526,
+   "subject_area_px": 907790
+  },
+  {
+   "frame": 180,
+   "text_px": 119078,
+   "text_px_over_subject_core": 50189,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9995,
+   "text_px_in_edge_band": 1543,
+   "edge_band_visible_share": 0.535,
+   "subject_area_px": 838257
+  }
+ ],
+ "behind_soft": [
+  {
+   "frame": 60,
+   "text_px": 119033,
+   "text_px_over_subject_core": 33501,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9998,
+   "text_px_in_edge_band": 23743,
+   "edge_band_visible_share": 0.448,
+   "subject_area_px": 774028
+  },
+  {
+   "frame": 120,
+   "text_px": 118927,
+   "text_px_over_subject_core": 35446,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9996,
+   "text_px_in_edge_band": 20759,
+   "edge_band_visible_share": 0.439,
+   "subject_area_px": 907062
+  },
+  {
+   "frame": 180,
+   "text_px": 119078,
+   "text_px_over_subject_core": 36960,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9995,
+   "text_px_in_edge_band": 24348,
+   "edge_band_visible_share": 0.507,
+   "subject_area_px": 837718
+  }
+ ],
+ "behind_grown": [
+  {
+   "frame": 60,
+   "text_px": 119033,
+   "text_px_over_subject_core": 49794,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9997,
+   "text_px_in_edge_band": 3704,
+   "edge_band_visible_share": 0.623,
+   "subject_area_px": 832779
+  },
+  {
+   "frame": 120,
+   "text_px": 118927,
+   "text_px_over_subject_core": 50651,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9996,
+   "text_px_in_edge_band": 2434,
+   "edge_band_visible_share": 0.582,
+   "subject_area_px": 964412
+  },
+  {
+   "frame": 180,
+   "text_px": 119078,
+   "text_px_over_subject_core": 53190,
+   "hidden_in_core": 1.0,
+   "visible_outside_subject": 0.9994,
+   "text_px_in_edge_band": 3576,
+   "edge_band_visible_share": 0.617,
+   "subject_area_px": 883551
+  }
+ ],
+ "_edge_band_partial_visibility_hard_vs_soft": [
+  0.572,
+  0.465
+ ],
+ "_subject_area_default_vs_grown": [
+  842432,
+  893580
+ ],
+ "_grow_enlarges_subject": true,
+ "pass": true
+}
