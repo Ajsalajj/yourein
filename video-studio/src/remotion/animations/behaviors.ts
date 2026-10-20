@@ -1,5 +1,6 @@
 import React, { type CSSProperties } from "react";
 import type { Behavior, GroupCtx, WordCtx } from "./types";
+import { BEHAVIORS_2 } from "./behaviors2";
 import { bell, clamp, easeInOutCubic, easeOutBack, easeInCubic, easeOutExpo, hash, mix, px, readableOn, rotateHue, smoothstep, withAlpha } from "./helpers";
 
 const h = React.createElement;
@@ -686,6 +687,7 @@ export const BEHAVIORS: Behavior[] = [
   gradientHighlight, backgroundPill, animatedUnderline, highlightSweep, verticalStack, retroSubtitle, comicBounce,
   softShadowPop, glitchAccent, luxuryTitle, kineticMultiLine, impactCaption,
   colorSwitch, slidingBox, squashStretch, bouncyLines, yellowEmphasis, boldCinematic,
+  ...BEHAVIORS_2,
 ];
 
 export const BEHAVIOR_MAP: Record<string, Behavior> = Object.fromEntries(BEHAVIORS.map((b) => [b.id, b]));

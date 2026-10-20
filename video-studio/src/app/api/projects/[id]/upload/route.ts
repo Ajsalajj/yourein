@@ -19,7 +19,8 @@ export const maxDuration = 600;
  */
 export const POST = route<{ id: string }>(async (req, { id }) => {
   const filename = req.nextUrl.searchParams.get("filename") ?? "";
-  const kind = req.nextUrl.searchParams.get("kind") === "audio" ? "audio" : "video";
+  const kindParam = req.nextUrl.searchParams.get("kind");
+  const kind: "video" | "audio" | "font" = kindParam === "audio" ? "audio" : kindParam === "font" ? "font" : "video";
   const declared = Number(req.headers.get("content-length") ?? 0);
   const pre = validateUpload({ filename, size: declared || 1, kind });
   if (!pre.ok) throw new HttpError(pre.status, pre.error);
@@ -55,6 +56,12 @@ export const POST = route<{ id: string }>(async (req, { id }) => {
     if (!sniff.ok) throw new HttpError(sniff.status, sniff.error);
 
     await fsp.rename(part, full);
+    if (kind === "font") {
+      // Fonts are registered as-is (no ffprobe). The browser/renderer validates the file when it loads the face.
+      const fontAsset: Asset = { id: assetId, kind: "font", filename: path.basename(filename).slice(0, 200), mime: pre.mime, storageKey: rel, sizeBytes: bytes, durationMs: 0, hasAudio: false };
+      const savedFont = await writeProject({ ...project, assets: { ...project.assets, [assetId]: fontAsset } });
+      return { asset: fontAsset, project: savedFont };
+    }
     let info;
     try {
       info = await probe(full);

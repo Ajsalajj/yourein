@@ -19,7 +19,9 @@ async function serve(req: NextRequest, { projectId, assetId }: P, head: boolean)
   const stat = await fsp.stat(file).catch(() => null);
   if (!stat?.isFile()) throw new HttpError(404, "File missing on disk");
   const type = thumb ? "image/jpeg" : asset.mime;
-  const base = { "Content-Type": type, "Accept-Ranges": "bytes", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=300" };
+  const base: Record<string, string> = { "Content-Type": type, "Accept-Ranges": "bytes", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=300" };
+  // Font faces are always fetched in CORS mode, and the renderer page lives on a different origin than this app.
+  if (asset.kind === "font") Object.assign(base, { "Access-Control-Allow-Origin": "*", "Cross-Origin-Resource-Policy": "cross-origin" });
 
   const m = req.headers.get("range")?.match(/^bytes=(\d*)-(\d*)$/);
   if (m && (m[1] || m[2])) {

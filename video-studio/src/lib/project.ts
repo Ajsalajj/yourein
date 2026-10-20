@@ -10,6 +10,7 @@
  *  - Media is referenced by asset id only; effects never contain file paths.
  */
 import { z } from "zod";
+import { customFontSchema, wordStyleSchema } from "./wordstyle";
 
 export const SCHEMA_VERSION = 1 as const;
 export const DEFAULT_FPS = 30;
@@ -26,7 +27,7 @@ const ms = z.number().finite().min(0);
 
 export const assetSchema = z.object({
   id: z.string().min(1),
-  kind: z.enum(["video", "audio", "image"]),
+  kind: z.enum(["video", "audio", "image", "font"]),
   filename: z.string(),
   mime: z.string(),
   /** Path relative to the project directory. Never absolute, never contains "..". */
@@ -133,6 +134,15 @@ export const stylePropsSchema = z.object({
   /** How long the active-word highlight takes to ramp in. */
   highlightMs: z.number().min(0).max(1000).optional(),
   easing: z.enum(["cubic", "expo", "sine", "back", "linear"]).optional(),
+  /** Base look applied to every word (gradient, glow, extrusion, multiple shadows, per-word typography ...). */
+  look: wordStyleSchema.optional(),
+  /** Extra look for the word being spoken. */
+  activeLook: wordStyleSchema.optional(),
+  /** Look for emphasised keywords (auto-picked per caption, or forced per word). */
+  emphasisLook: wordStyleSchema.optional(),
+  emphasis: z.object({ mode: z.enum(["off", "auto"]), maxPerGroup: z.number().int().min(1).max(4), minLength: z.number().int().min(2).max(12) }).optional(),
+  /** Shutter fraction of real (sub-frame) motion blur on captions: 0 = off. Costs render time. */
+  motionBlur: z.number().min(0).max(1).optional(),
 });
 export type StyleProps = z.infer<typeof stylePropsSchema>;
 
@@ -270,6 +280,10 @@ export const projectSchema = z.object({
   textLayers: z.array(textLayerSchema).default([]),
   /** Draw the captions behind the segmented subject (needs analysis.segmentation). */
   captionsBehindSubject: z.boolean().default(false),
+  /** Per-word overrides keyed by stable word id (see wordstyle.ts). */
+  wordStyles: z.record(z.string(), wordStyleSchema).default({}),
+  /** Fonts uploaded by the user (asset kind "font"). */
+  fonts: z.array(customFontSchema).default([]),
   analysis: analysisSchema.default({ segmentation: null, tracks: {} }),
   audio: audioSchema.default({ originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null }),
 });
@@ -304,6 +318,8 @@ export function newProject(opts: { id: string; name: string; aspect?: AspectId; 
     zooms: [],
     textLayers: [],
     captionsBehindSubject: false,
+    wordStyles: {},
+    fonts: [],
     analysis: { segmentation: null, tracks: {} },
     audio: { originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null },
   };

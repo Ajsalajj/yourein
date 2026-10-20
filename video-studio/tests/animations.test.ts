@@ -12,12 +12,14 @@ import type { WordCtx } from "../src/remotion/animations/types";
 
 const REQUIRED_OLD = ["word-pop", "smooth-scale", "elastic-bounce", "karaoke", "active-glow", "spring-motion", "slide-up", "slide-down", "blur-reveal", "fade-in", "typewriter", "char-stagger", "word-rotation", "smooth-tracking", "cinematic-serif", "minimal-editorial", "bold-creator", "neon-pulse", "gradient-highlight", "background-pill", "animated-underline", "highlight-sweep", "vertical-stack", "retro-subtitle", "comic-bounce", "soft-shadow-pop", "glitch-accent", "luxury-title", "kinetic-multi-line", "impact-caption"];
 
-const REQUIRED = [...REQUIRED_OLD, "color-switch", "sliding-box", "squash-stretch", "bouncy-lines", "yellow-emphasis", "bold-cinematic"];
+const REQUIRED_P1 = [...REQUIRED_OLD, "color-switch", "sliding-box", "squash-stretch", "bouncy-lines", "yellow-emphasis", "bold-cinematic"];
+const REQUIRED_P2 = ["kinetic-center", "kinetic-scatter", "neon-flicker", "punch", "color-lerp", "hop", "shadow-reveal", "flip", "stretch", "zoom-keyword", "float", "glow-flash", "cinematic-headline", "perspective-fly", "editorial-reveal", "depth-push", "extrude-sway", "bold-cut"];
+const REQUIRED = [...REQUIRED_P1, ...REQUIRED_P2];
 
-test("all 36 animation engines exist exactly once", () => {
-  assert.equal(BEHAVIORS.length, 36);
+test("all 54 animation engines exist exactly once", () => {
+  assert.equal(BEHAVIORS.length, 54);
   assert.deepEqual([...BEHAVIORS.map((b) => b.id)].sort(), [...REQUIRED].sort());
-  assert.equal(new Set(BEHAVIORS.map((b) => b.id)).size, 36);
+  assert.equal(new Set(BEHAVIORS.map((b) => b.id)).size, 54);
 });
 
 test("core 30 list: 30 presets, each template exists, each uses a DIFFERENT animation engine", () => {
@@ -40,6 +42,7 @@ function ctx(behaviorId: string, ms: number, over: Partial<WordCtx> = {}): WordC
     frame, fps: FPS, ms: m, style, scale: 1, dur: style.animationDurationMs, k: style.intensity,
     group: { startMs: gStart, endMs: gEnd, wordCount: 4 }, sinceGroup: m - gStart, untilGroupEnd: gEnd - m,
     enter: Math.min(1, Math.max(0, (m - gStart) / style.animationDurationMs)), exit: 0,
+    tSec: frame / FPS, look: {}, emphasized: false,
     spr: makeSpring(frame, FPS, style.animationDurationMs, { stiffness: style.springStiffness, damping: style.springDamping }),
     ease: makeEase(style.easing), sk: style.scaleIntensity ?? 1, exitMs: 200,
     word, index: 1, count: 4, sinceWord: m - 1000, untilWordEnd: 1400 - m, wordP: Math.min(1, Math.max(0, (m - 1000) / 400)),

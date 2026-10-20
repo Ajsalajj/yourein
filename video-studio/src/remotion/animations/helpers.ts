@@ -94,3 +94,11 @@ export function rotateHue(color: string, deg: number): string {
   }
   return `hsl(${Math.round((h + deg + 360) % 360)}, ${Math.round(Math.max(sat, 0.6) * 100)}%, ${Math.round(Math.min(0.62, Math.max(l, 0.5)) * 100)}%)`;
 }
+
+/** Linear colour blend for #rgb / #rrggbb values; anything else switches at the midpoint. */
+export function lerpColor(a: string, b: string, t: number): string {
+  const x = hexToRgb(a), y = hexToRgb(b);
+  if (!x || !y) return t < 0.5 ? a : b;
+  const k = clamp(t);
+  return `rgb(${Math.round(x[0] + (y[0] - x[0]) * k)}, ${Math.round(x[1] + (y[1] - x[1]) * k)}, ${Math.round(x[2] + (y[2] - x[2]) * k)})`;
+}

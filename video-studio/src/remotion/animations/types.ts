@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { StyleProps } from "../../lib/project";
 import type { OutWord } from "../../lib/timeline";
+import type { WordStyle } from "../../lib/wordstyle";
 
-export type LayoutKind = "flow" | "stack" | "single" | "kinetic";
+export type LayoutKind = "flow" | "stack" | "single" | "kinetic" | "free";
 
 export interface BaseCtx {
   frame: number;
@@ -23,6 +24,8 @@ export interface BaseCtx {
   enter: number;
   /** 0..1 progress of the group exit (0 until the exit window starts) */
   exit: number;
+  /** seconds on the video clock (frame / fps), for continuous (looping) effects */
+  tSec: number;
   /** user-selected easing for the preset's "ease-out" moves, t in 0..1 */
   ease: (t: number) => number;
   /** scale-motion multiplier (style.scaleIntensity, default 1) */
@@ -52,6 +55,10 @@ export interface WordCtx extends BaseCtx {
   geom: BlockGeometry;
   /** word was the most recently started word (stays "current" through pauses) */
   isCurrent: boolean;
+  /** merged look for this word (template -> active -> emphasis -> user) */
+  look: WordStyle;
+  /** this word is a keyword (auto-picked or forced) */
+  emphasized: boolean;
   /** how many words of this group have started so far (0..count) */
   startedCount: number;
   /** start time of the most recently started word */
@@ -72,6 +79,12 @@ export interface WordVisual {
   /** appended inline after the text (e.g. typing caret) */
   suffix?: ReactNode;
   hidden?: boolean;
+  /** multipliers on the look's glow / extrusion depth / shadow offsets (animated effects) */
+  glowK?: number;
+  extrudeK?: number;
+  shadowK?: number;
+  /** take the word out of the line and place it at an absolute canvas position (fractions, centre anchored) */
+  place?: { x: number; y: number };
 }
 
 export interface WordRect { x: number; y: number; w: number; h: number }
@@ -106,6 +119,8 @@ export interface Behavior {
   group?: (c: GroupCtx) => GroupVisual;
   /** extra horizontal padding (em) each word reserves for decorations such as pills; used for fit-to-width */
   wordPadEm?: number;
+  /** for layout "free": widest size multiplier any word may reach (used for fit-to-width) */
+  freeMaxEm?: number;
   /** perspective for 3D transforms on the block */
   perspective?: number;
 }

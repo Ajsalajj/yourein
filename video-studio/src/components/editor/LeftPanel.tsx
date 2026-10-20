@@ -1,6 +1,5 @@
 "use client";
-import { useState } from "react";
-import { Bot, Captions, Clapperboard, Film, LayoutGrid, Music, Shuffle, Type, Wand2 } from "lucide-react";
+import { Bot, Captions, Clapperboard, Film, LayoutGrid, Music, Shuffle, Sparkles, Type, Wand2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MediaPanel } from "./panels/MediaPanel";
 import { CaptionsPanel } from "./panels/CaptionsPanel";
@@ -10,11 +9,14 @@ import { AudioPanel } from "./panels/AudioPanel";
 import { BrollPanel, TransitionsPanel } from "./panels/PlannedPanel";
 import { EffectsPanel } from "./panels/EffectsPanel";
 import { AiPanel } from "./panels/AiPanel";
+import { TypographyPanel } from "./panels/TypographyPanel";
+import type { TabId } from "@/store/ui";
 
 const TABS = [
   { id: "media", label: "Media", icon: Film, panel: MediaPanel },
   { id: "captions", label: "Captions", icon: Captions, panel: CaptionsPanel },
   { id: "templates", label: "Templates", icon: LayoutGrid, panel: TemplatesPanel },
+  { id: "type", label: "Type FX", icon: Sparkles, panel: TypographyPanel },
   { id: "text", label: "Text", icon: Type, panel: TextPanel },
   { id: "audio", label: "Audio", icon: Music, panel: AudioPanel },
   { id: "broll", label: "B-roll", icon: Clapperboard, panel: BrollPanel },
@@ -23,7 +25,7 @@ const TABS = [
   { id: "ai", label: "AI tools", icon: Bot, panel: AiPanel },
 ] as const;
 
-export type TabId = (typeof TABS)[number]["id"];
+export type { TabId };
 
 export function LeftPanel({ tab, onTab }: { tab: TabId; onTab: (t: TabId) => void }) {
   const Active = TABS.find((t) => t.id === tab)!.panel;

@@ -6,6 +6,7 @@ import { Studio } from "@/remotion/Studio";
 import { ASPECTS, type AspectId } from "@/lib/project";
 import { useEditor } from "@/store/editor";
 import { useVision } from "@/store/vision";
+import { useUi } from "@/store/ui";
 import { sourceToCanvas } from "@/lib/tracking";
 import { mediaUrl, fmtTime } from "@/lib/client";
 import { Button, Tip } from "@/components/ui";
@@ -48,6 +49,24 @@ export function PlayerPane() {
     return { x: Math.max(0, p0.x), y: Math.max(0, p0.y), w: Math.min(1, p1.x) - Math.max(0, p0.x), h: Math.min(1, p1.y) - Math.max(0, p0.y) };
   };
   void sourceToCanvas;
+
+  /** click a caption word in the preview -> select it and open the Type FX panel (does not toggle playback) */
+  const pickWord = (e: React.PointerEvent) => {
+    if (dragMode || vision.picking) return;
+    const hit = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el instanceof HTMLElement && el.dataset.wordId && box.current?.contains(el)) as HTMLElement | undefined;
+    if (!hit) return;
+    e.stopPropagation();
+    useEditor.getState().select({ wordId: hit.dataset.wordId!, captionId: hit.dataset.captionId ?? null });
+    useUi.getState().setTab("type");
+  };
+  const [selRect, setSelRect] = useState<React.CSSProperties | null>(null);
+  useEffect(() => {
+    const b = box.current;
+    const el = sel.wordId && b ? (b.querySelector(`[data-word-id="${CSS.escape(sel.wordId)}"]`) as HTMLElement | null) : null;
+    if (!b || !el) return setSelRect(null);
+    const r = el.getBoundingClientRect(), o = b.getBoundingClientRect();
+    setSelRect({ left: r.left - o.left - 3, top: r.top - o.top - 3, width: r.width + 6, height: r.height + 6 });
+  }, [sel.wordId, frame, project.wordStyles, zoom]);
 
   useEffect(() => {
     const p = ref.current;
@@ -118,8 +137,9 @@ export function PlayerPane() {
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[#07080b] p-3">
         {hasVideo ? (
-          <div ref={box} onPointerMove={onDragPos} onPointerDown={onDragPos} className="relative shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-line" style={{ aspectRatio: `${aspect.width} / ${aspect.height}`, height: `${zoom * 100}%`, maxWidth: zoom === 1 ? "100%" : undefined, cursor: dragMode ? "crosshair" : undefined }}>
+          <div ref={box} onPointerDownCapture={pickWord} onPointerMove={onDragPos} onPointerDown={onDragPos} className="relative shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-line" style={{ aspectRatio: `${aspect.width} / ${aspect.height}`, height: `${zoom * 100}%`, maxWidth: zoom === 1 ? "100%" : undefined, cursor: dragMode ? "crosshair" : undefined }}>
             <Player ref={ref} component={Studio} inputProps={inputProps} durationInFrames={meta.durationInFrames} compositionWidth={Math.round(meta.width * quality)} compositionHeight={Math.round(meta.height * quality)} fps={meta.fps} controls={false} clickToPlay={!dragMode} doubleClickToFullscreen={false} acknowledgeRemotionLicense style={{ width: "100%", height: "100%" }} initiallyShowControls={false} />
+            {selRect ? <div aria-hidden className="pointer-events-none absolute z-10 rounded-sm border-2 border-accent-2" style={selRect} /> : null}
             {guides ? <Guides aspect={project.aspect} /> : null}
             {vision.picking ? (
               <div className="absolute inset-0 z-20 cursor-crosshair bg-black/10" aria-label="Drag to select the region to track"

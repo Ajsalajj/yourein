@@ -14,7 +14,8 @@ import { Logo } from "@/components/Logo";
 import { PlayerContext } from "./context";
 import { PlayerPane } from "./PlayerPane";
 import { Timeline } from "./Timeline";
-import { LeftPanel, type TabId } from "./LeftPanel";
+import { LeftPanel } from "./LeftPanel";
+import { useUi } from "@/store/ui";
 import { RightPanel } from "./RightPanel";
 import { ExportDialog } from "./ExportDialog";
 
@@ -33,7 +34,8 @@ export function EditorShell({ projectId }: { projectId: string }) {
   const saveState = useEditor((s) => s.saveState);
   const busy = useEditor((s) => s.busy);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>("captions");
+  const tab = useUi((s) => s.tab);
+  const setTab = useUi((s) => s.setTab);
   const [exporting, setExporting] = useState(false);
   const params = useSearchParams();
   const started = useRef(false);

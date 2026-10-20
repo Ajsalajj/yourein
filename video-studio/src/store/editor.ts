@@ -6,6 +6,7 @@ import * as ops from "@/lib/captions/ops";
 import { regroupCaptions } from "@/lib/captions/grouping";
 import { getTemplate } from "@/remotion/templates/registry";
 import { normalizeCuts } from "@/lib/timeline";
+import { isEmptyStyle, mergeWordStyles, type CustomFont, type WordStyle } from "@/lib/wordstyle";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 const MAX_HISTORY = 100;
@@ -15,6 +16,8 @@ interface Selection {
   zoomId: string | null;
   cutId: string | null;
   textId: string | null;
+  /** the word being styled in the Type FX panel (stable word id) */
+  wordId: string | null;
 }
 
 interface EditorState {
@@ -61,6 +64,13 @@ interface EditorState {
   setAudio: (patch: Partial<Project["audio"]>) => void;
   setTextLayers: (fn: (t: TextLayer[]) => TextLayer[], key?: string) => void;
   setFps: (fps: number) => void;
+  /** Merge `patch` into the style of one word (undefined values remove a property). Empty styles are deleted. */
+  setWordStyle: (wordId: string, patch: WordStyle) => void;
+  replaceWordStyle: (wordId: string, style: WordStyle | null) => void;
+  /** Edit one of the caption looks (all words / active word / keywords). */
+  setLook: (layer: "look" | "activeLook" | "emphasisLook", patch: WordStyle | null) => void;
+  addFont: (font: CustomFont, asset: Project["assets"][string]) => void;
+  removeFont: (fontId: string) => void;
 }
 
 export const useEditor = create<EditorState>((set, get) => ({
@@ -69,13 +79,13 @@ export const useEditor = create<EditorState>((set, get) => ({
   future: [],
   saveState: "idle",
   saveError: null,
-  selection: { captionId: null, zoomId: null, cutId: null, textId: null },
+  selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null },
   frame: 0,
   lastCoalesce: null,
   busy: false,
   rev: 0,
 
-  load: (p) => set({ rev: 0, project: p, past: [], future: [], saveState: "idle", saveError: null, selection: { captionId: null, zoomId: null, cutId: null, textId: null }, lastCoalesce: null }),
+  load: (p) => set({ rev: 0, project: p, past: [], future: [], saveState: "idle", saveError: null, selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null }, lastCoalesce: null }),
   replaceFromServer: (p) => set({ project: p, saveState: "saved", saveError: null }),
   commit: (fn, key) => {
     const { project, past, lastCoalesce } = get();
@@ -123,10 +133,19 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().commit((p) => ({
       ...p,
       captionStyle: { templateId: t.id, overrides: keepOverrides ? p.captionStyle.overrides : {}, position: t.position },
+      captionsBehindSubject: t.behindSubject ? !!p.analysis.segmentation : p.captionsBehindSubject,
       captions: p.captions.map((c) => (c.styleId || c.animationId ? { ...c, styleId: null, animationId: null } : c)),
     }));
   },
-  setCaptions: (fn, key) => get().commit((p) => ({ ...p, captions: fn(p.captions) }), key),
+  setCaptions: (fn, key) =>
+    get().commit((p) => {
+      const captions = fn(p.captions);
+      // drop styles of words that no longer exist (undo restores them: history stores whole snapshots)
+      const live = new Set(captions.flatMap((c) => c.words.map((w) => w.id)));
+      const keys = Object.keys(p.wordStyles);
+      const wordStyles = keys.every((k) => live.has(k)) ? p.wordStyles : Object.fromEntries(keys.filter((k) => live.has(k)).map((k) => [k, p.wordStyles[k]]));
+      return { ...p, captions, wordStyles };
+    }, key),
   regroup: () =>
     get().commit((p) => {
       const t = getTemplate(p.captionStyle.templateId);
@@ -147,6 +166,29 @@ export const useEditor = create<EditorState>((set, get) => ({
   clearCuts: (reason) => get().commit((p) => ({ ...p, cuts: reason ? p.cuts.filter((c) => c.reason !== reason) : [] })),
   setZooms: (fn, key) => get().commit((p) => ({ ...p, zooms: fn(p.zooms) }), key),
   setAudio: (patch) => get().commit((p) => ({ ...p, audio: { ...p.audio, ...patch } }), `audio:${Object.keys(patch).join(",")}`),
+  setWordStyle: (wordId, patch) =>
+    get().commit((p) => {
+      const next = mergeWordStyles(p.wordStyles[wordId], patch);
+      const clean = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== undefined)) as WordStyle;
+      const wordStyles = { ...p.wordStyles };
+      if (isEmptyStyle(clean)) delete wordStyles[wordId];
+      else wordStyles[wordId] = clean;
+      return { ...p, wordStyles };
+    }, `ws:${wordId}:${Object.keys(patch).join(",")}`),
+  replaceWordStyle: (wordId, style) =>
+    get().commit((p) => {
+      const wordStyles = { ...p.wordStyles };
+      if (!style || isEmptyStyle(style)) delete wordStyles[wordId];
+      else wordStyles[wordId] = style;
+      return { ...p, wordStyles };
+    }),
+  setLook: (layer, patch) =>
+    get().commit((p) => {
+      const merged = patch === null ? undefined : (Object.fromEntries(Object.entries(mergeWordStyles(p.captionStyle.overrides[layer], patch)).filter(([, v]) => v !== undefined)) as WordStyle);
+      return { ...p, captionStyle: { ...p.captionStyle, overrides: { ...p.captionStyle.overrides, [layer]: merged && !isEmptyStyle(merged) ? merged : undefined } } };
+    }, `look:${layer}:${patch ? Object.keys(patch).join(",") : "reset"}`),
+  addFont: (font, asset) => get().commit((p) => ({ ...p, assets: { ...p.assets, [asset.id]: asset }, fonts: [...p.fonts.filter((f) => f.id !== font.id), font] })),
+  removeFont: (fontId) => get().commit((p) => ({ ...p, fonts: p.fonts.filter((f) => f.id !== fontId) })),
   setTextLayers: (fn, key) => get().commit((p) => ({ ...p, textLayers: fn(p.textLayers) }), key),
 }));
 

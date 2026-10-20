@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
+import React, { useEffect, useMemo, useState } from "react";
+import { AbsoluteFill, Audio, continueRender, delayRender, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Project } from "../lib/project";
 import { captionsToOutput, frameToMs, zoomsToOutput, type Segment } from "../lib/timeline";
 import { getCompositionMeta, zoomAt, speechActivity } from "../lib/composition";
@@ -23,6 +23,30 @@ function fadeFactor(ms: number, totalMs: number, fadeInMs: number, fadeOutMs: nu
   if (fadeOutMs > 0) f *= clamp((totalMs - ms) / fadeOutMs);
   return f;
 }
+
+/** Registers the user's uploaded fonts (FontFace) and holds the frame until they are decoded - preview and export. */
+const ProjectFonts: React.FC<{ fonts: Project["fonts"]; mediaUrls: Record<string, string> }> = ({ fonts, mediaUrls }) => {
+  const key = fonts.map((f) => `${f.id}:${f.family}:${f.weight}:${f.style}:${mediaUrls[f.assetId]}`).join("|");
+  const [handle] = useState(() => (fonts.length ? delayRender("project fonts", { timeoutInMilliseconds: 30000 }) : null));
+  useEffect(() => {
+    if (!fonts.length || typeof document === "undefined") {
+      if (handle !== null) continueRender(handle);
+      return;
+    }
+    let alive = true;
+    Promise.all(
+      fonts.map(async (f) => {
+        const url = mediaUrls[f.assetId];
+        if (!url) return;
+        const face = new FontFace(f.family, `url("${url}")`, { weight: String(f.weight), style: f.style });
+        await face.load();
+        if (alive) document.fonts.add(face);
+      }),
+    ).catch(() => undefined).finally(() => { if (handle !== null) continueRender(handle); });
+    return () => { alive = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+};
 
 const VideoSegments: React.FC<{ project: Project; src: string; segments: Segment[]; totalMs: number }> = ({ project, src, segments, totalMs }) => {
   const { fps } = useVideoConfig();
@@ -64,10 +88,11 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   const captionsBehind = canCut && project.captionsBehindSubject;
   const behindLayers = canCut ? behindText : [];
   const frontLayers = canCut ? frontText : project.textLayers;
-  const captions = project.captionsVisible ? <CaptionLayer captions={outCaptions} styleState={project.captionStyle} /> : null;
+  const captions = project.captionsVisible ? <CaptionLayer captions={outCaptions} styleState={project.captionStyle} wordStyles={project.wordStyles} /> : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>
+      <ProjectFonts fonts={project.fonts} mediaUrls={mediaUrls} />
       <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
         {src ? <VideoSegments project={project} src={src} segments={meta.segments} totalMs={totalMs} /> : null}
       </AbsoluteFill>

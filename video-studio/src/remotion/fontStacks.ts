@@ -13,14 +13,16 @@ export interface FontOption {
   scripts: ("latin" | "malayalam" | "devanagari" | "tamil")[];
   /** SPDX id taken from each font package's own package.json (checked at build time by tests). */
   license: "OFL-1.1" | "Apache-2.0";
+  /** weights that ship a TRUE italic face (others are slanted synthetically by the browser) */
+  italics?: number[];
   /** npm package that ships the (unmodified) font files */
   source: string;
 }
 
 export const FONT_OPTIONS: FontOption[] = [
-  { family: "Inter", label: "Inter", weights: [400, 700, 800, 900], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/inter" },
-  { family: "Poppins", label: "Poppins", weights: [500, 700, 800], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/poppins" },
-  { family: "Montserrat", label: "Montserrat", weights: [700, 800], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/montserrat" },
+  { family: "Inter", label: "Inter", weights: [400, 700, 800, 900], scripts: ["latin"], italics: [800, 900], license: "OFL-1.1", source: "@fontsource/inter" },
+  { family: "Poppins", label: "Poppins", weights: [500, 700, 800], scripts: ["latin"], italics: [700, 800], license: "OFL-1.1", source: "@fontsource/poppins" },
+  { family: "Montserrat", label: "Montserrat", weights: [700, 800], scripts: ["latin"], italics: [800], license: "OFL-1.1", source: "@fontsource/montserrat" },
   { family: "Abril Fatface", label: "Abril Fatface", weights: [400], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/abril-fatface" },
   { family: "Anton", label: "Anton", weights: [400], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/anton" },
   { family: "Bebas Neue", label: "Bebas Neue", weights: [400], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/bebas-neue" },
@@ -28,9 +30,9 @@ export const FONT_OPTIONS: FontOption[] = [
   { family: "Oswald", label: "Oswald", weights: [500, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/oswald" },
   { family: "Space Grotesk", label: "Space Grotesk", weights: [500, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/space-grotesk" },
   { family: "JetBrains Mono", label: "JetBrains Mono", weights: [500, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/jetbrains-mono" },
-  { family: "Playfair Display", label: "Playfair Display", weights: [400, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/playfair-display" },
-  { family: "Cormorant Garamond", label: "Cormorant Garamond", weights: [500, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/cormorant-garamond" },
-  { family: "DM Serif Display", label: "DM Serif Display", weights: [400], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/dm-serif-display" },
+  { family: "Playfair Display", label: "Playfair Display", weights: [400, 700, 900], scripts: ["latin"], italics: [700, 900], license: "OFL-1.1", source: "@fontsource/playfair-display" },
+  { family: "Cormorant Garamond", label: "Cormorant Garamond", weights: [500, 700], scripts: ["latin"], italics: [500, 700], license: "OFL-1.1", source: "@fontsource/cormorant-garamond" },
+  { family: "DM Serif Display", label: "DM Serif Display", weights: [400], scripts: ["latin"], italics: [400], license: "OFL-1.1", source: "@fontsource/dm-serif-display" },
   { family: "Cinzel", label: "Cinzel", weights: [500, 700], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/cinzel" },
   { family: "Bangers", label: "Bangers", weights: [400], scripts: ["latin"], license: "OFL-1.1", source: "@fontsource/bangers" },
   { family: "Permanent Marker", label: "Permanent Marker", weights: [400], scripts: ["latin"], license: "Apache-2.0", source: "@fontsource/permanent-marker" },

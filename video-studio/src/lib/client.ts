@@ -15,7 +15,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Real upload progress via XHR (fetch cannot report upload progress). */
-export function uploadFile(projectId: string, file: File, kind: "video" | "audio", onProgress: (loaded: number, total: number) => void, signal?: AbortSignal): Promise<{ asset: Asset; project: Project }> {
+export function uploadFile(projectId: string, file: File, kind: "video" | "audio" | "font", onProgress: (loaded: number, total: number) => void, signal?: AbortSignal): Promise<{ asset: Asset; project: Project }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/projects/${projectId}/upload?filename=${encodeURIComponent(file.name)}&kind=${kind}`);
