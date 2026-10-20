@@ -12,12 +12,12 @@ const caps = (): Caption[] => groupWords(mk("this is a remarkable moment today".
 
 test("merge: later layers win, undefined never overrides", () => {
   assert.deepEqual(mergeWordStyles({ color: "#fff", fontWeight: 400 }, { color: "#f00", fontWeight: undefined }, null, false), { color: "#f00", fontWeight: 400 });
-  assert.ok(isEmptyStyle({}) && isEmptyStyle(undefined) && !isEmptyStyle({ italic: true }));
-  assert.deepEqual(diffStyle({ color: "#fff", italic: true }, { color: "#fff" }), { italic: true });
+  assert.ok(isEmptyStyle({}) && isEmptyStyle(undefined) && !isEmptyStyle({ fontStyle: "italic" }));
+  assert.deepEqual(diffStyle({ color: "#fff", fontStyle: "italic" }, { color: "#fff" }), { fontStyle: "italic" });
 });
 
 test("word style schema rejects out-of-range and unknown-shape values", () => {
-  assert.ok(wordStyleSchema.safeParse({ scale: 1.5, color: "#ff00aa", italic: true }).success);
+  assert.ok(wordStyleSchema.safeParse({ scale: 1.5, color: "#ff00aa", fontStyle: "italic" }).success);
   assert.ok(!wordStyleSchema.safeParse({ fontWeight: 5000 }).success);
 });
 
@@ -87,7 +87,7 @@ test("phase-2 template families are present, unique and each has a distinct anim
   const used = new Set(TEMPLATES.map((t) => t.animationId));
   for (const id of WANT) assert.ok(used.has(id as never), `no template uses ${id}`);
   assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, TEMPLATES.length);
-  const fp = TEMPLATES.map((t) => JSON.stringify([t.animationId, t.style.fontFamily, t.style.color, t.style.activeColor, t.style.stroke, t.style.shadow, t.style.look ?? null, t.style.activeLook ?? null]));
+  const fp = TEMPLATES.map((t) => JSON.stringify([t.animationId, t.style.fontFamily, t.style.color, t.style.highlightColor, t.style.strokeColor, t.style.strokeWidth, t.style.shadow, t.style.look ?? null, t.style.activeLook ?? null]));
   assert.equal(new Set(fp).size, fp.length, "two templates are visually identical");
   assert.ok(TEMPLATES.length >= 73, `expected ≥73 templates, got ${TEMPLATES.length}`);
 });
