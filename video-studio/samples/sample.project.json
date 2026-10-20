@@ -1,0 +1,746 @@
+{
+ "schemaVersion": 1,
+ "id": "pcab48c6ae9",
+ "name": "Sample project (Bold Creator)",
+ "createdAt": "2026-10-20T09:43:16.155Z",
+ "updatedAt": "2026-10-20T09:44:48.039Z",
+ "aspect": "9:16",
+ "fps": 30,
+ "sourceAssetId": "a9e50df4e12",
+ "assets": {
+  "a9e50df4e12": {
+   "id": "a9e50df4e12",
+   "kind": "video",
+   "filename": "demo.mp4",
+   "mime": "video/mp4",
+   "storageKey": "assets/a9e50df4e12.mp4",
+   "sizeBytes": 1598295,
+   "durationMs": 15495,
+   "width": 720,
+   "height": 1280,
+   "fps": 30,
+   "hasAudio": true,
+   "thumbnailKey": "assets/a9e50df4e12.jpg"
+  }
+ },
+ "transcript": {
+  "jobId": "c06af613067947b2",
+  "engine": "pocketsphinx",
+  "model": "en-us (bundled)",
+  "language": "en",
+  "languageProbability": null,
+  "wordTimestampsNative": true,
+  "createdAt": "2026-10-20T09:43:23.602Z",
+  "durationMs": 15510,
+  "warnings": [
+   "Whisper could not start (ProxyError: 403 Forbidden); used the offline English fallback instead.",
+   "Engine 'pocketsphinx' is a small offline English recogniser. Expect many wrong words - review and correct the captions.",
+   "This engine does not provide meaningful confidence scores; every word is reported as 0.5."
+  ],
+  "words": [
+   {
+    "id": "w_c6e9dca6aa",
+    "text": "oh",
+    "startMs": 220,
+    "endMs": 460,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_a09eb693a8",
+    "text": "and",
+    "startMs": 510,
+    "endMs": 760,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_2eb42bf4e4",
+    "text": "we",
+    "startMs": 760,
+    "endMs": 910,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_2f7248b3a0",
+    "text": "won",
+    "startMs": 910,
+    "endMs": 1150,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_5127a977b8",
+    "text": "and",
+    "startMs": 1390,
+    "endMs": 1630,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_cf6d62e4a5",
+    "text": "will",
+    "startMs": 1720,
+    "endMs": 1970,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_9135807c9b",
+    "text": "kill",
+    "startMs": 1970,
+    "endMs": 2140,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_d97e04c0fc",
+    "text": "you",
+    "startMs": 2840,
+    "endMs": 3070,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_861fb645c7",
+    "text": "to",
+    "startMs": 3820,
+    "endMs": 4010,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_30ddab9009",
+    "text": "do",
+    "startMs": 4010,
+    "endMs": 4320,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_dc96db57dd",
+    "text": "we",
+    "startMs": 4400,
+    "endMs": 4570,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_9516d210d4",
+    "text": "are",
+    "startMs": 4600,
+    "endMs": 4790,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_4d894d9e04",
+    "text": "going",
+    "startMs": 4860,
+    "endMs": 5200,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_7eece664d8",
+    "text": "to",
+    "startMs": 5300,
+    "endMs": 5440,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_3377ec8fa2",
+    "text": "learn",
+    "startMs": 5540,
+    "endMs": 5870,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_430b4beea7",
+    "text": "how",
+    "startMs": 5950,
+    "endMs": 6260,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_3341d38679",
+    "text": "to",
+    "startMs": 6360,
+    "endMs": 6440,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_b620424a89",
+    "text": "op",
+    "startMs": 6440,
+    "endMs": 6570,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_a9a93ec190",
+    "text": "ed",
+    "startMs": 6570,
+    "endMs": 6800,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_8d1ba7c289",
+    "text": "it",
+    "startMs": 6800,
+    "endMs": 6990,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_6f1e68d904",
+    "text": "really",
+    "startMs": 7070,
+    "endMs": 7460,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_f348dd3d37",
+    "text": "old",
+    "startMs": 7460,
+    "endMs": 7670,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_5ec5f61e45",
+    "text": "weekly",
+    "startMs": 7860,
+    "endMs": 8400,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_7796dde1a0",
+    "text": "and",
+    "startMs": 8890,
+    "endMs": 9160,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_24c646daec",
+    "text": "i",
+    "startMs": 9250,
+    "endMs": 9330,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_e7e26a4614",
+    "text": "could",
+    "startMs": 9330,
+    "endMs": 9580,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_e98e0e5ebb",
+    "text": "capture",
+    "startMs": 9670,
+    "endMs": 10210,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_85ea42f82a",
+    "text": "the",
+    "startMs": 10210,
+    "endMs": 10330,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_710d941f6b",
+    "text": "week",
+    "startMs": 10490,
+    "endMs": 10810,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_5b1f2a4128",
+    "text": "every",
+    "startMs": 10850,
+    "endMs": 11320,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_ed49868b7f",
+    "text": "where",
+    "startMs": 11350,
+    "endMs": 11670,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_a0b1a4977c",
+    "text": "the",
+    "startMs": 11900,
+    "endMs": 12260,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_28a02022dd",
+    "text": "ah",
+    "startMs": 12350,
+    "endMs": 12640,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_50a1d51c34",
+    "text": "thanks",
+    "startMs": 13270,
+    "endMs": 13740,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_3020f1fb28",
+    "text": "for",
+    "startMs": 13950,
+    "endMs": 14240,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   },
+   {
+    "id": "w_be2f21aed0",
+    "text": "watching",
+    "startMs": 14280,
+    "endMs": 14930,
+    "confidence": 0.5,
+    "timingSource": "asr"
+   }
+  ]
+ },
+ "captions": [
+  {
+   "id": "c_1119bd5675",
+   "text": "Hello everyone and welcome",
+   "startMs": 220,
+   "endMs": 1630,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_072f63c869",
+     "text": "Hello",
+     "startMs": 220,
+     "endMs": 527,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_be12f22dac",
+     "text": "everyone",
+     "startMs": 527,
+     "endMs": 1017,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_d462714518",
+     "text": "and",
+     "startMs": 1017,
+     "endMs": 1201,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_f8d2b2476f",
+     "text": "welcome",
+     "startMs": 1201,
+     "endMs": 1630,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    }
+   ]
+  },
+  {
+   "id": "c_8aea660dfb",
+   "text": "to the",
+   "startMs": 1720,
+   "endMs": 2140,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_cf6d62e4a5",
+     "text": "to",
+     "startMs": 1720,
+     "endMs": 1970,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_9135807c9b",
+     "text": "the",
+     "startMs": 1970,
+     "endMs": 2140,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    }
+   ]
+  },
+  {
+   "id": "c_cdcd7cd912",
+   "text": "channel.",
+   "startMs": 2840,
+   "endMs": 3070,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_d97e04c0fc",
+     "text": "channel.",
+     "startMs": 2840,
+     "endMs": 3070,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    }
+   ]
+  },
+  {
+   "id": "c_00014cf8f4",
+   "text": "Today we are going",
+   "startMs": 3820,
+   "endMs": 5200,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_cdb818cd49",
+     "text": "Today",
+     "startMs": 3820,
+     "endMs": 4320,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_dc96db57dd",
+     "text": "we",
+     "startMs": 4400,
+     "endMs": 4570,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_9516d210d4",
+     "text": "are",
+     "startMs": 4600,
+     "endMs": 4790,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_4d894d9e04",
+     "text": "going",
+     "startMs": 4860,
+     "endMs": 5200,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    }
+   ]
+  },
+  {
+   "id": "c_6a15793e9f",
+   "text": "to learn how to",
+   "startMs": 5300,
+   "endMs": 6570,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_7eece664d8",
+     "text": "to",
+     "startMs": 5300,
+     "endMs": 5440,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_3377ec8fa2",
+     "text": "learn",
+     "startMs": 5540,
+     "endMs": 5870,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_430b4beea7",
+     "text": "how",
+     "startMs": 5950,
+     "endMs": 6260,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    },
+    {
+     "id": "w_3341d38679",
+     "text": "to",
+     "startMs": 6360,
+     "endMs": 6440,
+     "confidence": 0.5,
+     "timingSource": "asr"
+    }
+   ]
+  },
+  {
+   "id": "c_b8a49591ff",
+   "text": "edit videos quickly. Animated",
+   "startMs": 6570,
+   "endMs": 8400,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_9f6139c27e",
+     "text": "edit",
+     "startMs": 6570,
+     "endMs": 6852,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_a38c2fae1a",
+     "text": "videos",
+     "startMs": 6852,
+     "endMs": 7274,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_819518611c",
+     "text": "quickly.",
+     "startMs": 7274,
+     "endMs": 7837,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_90deeaa020",
+     "text": "Animated",
+     "startMs": 7837,
+     "endMs": 8400,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    }
+   ]
+  },
+  {
+   "id": "c_3c4e4e6df0",
+   "text": "captions make every word",
+   "startMs": 8890,
+   "endMs": 10330,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_39b6154b91",
+     "text": "captions",
+     "startMs": 8890,
+     "endMs": 9439,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_14426549c8",
+     "text": "make",
+     "startMs": 9439,
+     "endMs": 9713,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_e6fbe99bc3",
+     "text": "every",
+     "startMs": 9713,
+     "endMs": 10056,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_81dc3983b8",
+     "text": "word",
+     "startMs": 10056,
+     "endMs": 10330,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    }
+   ]
+  },
+  {
+   "id": "c_06f197fbe5",
+   "text": "stand out. Thanks for",
+   "startMs": 10490,
+   "endMs": 12640,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_b907e0d83e",
+     "text": "stand",
+     "startMs": 10490,
+     "endMs": 11087,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_6507ae8314",
+     "text": "out.",
+     "startMs": 11087,
+     "endMs": 11565,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_c320b67977",
+     "text": "Thanks",
+     "startMs": 11565,
+     "endMs": 12282,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    },
+    {
+     "id": "w_c502bb24b2",
+     "text": "for",
+     "startMs": 12282,
+     "endMs": 12640,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    }
+   ]
+  },
+  {
+   "id": "c_9d25187969",
+   "text": "watching.",
+   "startMs": 13270,
+   "endMs": 14930,
+   "confidence": 0.5,
+   "speakerId": null,
+   "styleId": null,
+   "animationId": null,
+   "position": null,
+   "words": [
+    {
+     "id": "w_169b15f6c6",
+     "text": "watching.",
+     "startMs": 13270,
+     "endMs": 14930,
+     "confidence": 0.5,
+     "timingSource": "interpolated"
+    }
+   ]
+  }
+ ],
+ "captionStyle": {
+  "templateId": "bold-creator",
+  "overrides": {},
+  "position": {
+   "x": 0.5,
+   "y": 0.72
+  }
+ },
+ "captionsVisible": false,
+ "cuts": [
+  {
+   "id": "cut_e2e_0_aaaaaa",
+   "startMs": 3453,
+   "endMs": 3721,
+   "reason": "silence"
+  },
+  {
+   "id": "cut_e2e_1_aaaaaa",
+   "startMs": 15099,
+   "endMs": 15361,
+   "reason": "silence"
+  }
+ ],
+ "zooms": [
+  {
+   "id": "z_e26a99ff78",
+   "startMs": 100,
+   "endMs": 2300,
+   "scale": 1.2,
+   "focusX": 0.5,
+   "focusY": 0.42,
+   "rampMs": 350,
+   "source": "auto"
+  },
+  {
+   "id": "z_3f0980756d",
+   "startMs": 3700,
+   "endMs": 5900,
+   "scale": 1.28,
+   "focusX": 0.5,
+   "focusY": 0.42,
+   "rampMs": 350,
+   "source": "auto"
+  },
+  {
+   "id": "z_2deb920b45",
+   "startMs": 8770,
+   "endMs": 10970,
+   "scale": 1.2,
+   "focusX": 0.5,
+   "focusY": 0.42,
+   "rampMs": 350,
+   "source": "auto"
+  },
+  {
+   "id": "z_dd6aa466a8",
+   "startMs": 13150,
+   "endMs": 15350,
+   "scale": 1.28,
+   "focusX": 0.5,
+   "focusY": 0.42,
+   "rampMs": 350,
+   "source": "auto"
+  }
+ ],
+ "textLayers": [],
+ "audio": {
+  "originalVolume": 1,
+  "fadeInMs": 0,
+  "fadeOutMs": 0,
+  "music": null
+ }
+}

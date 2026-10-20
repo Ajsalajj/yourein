@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, "Noto Sans Malayalam", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --color-bg: #0b0c10;
+  --color-panel: #12141a;
+  --color-panel-2: #181b23;
+  --color-line: #262a35;
+  --color-text: #eceef4;
+  --color-mute: #9aa1b2;
+  --color-accent: #8b7bff;
+  --color-accent-2: #5ee1c4;
+  --color-danger: #ff6b7a;
+  --color-warn: #ffc857;
+  --color-ok: #5fe3a1;
+}
+
+:root { color-scheme: dark; }
+html, body { height: 100%; }
+body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+* { scrollbar-width: thin; scrollbar-color: #343949 transparent; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.panel { background: var(--color-panel); border: 1px solid var(--color-line); }
+.field { background: var(--color-panel-2); border: 1px solid var(--color-line); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--color-text); width: 100%; }
+.field:focus-visible { border-color: var(--color-accent); outline: none; box-shadow: 0 0 0 3px #8b7bff33; }
+select.field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa1b2' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+input[type="color"] { padding: 0; width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--color-line); background: var(--color-panel-2); cursor: pointer; }
+.hatch { background-image: repeating-linear-gradient(135deg, #ff6b7a33 0 6px, #ff6b7a14 6px 12px); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Applies to editor UI only. Caption animations inside the video are deterministic and unaffected. */
+  .ui-motion, .ui-motion * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,12 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+numpy>=1.26
+python-multipart>=0.0.9
+# --- speech engines ---------------------------------------------------------
+# Primary, all languages (MIT). Downloads model weights from Hugging Face on first use.
+faster-whisper>=1.1
+# Offline English fallback (BSD). Its acoustic model ships inside the wheel - no download.
+pocketsphinx>=5.0
+# --- dev ---------------------------------------------------------------------
+pytest>=8
+httpx>=0.27
