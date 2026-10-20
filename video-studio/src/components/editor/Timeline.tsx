@@ -6,17 +6,19 @@ import { api, fmtTime } from "@/lib/client";
 import * as ops from "@/lib/captions/ops";
 import { frameToMs } from "@/lib/timeline";
 import { uid } from "@/lib/project";
+import { sfxLength, sfxSourceStart, sfxLibraryItem } from "@/lib/sfx";
 import { Button, Tip } from "@/components/ui";
 import { useMeta, useSeek, useSourceDuration } from "./context";
 import { cn } from "@/lib/cn";
 
 const GUTTER = 84;
-const H = { ruler: 24, video: 42, audio: 40, cap: 34, fx: 28, music: 24 };
+const H = { ruler: 24, video: 42, audio: 40, cap: 34, fx: 28, sfx: 24, music: 24 };
 
 type Drag =
   | { kind: "scrub" }
   | { kind: "range"; anchor: number }
   | { kind: "cap-move" | "cap-l" | "cap-r"; id: string; x0: number; orig: import("@/lib/project").Caption }
+  | { kind: "sfx-move"; id: string; x0: number; orig: number }
   | { kind: "zoom-move" | "zoom-l" | "zoom-r"; id: string; x0: number; orig: import("@/lib/project").Zoom };
 
 export function Timeline() {
@@ -86,6 +88,9 @@ export function Timeline() {
           if (drag.kind === "cap-move") return ops.shiftCaption([drag.orig], c.id, delta)[0];
           return ops.resizeCaption([drag.orig], c.id, drag.kind === "cap-l" ? "start" : "end", (drag.kind === "cap-l" ? drag.orig.startMs : drag.orig.endMs) + delta)[0];
         }), `drag:${drag.id}`);
+      } else if (drag.kind === "sfx-move") {
+        const delta = ((px - drag.x0) / pps) * 1000;
+        st.setSfx((l) => l.map((c) => (c.id === drag.id ? { ...c, srcMs: Math.max(0, Math.min(duration, drag.orig + delta)), syncWordId: null } : c)), `drag:${drag.id}`);
       } else if (drag.kind === "zoom-move" || drag.kind === "zoom-l" || drag.kind === "zoom-r") {
         const delta = ((px - drag.x0) / pps) * 1000;
         st.setZooms((zs) => zs.map((z) => {
@@ -122,6 +127,7 @@ export function Timeline() {
       if (e.key.toLowerCase() === "s" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); splitAtPlayhead(); }
       if (e.key === "Delete" || e.key === "Backspace") {
         if (st.selection.cutId) { st.removeCut(st.selection.cutId); st.select({ cutId: null }); }
+        else if (st.selection.sfxId) { const id = st.selection.sfxId; st.setSfx((l) => l.filter((q) => q.id !== id)); st.select({ sfxId: null }); }
         else if (st.selection.zoomId) { const id = st.selection.zoomId; st.setZooms((z) => z.filter((q) => q.id !== id)); st.select({ zoomId: null }); }
         else if (st.selection.captionId) { const id = st.selection.captionId; st.setCaptions((c) => ops.deleteCaption(c, id)); st.select({ captionId: null }); }
       }
@@ -141,10 +147,10 @@ export function Timeline() {
   }, [pps, duration]);
 
   const st = useEditor.getState;
-  const rowTop = { ruler: 0, video: H.ruler, audio: H.ruler + H.video, cap: H.ruler + H.video + H.audio, fx: H.ruler + H.video + H.audio + H.cap, music: H.ruler + H.video + H.audio + H.cap + H.fx };
+  const rowTop = { ruler: 0, video: H.ruler, audio: H.ruler + H.video, cap: H.ruler + H.video + H.audio, fx: H.ruler + H.video + H.audio + H.cap, sfx: H.ruler + H.video + H.audio + H.cap + H.fx, music: H.ruler + H.video + H.audio + H.cap + H.fx + H.sfx };
   const hasMusic = !!project.audio.music;
   const total = rowTop.music + (hasMusic ? H.music : 0);
-  const labels: [string, number, number][] = [["Ruler", rowTop.ruler, H.ruler], ["Video", rowTop.video, H.video], ["Audio", rowTop.audio, H.audio], ["Captions", rowTop.cap, H.cap], ["Effects", rowTop.fx, H.fx], ...(hasMusic ? [["Music", rowTop.music, H.music] as [string, number, number]] : [])];
+  const labels: [string, number, number][] = [["Ruler", rowTop.ruler, H.ruler], ["Video", rowTop.video, H.video], ["Audio", rowTop.audio, H.audio], ["Captions", rowTop.cap, H.cap], ["Effects", rowTop.fx, H.fx], ["SFX", rowTop.sfx, H.sfx], ...(hasMusic ? [["Music", rowTop.music, H.music] as [string, number, number]] : [])];
 
   if (!duration) return null;
   return (
@@ -175,7 +181,7 @@ export function Timeline() {
               if ((e.target as HTMLElement).closest("[data-block]")) return;
               const px = localX(e); const ms = toMs(px);
               const y = e.clientY - e.currentTarget.getBoundingClientRect().top;
-              st().select({ captionId: null, zoomId: null, cutId: null });
+              st().select({ captionId: null, zoomId: null, cutId: null, sfxId: null });
               if (y >= rowTop.video && y < rowTop.audio) { setRange(null); setDrag({ kind: "range", anchor: ms }); }
               else { setDrag({ kind: "scrub" }); seek.fromSource(ms); }
             }}>
@@ -184,7 +190,7 @@ export function Timeline() {
               {ticks.out.map((t) => <div key={t} className="absolute top-0 h-full border-l border-line pl-1 text-[10px] text-mute" style={{ left: x(t * 1000) }}>{t < 60 ? `${t}s` : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, "0")}`}</div>)}
             </div>
             {/* lanes */}
-            {[rowTop.video, rowTop.audio, rowTop.cap, rowTop.fx].map((t, i) => <div key={i} className="absolute inset-x-0 border-b border-line/60" style={{ top: t, height: [H.video, H.audio, H.cap, H.fx][i] }} />)}
+            {[rowTop.video, rowTop.audio, rowTop.cap, rowTop.fx, rowTop.sfx].map((t, i) => <div key={i} className="absolute inset-x-0 border-b border-line/60" style={{ top: t, height: [H.video, H.audio, H.cap, H.fx, H.sfx][i] }} />)}
 
             {/* video lane: kept footage + removed regions */}
             <div className="absolute rounded bg-accent/25 ring-1 ring-accent/40" style={{ left: 0, width, top: rowTop.video + 4, height: H.video - 8 }} />
@@ -232,6 +238,21 @@ export function Timeline() {
                 </div>
               );
             })}
+
+            {/* sound-effects lane */}
+            {project.sfxSettings.enabled ? project.sfx.map((c) => {
+              const active = sel.sfxId === c.id;
+              const start = sfxSourceStart(project, c).srcMs;
+              const name = c.source.kind === "library" ? sfxLibraryItem(c.source.id)?.name ?? c.source.id : project.assets[c.source.assetId]?.filename ?? "sound";
+              return (
+                <div key={c.id} data-block role="button" tabIndex={0} aria-label={`Sound effect ${name}`} aria-pressed={active}
+                  onPointerDown={(e) => { e.stopPropagation(); st().select({ sfxId: c.id, captionId: null, zoomId: null, cutId: null }); setDrag({ kind: "sfx-move", id: c.id, x0: localX(e), orig: c.srcMs }); }}
+                  className={cn("absolute cursor-grab overflow-hidden rounded border px-1 text-[10px] leading-[18px] text-[#0b0c10]", active ? "border-white bg-[#f0b429]" : "border-[#f0b429]/60 bg-[#f0b429]/80")}
+                  style={{ left: x(start), width: Math.max(10, x(sfxLength(project, c))), top: rowTop.sfx + 3, height: H.sfx - 6 }} title={`${name}${c.syncWordId ? " (synced to a word)" : ""}`}>
+                  <span className="pointer-events-none block truncate">{c.syncWordId ? "⛓ " : ""}{name}</span>
+                </div>
+              );
+            }) : null}
 
             {hasMusic ? <div className="absolute rounded bg-warn/30 px-2 text-[10px] leading-[18px] text-warn" style={{ left: 0, width, top: rowTop.music + 3, height: H.music - 6 }}>♪ {project.assets[project.audio.music!.assetId]?.filename ?? "music"} {project.audio.music!.ducking ? "(ducks under speech)" : ""}</div> : null}
 

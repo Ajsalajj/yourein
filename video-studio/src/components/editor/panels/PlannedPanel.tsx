@@ -11,14 +11,3 @@ export function BrollPanel() {
     </div>
   );
 }
-
-export function TransitionsPanel() {
-  return (
-    <div className="space-y-3 p-4">
-      <h3 className="text-sm font-semibold">Transitions</h3>
-      <Status kind="not-implemented">
-        Transitions between cut segments are not built. Cuts are currently hard cuts (the audio and video of adjacent segments are frame-aligned). The Remotion transitions package is installed and is the planned basis.
-      </Status>
-    </div>
-  );
-}

@@ -1,0 +1,138 @@
+{
+ "smooth-zoom": {
+  "max_diff_outside_window": 1.15,
+  "window_diff_peak": 101.6,
+  "edge_diff_first": 0.3,
+  "edge_diff_last": 1.2,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true
+  },
+  "pass": true
+ },
+ "radial-zoom-blur": {
+  "max_diff_outside_window": 1.17,
+  "window_diff_peak": 97.8,
+  "edge_diff_first": 7.1,
+  "edge_diff_last": 12.9,
+  "radial_to_tangential_gradient_ratio_vs_control": 0.033,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "radial_streaks": true
+  },
+  "pass": true
+ },
+ "directional-blur": {
+  "max_diff_outside_window": 1.17,
+  "window_diff_peak": 103.5,
+  "edge_diff_first": 11.4,
+  "edge_diff_last": 8.5,
+  "horizontal_gradient_energy_ratio_vs_control": 0.298,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "blurs_along_x_only": true
+  },
+  "pass": true
+ },
+ "whip-pan": {
+  "max_diff_outside_window": 1.16,
+  "window_diff_peak": 134.4,
+  "edge_diff_first": 0.2,
+  "edge_diff_last": 1.2,
+  "horizontal_gradient_energy_ratio_vs_control": 0.442,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "blurs_along_x_only": true
+  },
+  "pass": true
+ },
+ "motion-blur": {
+  "max_diff_outside_window": 1.07,
+  "window_diff_peak": 112.5,
+  "edge_diff_first": 0.4,
+  "edge_diff_last": 1.2,
+  "horizontal_gradient_energy_ratio_vs_control": 0.371,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "blurs_along_x_only": true
+  },
+  "pass": true
+ },
+ "camera-push": {
+  "max_diff_outside_window": 1.17,
+  "window_diff_peak": 79.4,
+  "edge_diff_first": 0.7,
+  "edge_diff_last": 1.2,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true
+  },
+  "pass": true
+ },
+ "flash": {
+  "max_diff_outside_window": 1.07,
+  "window_diff_peak": 123.8,
+  "edge_diff_first": 1.7,
+  "edge_diff_last": 2.7,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "white_flash": true
+  },
+  "pass": true
+ },
+ "mask-reveal": {
+  "max_diff_outside_window": 1.07,
+  "window_diff_peak": 62.0,
+  "edge_diff_first": 0.2,
+  "edge_diff_last": 1.1,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "centre_is_incoming": true,
+   "corner_is_outgoing": true
+  },
+  "pass": true
+ },
+ "slide": {
+  "max_diff_outside_window": 1.16,
+  "window_diff_peak": 134.8,
+  "edge_diff_first": 0.6,
+  "edge_diff_last": 1.5,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "two_clips_visible_side_by_side": true
+  },
+  "pass": true
+ },
+ "cinematic-fade": {
+  "max_diff_outside_window": 1.07,
+  "window_diff_peak": 112.2,
+  "edge_diff_first": 0.8,
+  "edge_diff_last": 1.9,
+  "checks": {
+   "untouched_outside_window": true,
+   "edges_blend_into_clips": true,
+   "mid_differs_from_control": true,
+   "dips_to_black": true
+  },
+  "pass": true
+ },
+ "_pairwise_min_mid_frame_diff": 22.8,
+ "_all_distinct": true,
+ "pass": true
+}

@@ -6,6 +6,7 @@ import { Studio } from "@/remotion/Studio";
 import { ASPECTS, type AspectId } from "@/lib/project";
 import { useEditor } from "@/store/editor";
 import { useVision } from "@/store/vision";
+import { sfxUrls } from "@/lib/sfx";
 import { useUi } from "@/store/ui";
 import { sourceToCanvas } from "@/lib/tracking";
 import { mediaUrl, fmtTime } from "@/lib/client";
@@ -29,7 +30,7 @@ export function PlayerPane() {
   const [dragMode, setDragMode] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
-  const mediaUrls = useMemo(() => Object.fromEntries(Object.values(project.assets).map((a) => [a.id, mediaUrl(project.id, a.id)])), [project.assets, project.id]);
+  const mediaUrls = useMemo(() => ({ ...sfxUrls(""), ...Object.fromEntries(Object.values(project.assets).map((a) => [a.id, mediaUrl(project.id, a.id)])) }), [project.assets, project.id]);
   const seg = project.analysis.segmentation;
   const mask = useMemo(() => (seg ? { base: `/api/projects/${project.id}/masks/${seg.id}`, query: "", fps: seg.fps, frames: seg.frames } : null), [seg, project.id]);
   const inputProps = useMemo(() => ({ project, mediaUrls, mask }), [project, mediaUrls, mask]);

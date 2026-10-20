@@ -41,7 +41,7 @@ export function AudioPanel() {
         ) : null}
       </Section>
       <div className="space-y-3 p-4">
-        <Status kind="not-implemented">A separate sound-effects track, automatic sound suggestions and noise reduction are planned but not built. Music, volume, fades and ducking above are fully working in preview and export. Ducking follows the caption timing (it assumes captions mark where speech is).</Status>
+        <Status kind="not-implemented">Sound effects have their own tab (SFX). Noise reduction is not built. Music, volume, fades and ducking above work in preview and export; ducking follows the caption timing and any sound effect marked &ldquo;duck music&rdquo;.</Status>
       </div>
     </div>
   );

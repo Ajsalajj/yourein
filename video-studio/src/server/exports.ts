@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { uid, type Project } from "../lib/project";
 import { getCompositionMeta } from "../lib/composition";
+import { sfxUrls } from "../lib/sfx";
 import { config } from "./config";
 import { HttpError } from "./http";
 import { projectDir, readProject } from "./storage";
@@ -78,7 +79,7 @@ export function outputPath(job: ExportJob) {
 
 export function mediaUrls(project: Project): Record<string, string> {
   const q = config.accessToken ? `?token=${encodeURIComponent(config.accessToken)}` : "";
-  return Object.fromEntries(Object.values(project.assets).map((a) => [a.id, `${config.internalBaseUrl}/api/media/${project.id}/${a.id}${q}`]));
+  return { ...sfxUrls(config.internalBaseUrl), ...Object.fromEntries(Object.values(project.assets).map((a) => [a.id, `${config.internalBaseUrl}/api/media/${project.id}/${a.id}${q}`])) };
 }
 
 export function maskSource(project: Project) {
@@ -104,7 +105,7 @@ export async function startExport(projectId: string, opts: { quality: "standard"
     JSON.stringify({
       props: { project, mediaUrls: mediaUrls(project), mask: maskSource(project) },
       options: { crf: opts.quality === "high" ? 16 : 20, browserExecutable: config.browserExecutable || undefined, gl: config.renderGl, concurrency: config.renderConcurrency },
-      expected: { width: meta.width, height: meta.height, fps: meta.fps, durationInFrames: meta.durationInFrames, hasAudio: src.hasAudio || !!project.audio.music },
+      expected: { width: meta.width, height: meta.height, fps: meta.fps, durationInFrames: meta.durationInFrames, hasAudio: src.hasAudio || !!project.audio.music || project.sfx.length > 0 },
       ffprobe: config.ffprobe,
     }),
   );

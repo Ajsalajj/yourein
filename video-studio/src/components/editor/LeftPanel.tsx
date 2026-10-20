@@ -1,14 +1,16 @@
 "use client";
-import { Bot, Captions, Clapperboard, Film, LayoutGrid, Music, Shuffle, Sparkles, Type, Wand2 } from "lucide-react";
+import { Bot, Captions, Clapperboard, Film, LayoutGrid, Music, Shuffle, Sparkles, Volume2, Type, Wand2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MediaPanel } from "./panels/MediaPanel";
 import { CaptionsPanel } from "./panels/CaptionsPanel";
 import { TemplatesPanel } from "./panels/TemplatesPanel";
 import { TextPanel } from "./panels/TextPanel";
 import { AudioPanel } from "./panels/AudioPanel";
-import { BrollPanel, TransitionsPanel } from "./panels/PlannedPanel";
+import { BrollPanel } from "./panels/PlannedPanel";
+import { TransitionsPanel } from "./panels/TransitionsPanel";
 import { EffectsPanel } from "./panels/EffectsPanel";
 import { AiPanel } from "./panels/AiPanel";
+import { SfxPanel } from "./panels/SfxPanel";
 import { TypographyPanel } from "./panels/TypographyPanel";
 import type { TabId } from "@/store/ui";
 
@@ -19,6 +21,7 @@ const TABS = [
   { id: "type", label: "Type FX", icon: Sparkles, panel: TypographyPanel },
   { id: "text", label: "Text", icon: Type, panel: TextPanel },
   { id: "audio", label: "Audio", icon: Music, panel: AudioPanel },
+  { id: "sfx", label: "SFX", icon: Volume2, panel: SfxPanel },
   { id: "broll", label: "B-roll", icon: Clapperboard, panel: BrollPanel },
   { id: "effects", label: "Effects", icon: Wand2, panel: EffectsPanel },
   { id: "transitions", label: "Transitions", icon: Shuffle, panel: TransitionsPanel },

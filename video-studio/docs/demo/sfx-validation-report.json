@@ -1,0 +1,45 @@
+{
+ "effects": [
+  {
+   "id": "impact",
+   "planned_ms": 1500,
+   "measured_ms": 1500.0,
+   "error_ms": 0.0,
+   "correlation": 0.999,
+   "gain_vs_planned": 0.706,
+   "gain_vs_planned_after_pan_law": 0.998,
+   "pass": true
+  },
+  {
+   "id": "whoosh-soft",
+   "planned_ms": 3200,
+   "measured_ms": 3200.0,
+   "error_ms": 0.0,
+   "correlation": 0.986,
+   "gain_vs_planned": 0.684,
+   "gain_vs_planned_after_pan_law": 0.967,
+   "pass": true
+  },
+  {
+   "id": "ding",
+   "planned_ms": 5000,
+   "measured_ms": 5000.0,
+   "error_ms": 0.0,
+   "correlation": 1.0,
+   "gain_vs_planned": 0.707,
+   "gain_vs_planned_after_pan_law": 0.999,
+   "pass": true
+  }
+ ],
+ "ducking": {
+  "music_ratio_inside_effect_windows": [
+   0.349,
+   0.349,
+   0.35
+  ],
+  "expected_about": 0.35,
+  "music_ratio_far_from_effects": 1.0,
+  "pass": true
+ },
+ "pass": true
+}

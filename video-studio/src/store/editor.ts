@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import type { Caption, Cut, Position, Project, StyleProps, TextLayer, Zoom } from "@/lib/project";
+import type { BrollClip, ReframeSettings, SfxClip, SfxSettings, TransitionSpec } from "@/lib/edit-schema";
 import { uid } from "@/lib/project";
 import * as ops from "@/lib/captions/ops";
 import { regroupCaptions } from "@/lib/captions/grouping";
@@ -18,6 +19,9 @@ interface Selection {
   textId: string | null;
   /** the word being styled in the Type FX panel (stable word id) */
   wordId: string | null;
+  sfxId: string | null;
+  brollId: string | null;
+  transitionId: string | null;
 }
 
 interface EditorState {
@@ -71,6 +75,11 @@ interface EditorState {
   setLook: (layer: "look" | "activeLook" | "emphasisLook", patch: WordStyle | null) => void;
   addFont: (font: CustomFont, asset: Project["assets"][string]) => void;
   removeFont: (fontId: string) => void;
+  setSfx: (fn: (s: SfxClip[]) => SfxClip[], key?: string) => void;
+  setSfxSettings: (patch: Partial<SfxSettings>) => void;
+  setTransitions: (fn: (t: TransitionSpec[]) => TransitionSpec[], key?: string) => void;
+  setBroll: (fn: (b: BrollClip[]) => BrollClip[], key?: string) => void;
+  setReframe: (patch: Partial<ReframeSettings>) => void;
 }
 
 export const useEditor = create<EditorState>((set, get) => ({
@@ -79,13 +88,13 @@ export const useEditor = create<EditorState>((set, get) => ({
   future: [],
   saveState: "idle",
   saveError: null,
-  selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null },
+  selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null, sfxId: null, brollId: null, transitionId: null },
   frame: 0,
   lastCoalesce: null,
   busy: false,
   rev: 0,
 
-  load: (p) => set({ rev: 0, project: p, past: [], future: [], saveState: "idle", saveError: null, selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null }, lastCoalesce: null }),
+  load: (p) => set({ rev: 0, project: p, past: [], future: [], saveState: "idle", saveError: null, selection: { captionId: null, zoomId: null, cutId: null, textId: null, wordId: null, sfxId: null, brollId: null, transitionId: null }, lastCoalesce: null }),
   replaceFromServer: (p) => set({ project: p, saveState: "saved", saveError: null }),
   commit: (fn, key) => {
     const { project, past, lastCoalesce } = get();
@@ -189,6 +198,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     }, `look:${layer}:${patch ? Object.keys(patch).join(",") : "reset"}`),
   addFont: (font, asset) => get().commit((p) => ({ ...p, assets: { ...p.assets, [asset.id]: asset }, fonts: [...p.fonts.filter((f) => f.id !== font.id), font] })),
   removeFont: (fontId) => get().commit((p) => ({ ...p, fonts: p.fonts.filter((f) => f.id !== fontId) })),
+  setSfx: (fn, key) => get().commit((p) => ({ ...p, sfx: fn(p.sfx) }), key),
+  setSfxSettings: (patch) => get().commit((p) => ({ ...p, sfxSettings: { ...p.sfxSettings, ...patch } }), `sfxs:${Object.keys(patch).join(",")}`),
+  setTransitions: (fn, key) => get().commit((p) => ({ ...p, transitions: fn(p.transitions) }), key),
+  setBroll: (fn, key) => get().commit((p) => ({ ...p, broll: fn(p.broll) }), key),
+  setReframe: (patch) => get().commit((p) => ({ ...p, reframe: { ...p.reframe, ...patch } }), `reframe:${Object.keys(patch).join(",")}`),
   setTextLayers: (fn, key) => get().commit((p) => ({ ...p, textLayers: fn(p.textLayers) }), key),
 }));
 

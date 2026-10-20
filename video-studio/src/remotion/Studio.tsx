@@ -3,6 +3,11 @@ import { AbsoluteFill, Audio, continueRender, delayRender, OffthreadVideo, Seque
 import type { Project } from "../lib/project";
 import { captionsToOutput, frameToMs, zoomsToOutput, type Segment } from "../lib/timeline";
 import { getCompositionMeta, zoomAt, speechActivity } from "../lib/composition";
+import { resolveSfx, sfxActivity, sfxGain } from "../lib/sfx";
+import { BrollLayer } from "./BrollLayer";
+import { activeSplit, fullBrollActive, placeBroll, splitLayout } from "../lib/broll";
+import { TransitionStage } from "./TransitionStage";
+import { placeTransitions } from "../lib/transitions";
 import { CameraMotionBlur } from "@remotion/motion-blur";
 import { CaptionLayer } from "./CaptionLayer";
 import { resolveStyle } from "./templates/registry";
@@ -75,6 +80,15 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   const meta = useMemo(() => getCompositionMeta(project), [project]);
   const outCaptions = useMemo(() => captionsToOutput(project.captions, meta.segments), [project.captions, meta.segments]);
   const outZooms = useMemo(() => zoomsToOutput(project.zooms, meta.segments), [project.zooms, meta.segments]);
+  const sfxList = useMemo(() => resolveSfx(project, meta.segments), [project, meta.segments]);
+  const placed = useMemo(() => placeTransitions(project.transitions, meta.segments, fps), [project.transitions, meta.segments, fps]);
+  const srcAsset = project.sourceAssetId ? project.assets[project.sourceAssetId] : undefined;
+  const maxSrcFrame = srcAsset ? Math.max(0, Math.floor((srcAsset.durationMs * fps) / 1000) - 1) : 0;
+  const placedBroll = useMemo(() => placeBroll(project.broll, meta.segments, fps), [project.broll, meta.segments, fps]);
+  const brollDurations = useMemo(() => Object.fromEntries(project.broll.map((b) => [b.assetId, project.assets[b.assetId]?.durationMs ?? 0])), [project.broll, project.assets]);
+  const split = activeSplit(placedBroll, frame, fps);
+  const baseBox = split ? splitLayout(split.clip.mode, split.p).base : null;
+  const fullBroll = fullBrollActive(placedBroll, frame);
   const ms = frameToMs(frame, fps);
   const totalMs = frameToMs(durationInFrames, fps);
   const src = project.sourceAssetId ? mediaUrls[project.sourceAssetId] : undefined;
@@ -98,14 +112,17 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>
       <ProjectFonts fonts={project.fonts} mediaUrls={mediaUrls} />
-      <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
+      <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%`, ...(baseBox ? { left: `${baseBox.left * 100}%`, top: `${baseBox.top * 100}%`, width: `${baseBox.width * 100}%`, height: `${baseBox.height * 100}%`, overflow: "hidden" } : {}) }}>
         {src ? <VideoSegments project={project} src={src} segments={meta.segments} totalMs={totalMs} /> : null}
+        {src ? placed.map((t) => <TransitionStage key={t.spec.id} from={t.startFrame} frames={t.frames} spec={t.spec} a={{ src, startFrame: t.aStartSrcFrame, maxFrame: maxSrcFrame }} b={{ src, startFrame: t.bStartSrcFrame, maxFrame: maxSrcFrame }} />) : null}
       </AbsoluteFill>
+
+      {src ? <BrollLayer placed={placedBroll} mediaUrls={mediaUrls} durations={brollDurations} main={{ src, maxFrame: maxSrcFrame, segments: meta.segments }} /> : null}
 
       {/* BEHIND the speaker: text first, then the person cut out of the same video on top of it */}
       <TextLayers layers={behindLayers} project={project} segments={meta.segments} />
       {captionsBehind ? captions : null}
-      {canCut && (behindLayers.length > 0 || captionsBehind) ? (
+      {canCut && !fullBroll && !split && (behindLayers.length > 0 || captionsBehind) ? (
         <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
           <SubjectCutout src={src!} segments={meta.segments} mask={mask!} />
         </AbsoluteFill>
@@ -120,11 +137,32 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
           loop={music.loop}
           volume={(f) => {
             const t = frameToMs(f, fps);
-            const duck = music.ducking ? 1 - speechActivity(outCaptions, t) * (1 - music.duckLevel) : 1;
+            // speech ducking is optional (music.ducking); effects marked "duck music" always duck it
+            const duck = 1 - Math.max(music.ducking ? speechActivity(outCaptions, t) : 0, sfxActivity(sfxList, t)) * (1 - music.duckLevel);
             return music.volume * duck * fadeFactor(t, totalMs, project.audio.fadeInMs, project.audio.fadeOutMs);
           }}
         />
       ) : null}
+
+      {sfxList.map((r) => {
+        const url = mediaUrls[r.mediaKey];
+        if (!url) return null;
+        const from = Math.max(0, Math.round((r.outMs * fps) / 1000));
+        const frames = Math.max(1, Math.ceil((r.durMs * fps) / 1000));
+        return (
+          <Sequence key={r.id} from={from} durationInFrames={frames} name={`sfx ${r.id}`}>
+            <Audio
+              src={url}
+              startFrom={Math.round((r.offsetMs * fps) / 1000)}
+              volume={(f) => {
+                const t = frameToMs(from + f, fps);
+                const speech = project.sfxSettings.duckUnderSpeech > 0 ? 1 - speechActivity(outCaptions, t) * project.sfxSettings.duckUnderSpeech : 1;
+                return sfxGain(r, frameToMs(f, fps), project.sfxSettings.volume) * speech * fadeFactor(t, totalMs, 0, project.audio.fadeOutMs);
+              }}
+            />
+          </Sequence>
+        );
+      })}
     </AbsoluteFill>
   );
 };
