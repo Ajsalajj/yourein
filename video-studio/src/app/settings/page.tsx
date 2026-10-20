@@ -49,7 +49,7 @@ export default function Settings() {
         ) : !err ? <p className="text-mute">Checking…</p> : null}
         <section className="mt-8 text-[12px] leading-relaxed text-mute">
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider">Licences</h2>
-          <p>Remotion is free for individuals, non-profits and for-profit companies with up to 3 people; larger companies need a Remotion company licence. Fonts are SIL OFL 1.1. FFmpeg and Chromium are used as external tools. See docs/ARCHITECTURE.md.</p>
+          <p>Remotion is free for individuals, non-profits and for-profit companies with up to 3 people; larger companies need a Remotion company licence. Fonts are SIL OFL 1.1 (Permanent Marker: Apache-2.0); the person-segmentation model is Apache-2.0. FFmpeg and Chromium are used as external tools. See docs/ARCHITECTURE.md.</p>
         </section>
       </main>
     </>

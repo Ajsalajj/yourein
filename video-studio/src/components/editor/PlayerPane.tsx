@@ -5,6 +5,8 @@ import { Captions, Crosshair, Maximize2, Pause, Play, Shield, SkipBack, SkipForw
 import { Studio } from "@/remotion/Studio";
 import { ASPECTS, type AspectId } from "@/lib/project";
 import { useEditor } from "@/store/editor";
+import { useVision } from "@/store/vision";
+import { sourceToCanvas } from "@/lib/tracking";
 import { mediaUrl, fmtTime } from "@/lib/client";
 import { Button, Tip } from "@/components/ui";
 import { usePlayerRef, useMeta } from "./context";
@@ -27,7 +29,25 @@ export function PlayerPane() {
   const box = useRef<HTMLDivElement>(null);
 
   const mediaUrls = useMemo(() => Object.fromEntries(Object.values(project.assets).map((a) => [a.id, mediaUrl(project.id, a.id)])), [project.assets, project.id]);
-  const inputProps = useMemo(() => ({ project, mediaUrls }), [project, mediaUrls]);
+  const seg = project.analysis.segmentation;
+  const mask = useMemo(() => (seg ? { base: `/api/projects/${project.id}/masks/${seg.id}`, query: "", fps: seg.fps, frames: seg.frames } : null), [seg, project.id]);
+  const inputProps = useMemo(() => ({ project, mediaUrls, mask }), [project, mediaUrls, mask]);
+  const vision = useVision();
+  const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const srcAsset = project.sourceAssetId ? project.assets[project.sourceAssetId] : undefined;
+  const norm = (e: React.PointerEvent) => {
+    const r = box.current!.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+  };
+  /** canvas-normalised box -> source-frame-normalised ROI (inverse of object-fit: cover) */
+  const toSourceRoi = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    if (!srcAsset?.width || !srcAsset.height) return null;
+    const cw = meta.width, ch = meta.height, k = Math.max(cw / srcAsset.width, ch / srcAsset.height);
+    const inv = (p: { x: number; y: number }) => ({ x: (p.x * cw + (srcAsset.width! * k - cw) / 2) / (srcAsset.width! * k), y: (p.y * ch + (srcAsset.height! * k - ch) / 2) / (srcAsset.height! * k) });
+    const p0 = inv({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) }), p1 = inv({ x: Math.max(a.x, b.x), y: Math.max(a.y, b.y) });
+    return { x: Math.max(0, p0.x), y: Math.max(0, p0.y), w: Math.min(1, p1.x) - Math.max(0, p0.x), h: Math.min(1, p1.y) - Math.max(0, p0.y) };
+  };
+  void sourceToCanvas;
 
   useEffect(() => {
     const p = ref.current;
@@ -101,6 +121,14 @@ export function PlayerPane() {
           <div ref={box} onPointerMove={onDragPos} onPointerDown={onDragPos} className="relative shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-line" style={{ aspectRatio: `${aspect.width} / ${aspect.height}`, height: `${zoom * 100}%`, maxWidth: zoom === 1 ? "100%" : undefined, cursor: dragMode ? "crosshair" : undefined }}>
             <Player ref={ref} component={Studio} inputProps={inputProps} durationInFrames={meta.durationInFrames} compositionWidth={Math.round(meta.width * quality)} compositionHeight={Math.round(meta.height * quality)} fps={meta.fps} controls={false} clickToPlay={!dragMode} doubleClickToFullscreen={false} acknowledgeRemotionLicense style={{ width: "100%", height: "100%" }} initiallyShowControls={false} />
             {guides ? <Guides aspect={project.aspect} /> : null}
+            {vision.picking ? (
+              <div className="absolute inset-0 z-20 cursor-crosshair bg-black/10" aria-label="Drag to select the region to track"
+                onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); const p = norm(e); setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y }); }}
+                onPointerMove={(e) => { if (drag) { const p = norm(e); setDrag({ ...drag, x1: p.x, y1: p.y }); } }}
+                onPointerUp={() => { if (drag) { const roi = toSourceRoi({ x: drag.x0, y: drag.y0 }, { x: drag.x1, y: drag.y1 }); if (roi && roi.w > 0.02 && roi.h > 0.02) { vision.setRoi(roi); vision.setPicking(false); } setDrag(null); } }}>
+                {drag ? <div className="absolute border-2 border-accent-2 bg-accent-2/15" style={{ left: `${Math.min(drag.x0, drag.x1) * 100}%`, top: `${Math.min(drag.y0, drag.y1) * 100}%`, width: `${Math.abs(drag.x1 - drag.x0) * 100}%`, height: `${Math.abs(drag.y1 - drag.y0) * 100}%` }} /> : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="text-sm text-mute">This project has no video.</p>

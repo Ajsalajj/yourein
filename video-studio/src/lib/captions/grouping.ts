@@ -66,3 +66,28 @@ export function regroupCaptions(captions: Caption[], opts: Partial<GroupingOptio
   const words = [...captions].sort((a, b) => a.startMs - b.startMs).flatMap((c) => c.words);
   return groupWords(words, opts);
 }
+
+/* ───────── @remotion/captions integration ───────── */
+import { createTikTokStyleCaptions, type Caption as RemotionCaption } from "@remotion/captions";
+
+/** Our word timing -> Remotion's `Caption` (a leading space marks the start of a new word, as the package expects). */
+export function toRemotionCaptions(words: Word[]): RemotionCaption[] {
+  return words.map((w) => ({ text: ` ${w.text}`, startMs: w.startMs, endMs: w.endMs, timestampMs: (w.startMs + w.endMs) / 2, confidence: w.confidence }));
+}
+
+/**
+ * Group words into time-window "pages" with Remotion's own TikTok-style algorithm: tokens are combined until
+ * `combineTokensWithinMilliseconds` has elapsed. Complements `groupWords` (phrase-aware, count based).
+ */
+export function groupWithRemotionCaptions(words: Word[], combineTokensWithinMilliseconds = 1200): Caption[] {
+  if (!words.length) return [];
+  const { pages } = createTikTokStyleCaptions({ captions: toRemotionCaptions(words), combineTokensWithinMilliseconds });
+  let cursor = 0;
+  const out: Caption[] = [];
+  for (const page of pages) {
+    const slice = words.slice(cursor, cursor + page.tokens.length);
+    cursor += page.tokens.length;
+    if (slice.length) out.push(captionFromWords(slice));
+  }
+  return out;
+}

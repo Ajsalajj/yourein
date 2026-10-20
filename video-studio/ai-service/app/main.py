@@ -9,7 +9,7 @@ from typing import Literal, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from . import config, engines
+from . import config, engines, vision
 
 app = FastAPI(title="Caption Studio AI service", version="0.1.0", docs_url=None, redoc_url=None)
 pool = ThreadPoolExecutor(max_workers=1)  # one CPU-bound transcription at a time
@@ -82,3 +82,64 @@ def get_job(job_id: str):
     if not j:
         raise HTTPException(404, "unknown job")
     return j
+
+
+class SegmentIn(BaseModel):
+    path: str
+    out_dir: str
+    fps: float = Field(default=30, ge=1, le=60)
+
+
+class TrackIn(BaseModel):
+    path: str
+    fps: float = Field(default=30, ge=1, le=60)
+    start_ms: int = Field(default=0, ge=0)
+    end_ms: Optional[int] = Field(default=None, ge=0)
+    roi: dict
+
+
+def confined_dir(path: str) -> Path:
+    p = Path(path).resolve()
+    try:
+        p.relative_to(config.STORAGE_ROOT)
+    except ValueError:
+        raise HTTPException(400, "path is outside the storage root")
+    return p
+
+
+def _submit(kind: str, fn):
+    job_id = uuid.uuid4().hex[:16]
+    with lock:
+        jobs[job_id] = {"id": job_id, "status": "queued", "progress": 0.0, "stage": "queued", "error": None, "result": None}
+
+    def progress(p: float, stage: str):
+        with lock:
+            jobs[job_id].update(progress=round(p, 3), stage=stage, status="running")
+
+    def work():
+        try:
+            res = fn(progress)
+            with lock:
+                jobs[job_id].update(status="done", progress=1.0, stage="done", result=res)
+        except Exception as e:
+            with lock:
+                jobs[job_id].update(status="failed", error=f"{type(e).__name__}: {str(e)[:400]}", stage="failed")
+
+    pool.submit(work)
+    return {"id": job_id}
+
+
+@app.post("/v1/jobs/segment", dependencies=[Depends(auth)])
+def start_segment(req: SegmentIn):
+    src = confined(req.path)
+    out = confined_dir(req.out_dir)
+    return _submit("segment", lambda progress: vision.segment_video(src, out, req.fps, progress))
+
+
+@app.post("/v1/jobs/track", dependencies=[Depends(auth)])
+def start_track(req: TrackIn):
+    src = confined(req.path)
+    r = req.roi
+    if not all(k in r and isinstance(r[k], (int, float)) for k in ("x", "y", "w", "h")) or r["w"] <= 0.01 or r["h"] <= 0.01 or not (0 <= r["x"] < 1 and 0 <= r["y"] < 1):
+        raise HTTPException(422, "roi must be normalized {x,y,w,h} with a region of at least 1% of the frame")
+    return _submit("track", lambda progress: vision.track_region(src, r, req.start_ms, req.fps, progress, req.end_ms))

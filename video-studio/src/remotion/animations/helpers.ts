@@ -26,8 +26,21 @@ export function hash(n: number): number {
 /** Bell envelope: 0 -> 1 -> 0 across p in [0,1]. */
 export const bell = (p: number) => Math.sin(Math.PI * clamp(p));
 
-export function makeSpring(frame: number, fps: number, dur: number, startMsOfGroup = 0) {
-  void startMsOfGroup;
+export type EasingId = "cubic" | "expo" | "sine" | "back" | "linear";
+const easeSine = (t: number) => Math.sin((clamp(t) * Math.PI) / 2);
+export function makeEase(id: EasingId | undefined): (t: number) => number {
+  switch (id) {
+    case "expo": return easeOutExpo;
+    case "sine": return easeSine;
+    case "back": return (t) => easeOutBack(t, 1.2);
+    case "linear": return (t) => clamp(t);
+    default: return easeOutCubic;
+  }
+}
+
+export interface SpringOverrides { stiffness?: number; damping?: number }
+export function makeSpring(frame: number, fps: number, dur: number, over: SpringOverrides = {}) {
+  void frame;
   return (sinceMs: number, opts: { damping?: number; stiffness?: number; mass?: number; durMs?: number } = {}) => {
     if (sinceMs <= 0) return 0;
     const f = (sinceMs * fps) / 1000;
@@ -36,7 +49,7 @@ export function makeSpring(frame: number, fps: number, dur: number, startMsOfGro
       frame: f,
       fps,
       durationInFrames,
-      config: { damping: opts.damping ?? 12, stiffness: opts.stiffness ?? 140, mass: opts.mass ?? 0.8 },
+      config: { damping: over.damping ?? opts.damping ?? 12, stiffness: over.stiffness ?? opts.stiffness ?? 140, mass: opts.mass ?? 0.8 },
     });
   };
 }
@@ -64,3 +77,20 @@ export function withAlpha(color: string, a: number): string {
 
 /** px sized for the current canvas */
 export const px = (c: Pick<BaseCtx, "scale">, v: number) => v * c.scale;
+
+export function rotateHue(color: string, deg: number): string {
+  const rgb = hexToRgb(color);
+  if (!rgb) return color;
+  const [r, g, b] = rgb.map((v) => v / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  let sat = 0;
+  if (d) {
+    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return `hsl(${Math.round((h + deg + 360) % 360)}, ${Math.round(Math.max(sat, 0.6) * 100)}%, ${Math.round(Math.min(0.62, Math.max(l, 0.5)) * 100)}%)`;
+}

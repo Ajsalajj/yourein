@@ -118,6 +118,21 @@ export const stylePropsSchema = z.object({
   maxWordsPerLine: z.number().int().min(1).max(10),
   maxLines: z.number().int().min(1).max(5),
   wordsPerGroup: z.number().int().min(1).max(14),
+  /** Casing. `uppercase` is kept for older projects; `textTransform` wins when set. Skipped for Indic scripts. */
+  textTransform: z.enum(["none", "uppercase", "lowercase", "capitalize"]).optional(),
+  /** --- motion tuning. All optional: unset = the preset's designed value. --- */
+  /** Exit duration in ms (default: min(200, 25% of the caption)). */
+  exitMs: z.number().min(0).max(1500).optional(),
+  /** Spring overrides applied to every spring-driven motion of the preset. */
+  springStiffness: z.number().min(20).max(600).optional(),
+  springDamping: z.number().min(2).max(60).optional(),
+  /** Multiplier on scale-based motion only (pop, squash, slam), independent of overall intensity. */
+  scaleIntensity: z.number().min(0).max(2).optional(),
+  /** Shifts all motion relative to the spoken timestamps (negative = animations lead the speech). */
+  offsetMs: z.number().min(-500).max(500).optional(),
+  /** How long the active-word highlight takes to ramp in. */
+  highlightMs: z.number().min(0).max(1000).optional(),
+  easing: z.enum(["cubic", "expo", "sine", "back", "linear"]).optional(),
 });
 export type StyleProps = z.infer<typeof stylePropsSchema>;
 
@@ -148,6 +163,15 @@ export const zoomSchema = z.object({
 });
 export type Zoom = z.infer<typeof zoomSchema>;
 
+export const perspectiveSchema = z.object({
+  rotateX: z.number().min(-80).max(80).default(0),
+  rotateY: z.number().min(-80).max(80).default(0),
+  rotateZ: z.number().min(-180).max(180).default(0),
+  /** CSS perspective distance in px; smaller = stronger foreshortening */
+  depth: z.number().min(200).max(4000).default(1200),
+});
+export type Perspective = z.infer<typeof perspectiveSchema>;
+
 export const textLayerSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -155,11 +179,24 @@ export const textLayerSchema = z.object({
   endMs: ms,
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
-  fontSize: z.number().min(12).max(300),
+  fontSize: z.number().min(12).max(600),
   color: z.string(),
   fontFamily: z.string(),
   fontWeight: z.number().int().min(100).max(900),
   backgroundColor: z.string().default("transparent"),
+  strokeWidth: z.number().min(0).max(40).default(0),
+  strokeColor: z.string().default("#000000"),
+  letterSpacing: z.number().min(-0.2).max(2).default(0),
+  italic: z.boolean().default(false),
+  textTransform: z.enum(["none", "uppercase", "lowercase", "capitalize"]).default("none"),
+  /** Draw this layer BEHIND the segmented subject (needs subject masking to be analysed). */
+  behind: z.boolean().default(false),
+  /** Follow a motion track (project.analysis.tracks[trackId]); position/scale then move with the tracked region. */
+  trackId: z.string().nullable().default(null),
+  trackScale: z.boolean().default(false),
+  perspective: perspectiveSchema.nullable().default(null),
+  animation: z.enum(["none", "fade-up", "tracking-in", "scale-in", "mask-reveal"]).default("none"),
+  animMs: z.number().min(100).max(3000).default(600),
 });
 export type TextLayer = z.infer<typeof textLayerSchema>;
 
@@ -181,6 +218,39 @@ export const audioSchema = z.object({
 });
 export type AudioSettings = z.infer<typeof audioSchema>;
 
+/** Server-produced vision results. Written only by the analysis jobs, never accepted from the client. */
+export const segmentationSchema = z.object({
+  id: z.string(),
+  fps: z.number().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  frames: z.number().int().positive(),
+  method: z.string(),
+  sourceAssetId: z.string(),
+  createdAt: z.string(),
+});
+export type Segmentation = z.infer<typeof segmentationSchema>;
+
+export const trackSchema = z.object({
+  id: z.string(),
+  label: z.string().max(80),
+  fps: z.number().positive(),
+  startFrame: z.number().int().min(0),
+  /** per frame from startFrame: [centreX, centreY (normalised 0..1 of the SOURCE frame), scale relative to the first frame] */
+  points: z.array(z.tuple([z.number(), z.number(), z.number()])).min(1),
+  method: z.string(),
+  roi: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
+  sourceAssetId: z.string(),
+  createdAt: z.string(),
+});
+export type Track = z.infer<typeof trackSchema>;
+
+export const analysisSchema = z.object({
+  segmentation: segmentationSchema.nullable().default(null),
+  tracks: z.record(z.string(), trackSchema).default({}),
+});
+export type Analysis = z.infer<typeof analysisSchema>;
+
 export const projectSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   id: z.string(),
@@ -198,6 +268,9 @@ export const projectSchema = z.object({
   cuts: z.array(cutSchema).default([]),
   zooms: z.array(zoomSchema).default([]),
   textLayers: z.array(textLayerSchema).default([]),
+  /** Draw the captions behind the segmented subject (needs analysis.segmentation). */
+  captionsBehindSubject: z.boolean().default(false),
+  analysis: analysisSchema.default({ segmentation: null, tracks: {} }),
   audio: audioSchema.default({ originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null }),
 });
 export type Project = z.infer<typeof projectSchema>;
@@ -205,6 +278,10 @@ export type Project = z.infer<typeof projectSchema>;
 export function uid(prefix = ""): string {
   const r = (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(16).slice(2) + Date.now().toString(16)).replace(/-/g, "");
   return prefix + r.slice(0, 10);
+}
+
+export function newTextLayer(p: Partial<TextLayer> & { text: string; startMs: number; endMs: number }): TextLayer {
+  return textLayerSchema.parse({ id: uid("t_"), x: 0.5, y: 0.2, fontSize: 90, color: "#ffffff", fontFamily: "Poppins", fontWeight: 700, ...p });
 }
 
 export function newProject(opts: { id: string; name: string; aspect?: AspectId; now?: string }): Project {
@@ -226,6 +303,8 @@ export function newProject(opts: { id: string; name: string; aspect?: AspectId; 
     cuts: [],
     zooms: [],
     textLayers: [],
+    captionsBehindSubject: false,
+    analysis: { segmentation: null, tracks: {} },
     audio: { originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null },
   };
 }

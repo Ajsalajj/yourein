@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Download, Merge, Scissors, Split, Trash2, Up
 import { useEditor } from "@/store/editor";
 import { useTranscription } from "@/store/transcription";
 import * as ops from "@/lib/captions/ops";
+import { groupWithRemotionCaptions } from "@/lib/captions/grouping";
 import { cuesToCaptions, parseSubtitles, toSRT, toVTT } from "@/lib/captions/subtitles";
 import { captionsToOutput } from "@/lib/timeline";
 import type { Caption } from "@/lib/project";
@@ -132,7 +133,8 @@ export function CaptionsPanel() {
         <input ref={file} type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" className="sr-only" aria-label="Import subtitle file" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onImport(f); e.target.value = ""; }} />
         <Tip text="Exports caption timing as it appears in the final video (cuts applied)"><Button size="sm" disabled={!project.captions.length} onClick={() => exportAs("srt")}><Download size={13} /> SRT</Button></Tip>
         <Button size="sm" disabled={!project.captions.length} onClick={() => exportAs("vtt")}><Download size={13} /> VTT</Button>
-        <Tip text="Re-split all words into groups using the template's 'words per group'"><Button size="sm" disabled={!project.captions.length} onClick={() => useEditor.getState().regroup()}>Regroup</Button></Tip>
+        <Tip text="Re-split all words into groups using the template's 'words per group'"><Button size="sm" disabled={!project.captions.length} onClick={() => useEditor.getState().regroup()}>Regroup by words</Button></Tip>
+        <Tip text="Group by time window using @remotion/captions (TikTok-style pages)"><Button size="sm" disabled={!project.captions.length} onClick={() => useEditor.getState().setCaptions((cs) => groupWithRemotionCaptions([...cs].sort((a, b) => a.startMs - b.startMs).flatMap((c) => c.words), 1200))}>Regroup by time</Button></Tip>
       </div>
       <div className="relative">
         <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mute" aria-hidden />

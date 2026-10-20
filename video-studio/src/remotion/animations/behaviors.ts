@@ -1,11 +1,11 @@
 import React, { type CSSProperties } from "react";
 import type { Behavior, GroupCtx, WordCtx } from "./types";
-import { bell, clamp, easeInOutCubic, easeOutBack, easeOutCubic, easeOutExpo, hash, mix, px, readableOn, smoothstep, withAlpha } from "./helpers";
+import { bell, clamp, easeInOutCubic, easeOutBack, easeInCubic, easeOutExpo, hash, mix, px, readableOn, rotateHue, smoothstep, withAlpha } from "./helpers";
 
 const h = React.createElement;
 
 /** Fade the whole block in at the start and out at the end. */
-const groupFade = (c: GroupCtx) => easeOutCubic(c.enter) * (1 - easeInOutCubic(c.exit));
+const groupFade = (c: GroupCtx) => c.ease(c.enter) * (1 - easeInOutCubic(c.exit));
 /** Visibility of a word once spoken, for cumulative reveals. */
 const since = (c: WordCtx) => c.sinceWord;
 
@@ -19,7 +19,7 @@ const wordPop: Behavior = {
     return {
       style: {
         opacity: c.revealed ? Math.min(1, s * 3) * (1 - c.exit) : 0,
-        transform: `scale(${mix(0.35, 1, s) * (act ? 1 + 0.07 * c.k : 1)}) translateY(${(1 - s) * px(c, 24) * c.k}px)`,
+        transform: `scale(${mix(1 - 0.65 * c.sk, 1, s) * (act ? 1 + 0.07 * c.k * c.sk : 1)}) translateY(${(1 - s) * px(c, 24) * c.k}px)`,
         color: act ? c.style.highlightColor : c.style.color,
       },
     };
@@ -31,11 +31,11 @@ const smoothScale: Behavior = {
   id: "smooth-scale",
   name: "Smooth Scale",
   group: (c) => ({
-    style: { opacity: groupFade(c), transform: `scale(${mix(0.86, 1, easeOutCubic(c.enter)) * mix(1, 0.97, easeInOutCubic(c.exit))})` },
+    style: { opacity: groupFade(c), transform: `scale(${mix(1 - 0.14 * c.sk, 1, c.ease(c.enter)) * mix(1, 0.97, easeInOutCubic(c.exit))})` },
   }),
   word: (c) => {
-    const env = c.state === "active" ? smoothstep(0, 0.22, c.wordP) * (1 - smoothstep(0.78, 1, c.wordP)) : 0;
-    return { style: { transform: `scale(${1 + 0.11 * c.k * env})`, color: mixColor(c, env) } };
+    const env = c.state === "active" ? c.hlP * (1 - smoothstep(0.78, 1, c.wordP)) : 0;
+    return { style: { transform: `scale(${1 + 0.11 * c.k * c.sk * env})`, color: mixColor(c, env) } };
   },
 };
 function mixColor(c: WordCtx, t: number) {
@@ -64,7 +64,7 @@ const elasticBounce: Behavior = {
 const karaoke: Behavior = {
   id: "karaoke",
   name: "Karaoke Highlight",
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
     const p = c.state === "past" ? 1 : c.state === "active" ? c.wordP : 0;
     const edge = p * 100;
@@ -78,9 +78,9 @@ const karaoke: Behavior = {
 const activeGlow: Behavior = {
   id: "active-glow",
   name: "Active Word Glow",
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
-    const env = c.isCurrent ? smoothstep(0, 0.2, c.state === "active" ? c.wordP : 1) : 0;
+    const env = c.isCurrent ? c.hlP : 0;
     const g = env * c.k;
     return {
       style: {
@@ -119,7 +119,7 @@ const slideUp: Behavior = {
   id: "slide-up",
   name: "Slide Up",
   word: (c) => {
-    const p = easeOutCubic(c.sinceWord / c.dur);
+    const p = c.ease(c.sinceWord / c.dur);
     return {
       style: { overflow: "hidden", padding: "0.12em 0.06em", margin: "-0.12em -0.06em", opacity: c.revealed ? 1 - easeInOutCubic(c.exit) : 0 },
       inner: { display: "inline-block", transform: `translateY(${(1 - p) * 115}%)`, color: c.isCurrent ? c.style.highlightColor : c.style.color },
@@ -133,7 +133,7 @@ const slideDown: Behavior = {
   name: "Slide Down",
   word: (c) => {
     const t = c.sinceGroup - c.lineIndex * Math.max(90, c.dur * 0.35);
-    const p = easeOutCubic(t / c.dur);
+    const p = c.ease(t / c.dur);
     const out = Math.pow(clamp(c.exit), 3);
     return {
       style: {
@@ -151,7 +151,7 @@ const blurReveal: Behavior = {
   id: "blur-reveal",
   name: "Blur Reveal",
   word: (c) => {
-    const p = easeOutCubic(c.sinceWord / c.dur);
+    const p = c.ease(c.sinceWord / c.dur);
     return {
       style: {
         opacity: c.revealed ? p * (1 - c.exit) : 0,
@@ -227,7 +227,7 @@ const wordRotation: Behavior = {
 const smoothTracking: Behavior = {
   id: "smooth-tracking",
   name: "Smooth Tracking",
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter * 1.3) * (1 - easeInOutCubic(c.exit)) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter * 1.3) * (1 - easeInOutCubic(c.exit)) } }),
   word: (c) => {
     const e = easeOutExpo(c.enter);
     const spread = (c.index - (c.group.wordCount - 1) / 2) * px(c, 56) * (1 - e) * c.k;
@@ -241,7 +241,7 @@ const cinematicSerif: Behavior = {
   name: "Cinematic Serif",
   group: (c) => {
     const life = clamp(c.sinceGroup / Math.max(1, c.group.endMs - c.group.startMs));
-    const rule = easeOutCubic(c.sinceGroup / (c.dur * 1.6));
+    const rule = c.ease(c.sinceGroup / (c.dur * 1.6));
     const line = (side: "top" | "bottom"): React.ReactNode =>
       h("div", { key: side, style: { height: Math.max(1, px(c, 2)), width: `${rule * 46}%`, background: `linear-gradient(90deg, transparent, ${c.style.highlightColor}, transparent)`, margin: `${px(c, side === "top" ? 0 : 14)}px auto ${px(c, side === "top" ? 14 : 0)}px`, opacity: 1 - c.exit } });
     return { style: { transform: `scale(${mix(1, 1.045, life)})`, opacity: 1 - easeInOutCubic(c.exit) }, before: line("top"), after: line("bottom") };
@@ -257,14 +257,14 @@ const minimalEditorial: Behavior = {
   id: "minimal-editorial",
   name: "Minimal Editorial",
   group: (c) => {
-    const grow = easeOutCubic(c.sinceGroup / (c.dur * 1.2));
+    const grow = c.ease(c.sinceGroup / (c.dur * 1.2));
     return {
       style: { opacity: 1 - easeInOutCubic(c.exit), paddingLeft: px(c, 28), position: "relative" },
       before: h("div", { key: "bar", style: { position: "absolute", left: 0, top: 0, bottom: 0, width: Math.max(2, px(c, 5)), background: c.style.highlightColor, transformOrigin: "top", transform: `scaleY(${grow})` } }),
     };
   },
   word: (c) => {
-    const p = easeOutCubic(c.sinceWord / c.dur);
+    const p = c.ease(c.sinceWord / c.dur);
     return { style: { clipPath: `inset(-10% ${(1 - (c.revealed ? p : 0)) * 100}% -10% 0)`, opacity: c.revealed ? 1 : 0, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
   },
 };
@@ -275,12 +275,12 @@ const boldCreator: Behavior = {
   name: "Bold Creator",
   group: (c) => ({ style: { opacity: c.sinceGroup >= 0 ? 1 - (c.exit > 0.6 ? 1 : 0) : 0, transform: `scale(${mix(0.9, 1, easeOutBack(c.sinceGroup / 140))})` } }),
   word: (c) => {
-    const s = c.spr(c.sinceWord, { damping: 8, stiffness: 300, mass: 0.5, durMs: 300 });
+    const s = c.spr(c.sinceWord, { damping: 8, stiffness: 300, mass: 0.5, durMs: c.style.highlightMs ?? 300 });
     const act = c.isCurrent;
     return {
       style: {
         color: act ? c.style.highlightColor : c.style.color,
-        transform: act ? `scale(${mix(1, 1.18, s) * (1 + (c.k - 1) * 0.05)}) rotate(${mix(0, -3.5, s)}deg) translateY(${-s * px(c, 8)}px)` : "scale(1)",
+        transform: act ? `scale(${(1 + 0.18 * s * c.sk) * (1 + (c.k - 1) * 0.05)}) rotate(${mix(0, -3.5, s)}deg) translateY(${-s * px(c, 8)}px)` : "scale(1)",
         zIndex: act ? 2 : 1,
       },
     };
@@ -313,7 +313,7 @@ const neonPulse: Behavior = {
 const gradientHighlight: Behavior = {
   id: "gradient-highlight",
   name: "Gradient Highlight",
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
     if (!c.isCurrent) return { style: { color: c.style.color } };
     const pos = mix(0, 100, easeInOutCubic(c.state === "active" ? c.wordP : 1));
@@ -333,7 +333,7 @@ const backgroundPill: Behavior = {
   id: "background-pill",
   name: "Background Pill",
   wordPadEm: 0.84,
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
     const act = c.isCurrent;
     const s = c.spr(c.sinceWord, { damping: 12, stiffness: 240, mass: 0.6, durMs: 320 });
@@ -351,7 +351,7 @@ const backgroundPill: Behavior = {
 const animatedUnderline: Behavior = {
   id: "animated-underline",
   name: "Animated Underline",
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
     const p = c.state === "past" ? 1 : c.state === "active" ? easeInOutCubic(c.wordP) : 0;
     return {
@@ -366,7 +366,7 @@ const highlightSweep: Behavior = {
   id: "highlight-sweep",
   name: "Highlight Sweep",
   wordPadEm: 0.32,
-  group: (c) => ({ style: { opacity: easeOutCubic(c.enter) * (1 - c.exit) } }),
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
   word: (c) => {
     const p = c.state === "past" ? 1 : c.state === "active" ? easeInOutCubic(c.wordP) : 0;
     return {
@@ -442,8 +442,8 @@ const softShadowPop: Behavior = {
   id: "soft-shadow-pop",
   name: "Soft Shadow Pop",
   word: (c) => {
-    const p = easeOutCubic(c.sinceWord / c.dur);
-    const lift = c.isCurrent ? easeOutCubic(c.sinceWord / 240) : 0;
+    const p = c.ease(c.sinceWord / c.dur);
+    const lift = c.isCurrent ? c.ease(c.sinceWord / 240) : 0;
     return {
       style: {
         opacity: c.revealed ? p * (1 - c.exit) : 0,
@@ -484,7 +484,7 @@ const luxuryTitle: Behavior = {
   name: "Luxury Title",
   unit: "char",
   group: (c) => {
-    const e = easeOutCubic(c.sinceGroup / (c.dur * 2));
+    const e = c.ease(c.sinceGroup / (c.dur * 2));
     const rule = (k: string) => h("div", { key: k, style: { height: Math.max(1, px(c, 1.5)), width: `${e * 60}%`, margin: `${px(c, 16)}px auto`, background: `linear-gradient(90deg, transparent, ${c.style.highlightColor}, transparent)`, opacity: 1 - c.exit } });
     return { style: { opacity: 1 - easeInOutCubic(c.exit) }, before: rule("a"), after: rule("b") };
   },
@@ -492,7 +492,7 @@ const luxuryTitle: Behavior = {
   // Gold gradient is painted per glyph: background-clip:text does not reach children that carry their own transform/opacity.
   char: (c, _ch, i) => {
     const t = c.sinceGroup - (c.index * 4 + i) * 38;
-    const p = easeOutCubic(t / (c.dur * 1.2));
+    const p = c.ease(t / (c.dur * 1.2));
     return {
       display: "inline-block",
       opacity: p,
@@ -547,9 +547,130 @@ const impactCaption: Behavior = {
         top: 0,
         textAlign: "center",
         opacity: c.isCurrent ? 1 - c.exit : 0,
-        transform: `translate(${shakeX}px, ${shakeY}px) scale(${mix(2.3, 1, p)})`,
+        transform: `translate(${shakeX}px, ${shakeY}px) scale(${1 + 1.3 * c.sk * (1 - p)})`,
         color: flash ? "#ffffff" : c.style.highlightColor,
         filter: flash ? "brightness(1.6)" : undefined,
+      },
+    };
+  },
+};
+
+
+/* 31 ───────────────────────── Animated Color Switching */
+const colorSwitch: Behavior = {
+  id: "color-switch",
+  name: "Animated Color Switching",
+  group: (c) => ({ style: { opacity: c.ease(c.enter) * (1 - c.exit) } }),
+  word: (c) => {
+    const pal = [c.style.highlightColor, rotateHue(c.style.highlightColor, 140), rotateHue(c.style.highlightColor, 250)];
+    const tick = c.spr(c.sinceWord, { damping: 9, stiffness: 320, mass: 0.5, durMs: 280 });
+    const flash = c.sinceWord >= 0 && c.sinceWord < 80;
+    return {
+      style: {
+        color: !c.revealed ? withAlpha("#ffffff", 0.55) : flash ? "#ffffff" : pal[c.index % pal.length],
+        transform: `scale(${1 + 0.14 * c.k * c.sk * Math.max(0, 1 - Math.abs(tick - 1) * 2) * (c.isCurrent ? 1 : 0)})`,
+      },
+    };
+  },
+};
+
+/* 32 ───────────────────────── Moving Background Box (one box slides between words) */
+const slidingBox: Behavior = {
+  id: "sliding-box",
+  name: "Moving Background Box",
+  wordPadEm: 0.5,
+  group: (c) => {
+    const i = Math.max(0, c.currentIndex);
+    const a = c.geom.rects[Math.max(0, i - 1)];
+    const b = c.geom.rects[i];
+    if (!a || !b) return {};
+    const t = i === 0 ? 1 : c.spr(c.ms - c.currentStartMs, { damping: 17, stiffness: 240, mass: 0.7, durMs: 320 });
+    const pop = c.currentIndex < 0 ? 0 : i === 0 ? c.spr(c.ms - c.currentStartMs, { damping: 12, stiffness: 260, durMs: 280 }) : 1;
+    const r = { x: mix(a.x, b.x, t), y: mix(a.y, b.y, t), w: mix(a.w, b.w, t), h: mix(a.h, b.h, t) };
+    return {
+      style: { position: "relative", opacity: c.ease(c.enter) * (1 - c.exit) },
+      before: h("div", { key: "box", style: { position: "absolute", left: r.x, top: r.y, width: r.w, height: r.h, borderRadius: px(c, 14), background: c.style.highlightColor, transform: `scale(${mix(0.6, 1, Math.min(1.1, pop))})`, opacity: c.currentIndex < 0 ? 0 : 1, boxShadow: `0 ${px(c, 8)}px ${px(c, 22)}px ${withAlpha(c.style.highlightColor, 0.4)}` } }),
+    };
+  },
+  word: (c) => ({ style: { padding: "0 0.25em", color: c.isCurrent ? readableOn(c.style.highlightColor) : c.style.color, textShadow: c.isCurrent ? "none" : undefined, WebkitTextStroke: c.isCurrent ? "0" : undefined, zIndex: 1 } }),
+};
+
+/* 33 ───────────────────────── Squash & Stretch (volume-preserving fall, landing, settle) */
+const squashStretch: Behavior = {
+  id: "squash-stretch",
+  name: "Text Squash & Stretch",
+  word: (c) => {
+    const t = c.sinceWord;
+    const fallMs = Math.max(120, c.dur * 0.5);
+    const fall = clamp(t / fallMs);
+    const land = c.spr(t - fallMs, { damping: 7, stiffness: 320, mass: 0.5, durMs: 420 });
+    let sy: number;
+    if (t < fallMs) sy = 1 + 0.45 * easeInCubic(fall);
+    else sy = mix(0.62, 1, land);
+    sy = 1 + (sy - 1) * c.sk;
+    const sx = 1 / Math.max(0.4, sy);
+    const y = t < fallMs ? -(1 - easeInCubic(fall)) * px(c, 170) * c.k : 0;
+    return {
+      style: { opacity: c.revealed ? 1 - c.exit : 0, transform: `translateY(${y}px) scale(${sx}, ${sy})`, transformOrigin: "50% 100%", color: c.isCurrent ? c.style.highlightColor : c.style.color },
+    };
+  },
+};
+
+/* 34 ───────────────────────── Bouncy Multiline (each LINE bounces in, letters ride a decaying wave) */
+const bouncyLines: Behavior = {
+  id: "bouncy-lines",
+  name: "Bouncy Multiline",
+  word: (c) => {
+    const lineT = c.sinceGroup - c.lineIndex * 150;
+    const s = c.spr(lineT, { damping: 6, stiffness: 170, mass: 0.9, durMs: Math.max(c.dur, 520) });
+    const wave = Math.sin((c.frame / c.fps) * 9 - c.indexInLine * 0.9) * px(c, 5) * c.k * Math.exp(-Math.max(0, lineT) / 700);
+    return {
+      style: { opacity: lineT > 0 ? 1 - c.exit : 0, transform: `translateY(${(1 - s) * px(c, 130) * c.k + wave}px) scale(${1 + (s - 1) * 0.25 * c.sk})`, color: c.isCurrent ? c.style.highlightColor : c.style.color },
+    };
+  },
+};
+
+/* 35 ───────────────────────── Yellow Active-Word Emphasis (three reading states) */
+const yellowEmphasis: Behavior = {
+  id: "yellow-emphasis",
+  name: "Active-Word Emphasis",
+  group: (c) => ({ style: { opacity: clamp(c.sinceGroup / 90) * (1 - c.exit > 0.5 ? 1 : 0) } }),
+  word: (c) => {
+    const s = c.spr(c.sinceWord, { damping: 13, stiffness: 420, mass: 0.5, durMs: c.style.highlightMs ?? 240 });
+    const cur = c.isCurrent;
+    return {
+      style: {
+        color: cur ? c.style.highlightColor : c.style.color,
+        opacity: c.revealed ? 1 : 0.5,
+        transform: cur ? `scale(${1 + 0.12 * c.sk * Math.min(s, 1.15)})` : "scale(1)",
+        textShadow: cur ? `0 ${px(c, 6)}px ${px(c, 18)}px ${withAlpha(c.style.highlightColor, 0.55)}` : undefined,
+      },
+    };
+  },
+};
+
+/* 36 ───────────────────────── Bold Cinematic (slow push, staggered focus-in, light streak) */
+const boldCinematic: Behavior = {
+  id: "bold-cinematic",
+  name: "Bold Cinematic",
+  group: (c) => {
+    const life = clamp(c.sinceGroup / Math.max(1, c.group.endMs - c.group.startMs));
+    const sweep = c.ease(c.sinceGroup / 900);
+    const w = c.geom.width;
+    return {
+      style: { position: "relative", transform: `scale(${mix(1, 1 + 0.06 * c.sk, life)})`, opacity: 1 - easeInOutCubic(c.exit) },
+      before: h("div", { key: "streak", style: { position: "absolute", top: "50%", left: mix(-w * 0.4, w, sweep), width: w * 0.4, height: Math.max(2, px(c, 3)), background: "linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent)", opacity: Math.sin(Math.PI * clamp(sweep)) * 0.8, filter: `blur(${px(c, 1)}px)`, pointerEvents: "none" } }),
+    };
+  },
+  word: (c) => {
+    const p = c.ease(c.sinceWord / (c.dur * 1.3));
+    return {
+      style: {
+        opacity: c.revealed ? p : 0,
+        transform: `scale(${1 + 0.14 * (1 - p) * c.sk})`,
+        filter: `blur(${(1 - p) * px(c, 5)}px)`,
+        textShadow: c.isCurrent ? `0 0 ${px(c, 26)}px ${withAlpha(c.style.highlightColor, 0.75)}, 0 ${px(c, 4)}px ${px(c, 12)}px rgba(0,0,0,.6)` : `0 ${px(c, 4)}px ${px(c, 12)}px rgba(0,0,0,.6)`,
+        color: c.isCurrent ? c.style.highlightColor : c.style.color,
       },
     };
   },
@@ -560,6 +681,7 @@ export const BEHAVIORS: Behavior[] = [
   typewriter, charStagger, wordRotation, smoothTracking, cinematicSerif, minimalEditorial, boldCreator, neonPulse,
   gradientHighlight, backgroundPill, animatedUnderline, highlightSweep, verticalStack, retroSubtitle, comicBounce,
   softShadowPop, glitchAccent, luxuryTitle, kineticMultiLine, impactCaption,
+  colorSwitch, slidingBox, squashStretch, bouncyLines, yellowEmphasis, boldCinematic,
 ];
 
 export const BEHAVIOR_MAP: Record<string, Behavior> = Object.fromEntries(BEHAVIORS.map((b) => [b.id, b]));

@@ -58,10 +58,10 @@ export function RightPanel() {
         <Slider label="Size" value={st.fontSize} min={24} max={200} onChange={(v) => setStyle({ fontSize: v })} format={(v) => `${v}px`} />
         <Slider label="Letter spacing" value={st.letterSpacing} min={-0.05} max={0.4} step={0.01} onChange={(v) => setStyle({ letterSpacing: v })} format={(v) => `${v.toFixed(2)} em`} />
         <Slider label="Line height" value={st.lineHeight} min={0.8} max={1.8} step={0.05} onChange={(v) => setStyle({ lineHeight: v })} format={(v) => v.toFixed(2)} />
-        <Switch label="UPPERCASE (Latin text)" checked={st.uppercase} onChange={(v) => setStyle({ uppercase: v })} />
+        <Field label="Text case"><select className="field" value={st.textTransform ?? (st.uppercase ? "uppercase" : "none")} onChange={(e) => setStyle({ textTransform: e.target.value as NonNullable<StyleProps["textTransform"]> })}><option value="none">As spoken</option><option value="uppercase">UPPERCASE</option><option value="lowercase">lowercase</option><option value="capitalize">Capitalize Each Word</option></select></Field>
         <Switch label="Italic" checked={st.italic} onChange={(v) => setStyle({ italic: v })} />
         <Field label="Alignment"><select className="field" value={st.align} onChange={(e) => setStyle({ align: e.target.value as StyleProps["align"] })}><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></Field>
-        <p className="text-[10px] leading-snug text-mute">Letter spacing and uppercase are skipped automatically for Malayalam, Hindi and Tamil, where they would break joined letters.</p>
+        <p className="text-[10px] leading-snug text-mute">Letter spacing and text case are skipped automatically for Malayalam, Hindi and Tamil, where they would break joined letters.</p>
       </Section>
 
       <Section title="Colours & outline">
@@ -79,8 +79,21 @@ export function RightPanel() {
       </Section>
 
       <Section title="Animation">
-        <Slider label="Duration" value={st.animationDurationMs} min={80} max={1500} step={20} onChange={(v) => setStyle({ animationDurationMs: v })} format={(v) => `${v} ms`} />
-        <Slider label="Intensity" value={st.intensity} min={0} max={2} step={0.05} onChange={(v) => setStyle({ intensity: v })} format={(v) => `${Math.round(v * 100)}%`} />
+        <Slider label="Enter duration" value={st.animationDurationMs} min={80} max={1500} step={20} onChange={(v) => setStyle({ animationDurationMs: v })} format={(v) => `${v} ms`} />
+        <Slider label="Exit duration" value={st.exitMs ?? 200} min={0} max={1000} step={20} onChange={(v) => setStyle({ exitMs: v })} format={(v) => `${v} ms${st.exitMs === undefined ? " (auto)" : ""}`} />
+        <Slider label="Overall intensity" value={st.intensity} min={0} max={2} step={0.05} onChange={(v) => setStyle({ intensity: v })} format={(v) => `${Math.round(v * 100)}%`} />
+        <Slider label="Scale intensity" value={st.scaleIntensity ?? 1} min={0} max={2} step={0.05} onChange={(v) => setStyle({ scaleIntensity: v })} format={(v) => `${Math.round(v * 100)}%`} />
+        <Slider label="Animation offset" value={st.offsetMs ?? 0} min={-300} max={300} step={10} onChange={(v) => setStyle({ offsetMs: v })} format={(v) => `${v > 0 ? "+" : ""}${v} ms${v < 0 ? " (leads speech)" : ""}`} />
+        <Slider label="Highlight duration" value={st.highlightMs ?? 200} min={0} max={800} step={20} onChange={(v) => setStyle({ highlightMs: v })} format={(v) => `${v} ms`} />
+        <Field label="Transition easing"><select className="field" value={st.easing ?? "cubic"} onChange={(e) => setStyle({ easing: e.target.value as NonNullable<StyleProps["easing"]> })}><option value="cubic">Ease-out cubic</option><option value="expo">Ease-out expo (snappy)</option><option value="sine">Ease-out sine (gentle)</option><option value="back">Ease-out back (overshoot)</option><option value="linear">Linear</option></select></Field>
+        <Switch label="Custom spring" checked={st.springStiffness !== undefined} onChange={(on) => setStyle(on ? { springStiffness: 140, springDamping: 12 } : { springStiffness: undefined, springDamping: undefined })} />
+        {st.springStiffness !== undefined ? (
+          <>
+            <Slider label="Spring stiffness" value={st.springStiffness} min={20} max={600} step={10} onChange={(v) => setStyle({ springStiffness: v })} />
+            <Slider label="Spring damping" value={st.springDamping ?? 12} min={2} max={60} step={1} onChange={(v) => setStyle({ springDamping: v })} />
+          </>
+        ) : <p className="text-[10px] text-mute">Springs use each preset’s designed stiffness/damping. Turn on to override all of them.</p>}
+        <Button size="sm" variant="ghost" onClick={() => setStyle({ exitMs: undefined, scaleIntensity: undefined, offsetMs: undefined, highlightMs: undefined, easing: undefined, springStiffness: undefined, springDamping: undefined })}>Reset motion to preset</Button>
       </Section>
 
       <Section title="Layout">

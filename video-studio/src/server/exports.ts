@@ -81,6 +81,12 @@ export function mediaUrls(project: Project): Record<string, string> {
   return Object.fromEntries(Object.values(project.assets).map((a) => [a.id, `${config.internalBaseUrl}/api/media/${project.id}/${a.id}${q}`]));
 }
 
+export function maskSource(project: Project) {
+  const seg = project.analysis.segmentation;
+  if (!seg) return null;
+  return { base: `${config.internalBaseUrl}/api/projects/${project.id}/masks/${seg.id}`, query: config.accessToken ? `?token=${encodeURIComponent(config.accessToken)}` : "", fps: seg.fps, frames: seg.frames };
+}
+
 export async function startExport(projectId: string, opts: { quality: "standard" | "high" }): Promise<ExportJob> {
   const project = await readProject(projectId);
   const src = project.sourceAssetId ? project.assets[project.sourceAssetId] : null;
@@ -96,7 +102,7 @@ export async function startExport(projectId: string, opts: { quality: "standard"
   await fs.writeFile(
     path.join(dir, "input.json"),
     JSON.stringify({
-      props: { project, mediaUrls: mediaUrls(project) },
+      props: { project, mediaUrls: mediaUrls(project), mask: maskSource(project) },
       options: { crf: opts.quality === "high" ? 16 : 20, browserExecutable: config.browserExecutable || undefined, gl: config.renderGl, concurrency: config.renderConcurrency },
       expected: { width: meta.width, height: meta.height, fps: meta.fps, durationInFrames: meta.durationInFrames, hasAudio: src.hasAudio || !!project.audio.music },
       ffprobe: config.ffprobe,

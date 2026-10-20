@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { groupWords, regroupCaptions } from "../src/lib/captions/grouping";
+import { groupWords, regroupCaptions, groupWithRemotionCaptions, toRemotionCaptions } from "../src/lib/captions/grouping";
 import * as ops from "../src/lib/captions/ops";
 import { cuesToCaptions, formatTimestamp, parseSubtitles, parseTimestamp, toSRT, toVTT } from "../src/lib/captions/subtitles";
 import { balanceLines, graphemes, graphemeCount, isComplexScript, scriptOf } from "../src/lib/captions/text";
@@ -186,4 +186,17 @@ test("line balancing: honours max words/lines and keeps all words in order", () 
 test("line balancing avoids a lone orphan word", () => {
   const lines = balanceLines("the quick brown fox jumps".split(" "), 4, 2);
   assert.ok(lines.every((l) => l.length >= 2), JSON.stringify(lines));
+});
+
+test("@remotion/captions: words convert to Remotion captions and group by time window", () => {
+  const words = mk("one two three four five six seven eight".split(" "), 0, 500);
+  const rc = toRemotionCaptions(words);
+  assert.equal(rc.length, 8);
+  assert.ok(rc.every((c) => c.text.startsWith(" ") && c.endMs > c.startMs));
+  const pages = groupWithRemotionCaptions(words, 1200);
+  assert.ok(pages.length >= 2 && pages.length < 8);
+  assert.equal(pages.flatMap((p) => p.words).length, 8, "no word lost or duplicated");
+  assert.deepEqual(pages.flatMap((p) => p.words.map((w) => w.text)), words.map((w) => w.text));
+  assert.ok(groupWithRemotionCaptions(words, 100).length > groupWithRemotionCaptions(words, 3000).length);
+  assert.deepEqual(groupWithRemotionCaptions([], 1000), []);
 });

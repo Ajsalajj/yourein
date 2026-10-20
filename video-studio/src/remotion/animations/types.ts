@@ -23,6 +23,12 @@ export interface BaseCtx {
   enter: number;
   /** 0..1 progress of the group exit (0 until the exit window starts) */
   exit: number;
+  /** user-selected easing for the preset's "ease-out" moves, t in 0..1 */
+  ease: (t: number) => number;
+  /** scale-motion multiplier (style.scaleIntensity, default 1) */
+  sk: number;
+  /** exit duration in ms */
+  exitMs: number;
   /** spring value (0..~1.2) started `sinceMs` ago, stretched to `durMs` (defaults to dur). */
   spr: (sinceMs: number, opts?: { damping?: number; stiffness?: number; mass?: number; durMs?: number }) => number;
 }
@@ -40,6 +46,10 @@ export interface WordCtx extends BaseCtx {
   lineIndex: number;
   indexInLine: number;
   lineCount: number;
+  /** 0..1 ramp of the active-word highlight since the word started (style.highlightMs) */
+  hlP: number;
+  /** geometry of every word relative to the caption block (for behaviours that draw between words) */
+  geom: BlockGeometry;
   /** word was the most recently started word (stays "current" through pauses) */
   isCurrent: boolean;
   /** how many words of this group have started so far (0..count) */
@@ -64,8 +74,15 @@ export interface WordVisual {
   hidden?: boolean;
 }
 
+export interface WordRect { x: number; y: number; w: number; h: number }
+export interface BlockGeometry { rects: WordRect[]; width: number; height: number }
+
 export interface GroupCtx extends BaseCtx {
   lineCount: number;
+  geom: BlockGeometry;
+  /** index of the most recently started word and when it started (same clock as word animation) */
+  currentIndex: number;
+  currentStartMs: number;
 }
 
 export interface GroupVisual {

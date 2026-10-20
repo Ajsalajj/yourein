@@ -17,7 +17,7 @@ export const PUT = route<P>(async (req, { id }) => {
     if (!known || known.storageKey !== a.storageKey) throw new HttpError(400, `Unknown asset ${aid}`);
   }
   if (incoming.sourceAssetId && !current.assets[incoming.sourceAssetId]) throw new HttpError(400, "Unknown source asset");
-  const saved = await writeProject({ ...incoming, assets: current.assets, createdAt: current.createdAt, transcript: current.transcript ?? incoming.transcript });
+  const saved = await writeProject({ ...incoming, assets: current.assets, createdAt: current.createdAt, transcript: current.transcript ?? incoming.transcript, analysis: current.analysis });
   return { project: saved };
 });
 

@@ -71,4 +71,4 @@ Servers bind to 127.0.0.1. Uploads are streamed to disk with a size cap, checked
 
 ## Licences
 
-Remotion is free for individuals, non-profits and for-profit companies of up to 3 people; larger companies need a [Remotion company licence](https://www.remotion.dev/license). Fonts: SIL OFL 1.1 (Fontsource). faster-whisper MIT, pocketsphinx BSD, FastAPI MIT, Next.js MIT, Zustand MIT. FFmpeg/Chromium are used as external programs (note FFmpeg's x264 encoder is GPL - relevant only if you redistribute binaries).
+Remotion is free for individuals, non-profits and for-profit companies of up to 3 people; larger companies need a [Remotion company licence](https://www.remotion.dev/license). Fonts: SIL OFL 1.1 except Permanent Marker (Apache-2.0), shipped unmodified via Fontsource - full table in [docs/FONTS.md](docs/FONTS.md). MediaPipe selfie-segmentation model: Apache-2.0. faster-whisper MIT, pocketsphinx BSD, FastAPI MIT, Next.js MIT, Zustand MIT. FFmpeg/Chromium are used as external programs (note FFmpeg's x264 encoder is GPL - relevant only if you redistribute binaries).

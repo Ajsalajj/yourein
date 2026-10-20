@@ -1,19 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { continueRender, delayRender, useCurrentFrame, useVideoConfig } from "remotion";
+import { continueRender, delayRender, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import { measureText } from "@remotion/layout-utils";
 import type { CaptionStyleState, StyleProps } from "../lib/project";
 import type { OutCaption } from "../lib/timeline";
 import { balanceLines, graphemes, isComplexScript } from "../lib/captions/text";
 import { BEHAVIOR_MAP } from "./animations/behaviors";
-import { clamp, easeOutCubic, makeSpring } from "./animations/helpers";
-import type { BaseCtx, Behavior, WordCtx, WordVisual } from "./animations/types";
+import { clamp, makeEase, makeSpring } from "./animations/helpers";
+import type { BaseCtx, BlockGeometry, Behavior, WordCtx, WordVisual } from "./animations/types";
 import { getTemplate, resolveStyle } from "./templates/registry";
+import { applyTransform } from "./textTransform";
 import { primaryFamily } from "./fontStacks";
 import "./fonts";
 
 /* ───────────── fonts ───────────── */
 const loaded = new Set<string>();
-function useFontsReady(family: string, weight: number, text: string) {
+export function useFontsReady(family: string, weight: number, text: string) {
   const key = `${family}|${weight}|${isComplexScript(text) ? "indic" : "latin"}`;
   const [ready, setReady] = useState(() => loaded.has(key) || typeof document === "undefined");
   const [handle] = useState(() => (loaded.has(key) || typeof document === "undefined" ? null : delayRender(`fonts ${key}`, { timeoutInMilliseconds: 25000 })));
@@ -43,18 +44,20 @@ interface Layout {
   lines: number[][];
   fontPx: number;
   maxWidth: number;
+  geom: BlockGeometry;
 }
 
 function computeLayout(words: string[], style: StyleProps, behavior: Behavior, width: number, height: number, scale: number, fontsReady: boolean): Layout {
   const layoutKind = behavior.layout ?? "flow";
   const maxWidth = (width > height ? 0.72 : 0.88) * width;
   const basePx = style.fontSize * scale;
-  const texts = words.map((w) => (style.uppercase && !isComplexScript(w) ? w.toLocaleUpperCase() : w));
+  const texts = words.map((w) => applyTransform(w, style));
   let lines: number[][];
   if (layoutKind === "stack" || layoutKind === "single") lines = words.map((_, i) => [i]);
   else lines = balanceLines(words, style.maxWordsPerLine, style.maxLines);
 
   let fit = 1;
+  let widths: number[] | null = null;
   if (fontsReady && typeof document !== "undefined") {
     try {
       const family = primaryFamily(style.fontFamily);
@@ -64,6 +67,7 @@ function computeLayout(words: string[], style: StyleProps, behavior: Behavior, w
       const pad = (behavior.wordPadEm ?? 0) * basePx;
       let widest = 0;
       if (layoutKind === "flow") {
+        widths = texts.map((t) => m(t, basePx) + pad);
         for (const line of lines) widest = Math.max(widest, line.reduce((acc, i) => acc + m(texts[i], basePx) + pad, 0) + gap * (line.length - 1));
       } else {
         const mult = layoutKind === "kinetic" ? 1.55 : layoutKind === "single" ? 1.15 : 1.1;
@@ -77,7 +81,23 @@ function computeLayout(words: string[], style: StyleProps, behavior: Behavior, w
       /* measurement is best-effort; flex layout still keeps the text on screen */
     }
   }
-  return { lines, fontPx: basePx * fit, maxWidth };
+  const fs = basePx * fit;
+  const gapPx = fs * 0.28;
+  const padPx = (behavior.wordPadEm ?? 0) * fs;
+  // Word rectangles relative to the caption block (used by behaviours that draw between words, e.g. a sliding box).
+  const w = (widths ?? texts.map((t) => graphemes(t).length * fs * 0.56 + padPx)).map((x) => x * fit);
+  const lineW = lines.map((l) => l.reduce((a, i) => a + w[i], 0) + gapPx * Math.max(0, l.length - 1));
+  const blockW = Math.max(1, ...lineW);
+  const lh = fs * style.lineHeight;
+  const rects = new Array(words.length).fill(null).map(() => ({ x: 0, y: 0, w: 0, h: lh }));
+  lines.forEach((l, li) => {
+    let x = style.align === "left" ? 0 : style.align === "right" ? blockW - lineW[li] : (blockW - lineW[li]) / 2;
+    l.forEach((i) => {
+      rects[i] = { x, y: li * lh, w: w[i], h: lh };
+      x += w[i] + gapPx;
+    });
+  });
+  return { lines, fontPx: fs, maxWidth, geom: { rects, width: blockW, height: lh * lines.length } };
 }
 
 /* ───────────── rendering ───────────── */
@@ -86,12 +106,14 @@ const JUSTIFY = { left: "flex-start", center: "center", right: "flex-end" } as c
 interface GroupProps {
   caption: OutCaption;
   styleState: CaptionStyleState;
+  /** first frame of the enclosing <Sequence>; frames inside it are local */
+  fromFrame: number;
 }
 
-const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
-  const frame = useCurrentFrame();
+const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState, fromFrame }) => {
+  const frame = useCurrentFrame() + fromFrame; // global frame: all timing is expressed on the video clock
   const { fps, width, height } = useVideoConfig();
-  const ms = (frame * 1000) / fps;
+  const realMs = (frame * 1000) / fps;
   const { style, template } = resolveStyle(styleState, caption.styleId);
   const behavior = BEHAVIOR_MAP[caption.animationId ?? template.animationId] ?? BEHAVIOR_MAP["word-pop"];
   const pos = caption.position ?? styleState.position;
@@ -105,7 +127,9 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
   const k = style.intensity;
   const gStart = caption.startMs;
   const gEnd = caption.endMs;
-  const exitMs = Math.min(200, (gEnd - gStart) * 0.25);
+  // style.offsetMs shifts the animation clock against the spoken timestamps; visibility and exit stay on real time.
+  const ms = realMs - (style.offsetMs ?? 0);
+  const exitMs = Math.max(0, style.exitMs ?? Math.min(200, (gEnd - gStart) * 0.25));
   const base: BaseCtx = {
     frame,
     fps,
@@ -114,12 +138,15 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
     scale,
     dur,
     k,
+    ease: makeEase(style.easing),
+    sk: style.scaleIntensity ?? 1,
+    exitMs,
     group: { startMs: gStart, endMs: gEnd, wordCount: caption.words.length },
     sinceGroup: ms - gStart,
-    untilGroupEnd: gEnd - ms,
+    untilGroupEnd: gEnd - realMs,
     enter: clamp((ms - gStart) / dur),
-    exit: exitMs > 0 ? clamp((ms - (gEnd - exitMs)) / exitMs) : 0,
-    spr: makeSpring(frame, fps, dur),
+    exit: exitMs > 0 ? clamp((realMs - (gEnd - exitMs)) / exitMs) : 0,
+    spr: makeSpring(frame, fps, dur, { stiffness: style.springStiffness, damping: style.springDamping }),
   };
 
   const lengths = caption.words.map((w) => graphemes(w.text).length);
@@ -150,13 +177,15 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
       indexInLine: where.indexInLine,
       lineCount: layout.lines.length,
       isCurrent: startedCount > 0 && i === currentIdx,
+      hlP: clamp((ms - w.startMs) / Math.max(1, style.highlightMs ?? 200)),
+      geom: layout.geom,
       startedCount,
       currentStartMs,
       emphasis: maxLen === minLen ? 0.5 : (lengths[i] - minLen) / (maxLen - minLen),
     };
   };
 
-  const groupVisual = behavior.group?.({ ...base, lineCount: layout.lines.length }) ?? {};
+  const groupVisual = behavior.group?.({ ...base, lineCount: layout.lines.length, geom: layout.geom, currentIndex: startedCount > 0 ? currentIdx : -1, currentStartMs }) ?? {};
   const layoutKind = behavior.layout ?? "flow";
   const fs = layout.fontPx;
   const gap = fs * 0.28;
@@ -183,7 +212,7 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
     const ctx = wordCtx(i);
     const vis: WordVisual = behavior.word?.(ctx) ?? {};
     if (vis.hidden) return null;
-    const text = style.uppercase && !isComplexScript(w.text) ? w.text.toLocaleUpperCase() : w.text;
+    const text = applyTransform(w.text, style);
     const parts =
       behavior.unit === "char" && behavior.char
         ? graphemes(text).map((ch, ci, arr) => (
@@ -278,12 +307,21 @@ const CaptionGroup: React.FC<GroupProps> = ({ caption, styleState }) => {
 };
 
 export const CaptionLayer: React.FC<{ captions: OutCaption[]; styleState: CaptionStyleState }> = ({ captions, styleState }) => {
-  const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const ms = (frame * 1000) / fps;
-  const active = useMemo(() => captions, [captions]).find((c) => ms >= c.startMs && ms < c.endMs);
-  if (!active) return null;
-  return <CaptionGroup key={active.id} caption={active} styleState={styleState} />;
+  return (
+    <>
+      {captions.map((c) => {
+        const from = Math.max(0, Math.floor((c.startMs * fps) / 1000));
+        const end = Math.max(from + 1, Math.ceil((c.endMs * fps) / 1000));
+        // Each caption lives in its own Sequence: it mounts only while visible, and Remotion owns its lifetime.
+        return (
+          <Sequence key={c.id} from={from} durationInFrames={end - from} layout="none" name={`caption ${c.words[0]?.text ?? ""}`}>
+            <CaptionGroup caption={c} styleState={styleState} fromFrame={from} />
+          </Sequence>
+        );
+      })}
+    </>
+  );
 };
 
-export { easeOutCubic, getTemplate };
+export { getTemplate };
