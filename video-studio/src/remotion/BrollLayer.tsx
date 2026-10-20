@@ -34,7 +34,7 @@ const View: React.FC<{ b: PlacedBroll; src: string; durationMs: number }> = ({ b
   );
 };
 
-export interface MainRef { src: string; maxFrame: number; segments: Segment[] }
+export interface MainRef { src: string; maxFrame: number; segments: Segment[]; rectAt?: (outFrame: number) => { left: number; top: number; width: number; height: number } }
 
 /** Output frame -> source frame of the main clip (linear continuation of the segment that contains f, or of the nearest one). */
 function mainSrcFrame(f: number, segs: Segment[]): number {
@@ -62,10 +62,10 @@ export const BrollLayer: React.FC<{ placed: PlacedBroll[]; mediaUrls: Record<str
               <View b={b} src={src} durationMs={dur} />
             </Sequence>
             {full && b.clip.transitionIn ? (
-              <TransitionStage from={b.from} frames={half} spec={transitionSchemaDefaults(b.clip.id + ":in", b.clip.transitionIn, half, fps)} a={{ src: main.src, startFrame: mainSrcFrame(b.from, main.segments), maxFrame: main.maxFrame }} b={{ src, startFrame: clipIn, maxFrame: brollMax }} />
+              <TransitionStage from={b.from} frames={half} spec={transitionSchemaDefaults(b.clip.id + ":in", b.clip.transitionIn, half, fps)} a={{ src: main.src, startFrame: mainSrcFrame(b.from, main.segments), maxFrame: main.maxFrame, rectAt: main.rectAt }} b={{ src, startFrame: clipIn, maxFrame: brollMax }} />
             ) : null}
             {full && b.clip.transitionOut ? (
-              <TransitionStage from={b.from + b.frames - half} frames={half} spec={transitionSchemaDefaults(b.clip.id + ":out", b.clip.transitionOut, half, fps)} a={{ src, startFrame: clipIn + (b.frames - half), maxFrame: brollMax }} b={{ src: main.src, startFrame: mainSrcFrame(b.from + b.frames - half, main.segments), maxFrame: main.maxFrame }} />
+              <TransitionStage from={b.from + b.frames - half} frames={half} spec={transitionSchemaDefaults(b.clip.id + ":out", b.clip.transitionOut, half, fps)} a={{ src, startFrame: clipIn + (b.frames - half), maxFrame: brollMax }} b={{ src: main.src, startFrame: mainSrcFrame(b.from + b.frames - half, main.segments), maxFrame: main.maxFrame, rectAt: main.rectAt }} />
             ) : null}
           </React.Fragment>
         );

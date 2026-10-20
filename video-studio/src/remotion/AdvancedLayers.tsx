@@ -38,7 +38,7 @@ function useMatte(url: string): string {
   return shown;
 }
 
-const CutoutFrame: React.FC<{ src: string; seg: Segment; mask: MaskSource }> = ({ src, seg, mask }) => {
+const CutoutFrame: React.FC<{ src: string; seg: Segment; mask: MaskSource; rectAt?: (outFrame: number) => { left: number; top: number; width: number; height: number } }> = ({ src, seg, mask, rectAt }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const srcFrame = seg.srcStartFrame + frame;
@@ -46,23 +46,28 @@ const CutoutFrame: React.FC<{ src: string; seg: Segment; mask: MaskSource }> = (
   const url = `${mask.base}/${idx}${mask.query ?? ""}`;
   const shown = useMatte(url);
   const css = `url("${shown}")`;
+  // face-aware camera: the video and its matte are placed with the same rectangle, so the cut-out stays registered to the person
+  const r = rectAt?.(seg.outStartFrame + frame);
+  const geo: React.CSSProperties = r
+    ? { position: "absolute", left: r.left, top: r.top, width: r.width, height: r.height, objectFit: "fill", maxWidth: "none", WebkitMaskSize: `${r.width}px ${r.height}px`, maskSize: `${r.width}px ${r.height}px`, WebkitMaskPosition: "0 0", maskPosition: "0 0" }
+    : { width: "100%", height: "100%", objectFit: "cover", WebkitMaskSize: "cover", maskSize: "cover", WebkitMaskPosition: "center", maskPosition: "center" };
   return (
     <OffthreadVideo
       src={src}
       startFrom={seg.srcStartFrame}
       volume={0}
       transparent
-      style={{ width: "100%", height: "100%", objectFit: "cover", WebkitMaskImage: css, maskImage: css, WebkitMaskSize: "cover", maskSize: "cover", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" }}
+      style={{ WebkitMaskImage: css, maskImage: css, WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", ...geo }}
     />
   );
 };
 
 /** The video again, but only the person (alpha matte from real segmentation), drawn ABOVE any "behind" text. */
-export const SubjectCutout: React.FC<{ src: string; segments: Segment[]; mask: MaskSource }> = ({ src, segments, mask }) => (
+export const SubjectCutout: React.FC<{ src: string; segments: Segment[]; mask: MaskSource; rectAt?: (outFrame: number) => { left: number; top: number; width: number; height: number } }> = ({ src, segments, mask, rectAt }) => (
   <>
     {segments.map((seg) => (
       <Sequence key={`cut-${seg.outStartFrame}`} from={seg.outStartFrame} durationInFrames={seg.frames} name="subject cutout">
-        <CutoutFrame src={src} seg={seg} mask={mask} />
+        <CutoutFrame src={src} seg={seg} mask={mask} rectAt={rectAt} />
       </Sequence>
     ))}
   </>

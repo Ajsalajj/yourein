@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AbsoluteFill, Audio, continueRender, delayRender, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Project } from "../lib/project";
-import { captionsToOutput, frameToMs, zoomsToOutput, type Segment } from "../lib/timeline";
+import { captionsToOutput, frameToMs, outputToSource, zoomsToOutput, type Segment } from "../lib/timeline";
 import { getCompositionMeta, zoomAt, speechActivity } from "../lib/composition";
 import { resolveSfx, sfxActivity, sfxGain } from "../lib/sfx";
+import { buildCameraPath, videoRect } from "../lib/reframe";
 import { BrollLayer } from "./BrollLayer";
 import { activeSplit, fullBrollActive, placeBroll, splitLayout } from "../lib/broll";
 import { TransitionStage } from "./TransitionStage";
@@ -55,19 +56,22 @@ const ProjectFonts: React.FC<{ fonts: Project["fonts"]; mediaUrls: Record<string
   return null;
 };
 
-const VideoSegments: React.FC<{ project: Project; src: string; segments: Segment[]; totalMs: number }> = ({ project, src, segments, totalMs }) => {
+type RectAt = (outFrame: number) => { left: number; top: number; width: number; height: number };
+const SegVideo: React.FC<{ src: string; seg: Segment; volume: (f: number) => number; rectAt?: RectAt }> = ({ src, seg, volume, rectAt }) => {
+  const k = useCurrentFrame();
+  const r = rectAt?.(seg.outStartFrame + k);
+  const style: React.CSSProperties = r ? { position: "absolute", left: r.left, top: r.top, width: r.width, height: r.height, objectFit: "fill", maxWidth: "none" } : { width: "100%", height: "100%", objectFit: "cover" };
+  return <OffthreadVideo src={src} startFrom={seg.srcStartFrame} volume={volume} style={style} />;
+};
+
+const VideoSegments: React.FC<{ project: Project; src: string; segments: Segment[]; totalMs: number; rectAt?: RectAt }> = ({ project, src, segments, totalMs, rectAt }) => {
   const { fps } = useVideoConfig();
   const a = project.audio;
   return (
     <>
       {segments.map((seg) => (
         <Sequence key={`${seg.srcStartMs}-${seg.outStartFrame}`} from={seg.outStartFrame} durationInFrames={seg.frames} name={`clip ${Math.round(seg.srcStartMs)}ms`}>
-          <OffthreadVideo
-            src={src}
-            startFrom={seg.srcStartFrame}
-            volume={(f) => a.originalVolume * fadeFactor(frameToMs(seg.outStartFrame + f, fps), totalMs, a.fadeInMs, a.fadeOutMs)}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <SegVideo src={src} seg={seg} rectAt={rectAt} volume={(f) => a.originalVolume * fadeFactor(frameToMs(seg.outStartFrame + f, fps), totalMs, a.fadeInMs, a.fadeOutMs)} />
         </Sequence>
       ))}
     </>
@@ -84,10 +88,24 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   const placed = useMemo(() => placeTransitions(project.transitions, meta.segments, fps), [project.transitions, meta.segments, fps]);
   const srcAsset = project.sourceAssetId ? project.assets[project.sourceAssetId] : undefined;
   const maxSrcFrame = srcAsset ? Math.max(0, Math.floor((srcAsset.durationMs * fps) / 1000) - 1) : 0;
+  const { width: outW, height: outH } = useVideoConfig();
+  const geom = srcAsset?.width && srcAsset.height ? { srcW: srcAsset.width, srcH: srcAsset.height, outW, outH } : null;
+  const reframeOn = !!geom && project.reframe.mode === "face";
+  const camPath = useMemo(
+    () => (reframeOn && geom ? buildCameraPath(project.analysis.faces?.sourceAssetId === project.sourceAssetId ? project.analysis.faces : null, geom, project.reframe, srcAsset?.durationMs ?? 0) : null),
+    [reframeOn, geom?.srcW, geom?.srcH, geom?.outW, geom?.outH, project.analysis.faces, project.reframe, project.sourceAssetId, srcAsset?.durationMs], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const rectAt: RectAt | undefined = camPath && geom ? (f) => {
+    const t = frameToMs(f, fps);
+    return videoRect(camPath.at(outputToSource(t, meta.segments)), geom, zoomAt(outZooms, t).scale);
+  } : undefined;
+  const baseRect = rectAt;
   const placedBroll = useMemo(() => placeBroll(project.broll, meta.segments, fps), [project.broll, meta.segments, fps]);
   const brollDurations = useMemo(() => Object.fromEntries(project.broll.map((b) => [b.assetId, project.assets[b.assetId]?.durationMs ?? 0])), [project.broll, project.assets]);
   const split = activeSplit(placedBroll, frame, fps);
   const baseBox = split ? splitLayout(split.clip.mode, split.p).base : null;
+  // inside a split-screen panel the speaker is plainly cover-fitted into the smaller box (the camera geometry assumes the full frame)
+  const rectForBase = baseBox ? undefined : baseRect;
   const fullBroll = fullBrollActive(placedBroll, frame);
   const ms = frameToMs(frame, fps);
   const totalMs = frameToMs(durationInFrames, fps);
@@ -112,19 +130,19 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>
       <ProjectFonts fonts={project.fonts} mediaUrls={mediaUrls} />
-      <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%`, ...(baseBox ? { left: `${baseBox.left * 100}%`, top: `${baseBox.top * 100}%`, width: `${baseBox.width * 100}%`, height: `${baseBox.height * 100}%`, overflow: "hidden" } : {}) }}>
-        {src ? <VideoSegments project={project} src={src} segments={meta.segments} totalMs={totalMs} /> : null}
-        {src ? placed.map((t) => <TransitionStage key={t.spec.id} from={t.startFrame} frames={t.frames} spec={t.spec} a={{ src, startFrame: t.aStartSrcFrame, maxFrame: maxSrcFrame }} b={{ src, startFrame: t.bStartSrcFrame, maxFrame: maxSrcFrame }} />) : null}
+      <AbsoluteFill style={{ ...(rectForBase ? {} : { transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }), ...(baseBox ? { left: `${baseBox.left * 100}%`, top: `${baseBox.top * 100}%`, width: `${baseBox.width * 100}%`, height: `${baseBox.height * 100}%`, overflow: "hidden" } : {}) }}>
+        {src ? <VideoSegments project={project} src={src} segments={meta.segments} totalMs={totalMs} rectAt={rectForBase} /> : null}
+        {src ? placed.map((t) => <TransitionStage key={t.spec.id} from={t.startFrame} frames={t.frames} spec={t.spec} a={{ src, startFrame: t.aStartSrcFrame, maxFrame: maxSrcFrame, rectAt: rectForBase }} b={{ src, startFrame: t.bStartSrcFrame, maxFrame: maxSrcFrame, rectAt: rectForBase }} />) : null}
       </AbsoluteFill>
 
-      {src ? <BrollLayer placed={placedBroll} mediaUrls={mediaUrls} durations={brollDurations} main={{ src, maxFrame: maxSrcFrame, segments: meta.segments }} /> : null}
+      {src ? <BrollLayer placed={placedBroll} mediaUrls={mediaUrls} durations={brollDurations} main={{ src, maxFrame: maxSrcFrame, segments: meta.segments, rectAt }} /> : null}
 
       {/* BEHIND the speaker: text first, then the person cut out of the same video on top of it */}
       <TextLayers layers={behindLayers} project={project} segments={meta.segments} />
       {captionsBehind ? captions : null}
       {canCut && !fullBroll && !split && (behindLayers.length > 0 || captionsBehind) ? (
-        <AbsoluteFill style={{ transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
-          <SubjectCutout src={src!} segments={meta.segments} mask={mask!} />
+        <AbsoluteFill style={rectAt ? undefined : { transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
+          <SubjectCutout src={src!} segments={meta.segments} mask={mask!} rectAt={rectAt} />
         </AbsoluteFill>
       ) : null}
 

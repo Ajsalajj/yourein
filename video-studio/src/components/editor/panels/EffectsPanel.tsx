@@ -9,6 +9,49 @@ import { useSeek, useSourceDuration } from "../context";
 import { useState } from "react";
 import { fmtTime } from "@/lib/client";
 
+function FaceFraming() {
+  const project = useEditor((s) => s.project)!;
+  const vision = useVision();
+  const frame = useEditor((s) => s.frame);
+  const seek = useSeek();
+  const duration = useSourceDuration();
+  const faces = project.analysis.faces;
+  const r = project.reframe;
+  const set = useEditor.getState().setReframe;
+  const cover = faces ? Math.round((faces.detected / Math.max(1, faces.total)) * 100) : 0;
+  return (
+    <Section title="Face-aware framing">
+      <p className="text-[11px] leading-relaxed text-mute">Detects the main face (neural detector, 10 samples per second), follows it with a smoothed virtual camera and reframes the video - including 16:9 → 9:16. Without detections the normal centre crop is used.</p>
+      <Button className="w-full" variant={faces ? "secondary" : "primary"} disabled={vision.faces.phase === "running" || !project.sourceAssetId} onClick={() => void vision.analyseFaces(project.id)}>{vision.faces.phase === "running" ? "Detecting…" : faces ? "Detect again" : "Detect faces"}</Button>
+      {vision.faces.phase === "running" ? <div role="status" className="space-y-1"><div className="h-1.5 overflow-hidden rounded-full bg-line"><div className="h-full bg-accent transition-[width]" style={{ width: `${vision.faces.progress * 100}%` }} /></div><p className="text-[11px] text-mute">{vision.faces.stage}</p></div> : null}
+      {vision.faces.phase === "error" ? <p role="alert" className="text-[12px] text-danger">{vision.faces.error}</p> : null}
+      {faces ? <div role="status" className={`rounded-md border p-2 text-[11px] ${cover >= 50 ? "border-ok/30 bg-ok/10 text-ok" : "border-warn/30 bg-warn/10 text-warn"}`}>Face found in {faces.detected} of {faces.total} samples ({cover} %). {cover < 50 ? "Low coverage: the camera falls back to the centre crop where no face is found." : "Gaps are bridged or held, then the camera eases back to centre."}</div> : null}
+      <Switch label="Follow the face" checked={r.mode === "face"} onChange={(v) => set({ mode: v ? "face" : "off" })} />
+      {r.mode === "face" ? (
+        <>
+          <Slider label="Framing tightness" value={Math.round(r.tightness * 100)} min={15} max={60} onChange={(v) => set({ tightness: v / 100 })} format={(v) => `face = ${v}% of frame height`} />
+          <Slider label="Camera smoothness" value={r.smoothMs} min={150} max={2500} step={50} onChange={(v) => set({ smoothMs: v })} format={(v) => `${(v / 1000).toFixed(2)} s`} />
+          <div className="space-y-1.5">
+            <p className="text-[12px] font-medium">Manual overrides</p>
+            <Button size="sm" variant="secondary" onClick={() => { const at = Math.round(seek.sourceNow(frame)); set({ overrides: [...r.overrides, { id: uid("ov_"), startMs: at, endMs: Math.min(duration, at + 2500), x: 0.5, y: 0.45, scale: 1.4 }] }); }}><Plus size={13} /> Add at playhead</Button>
+            {r.overrides.map((o) => (
+              <div key={o.id} className="space-y-1 rounded-md border border-line p-2">
+                <div className="flex items-center justify-between text-[11px]"><span className="tabular-nums">{fmtTime(o.startMs)}–{fmtTime(o.endMs)}</span><Button variant="ghost" size="icon" className="!h-6 !w-6" aria-label="Delete override" onClick={() => set({ overrides: r.overrides.filter((x) => x.id !== o.id) })}><Trash2 size={12} /></Button></div>
+                <Slider label="Focus X" value={Math.round(o.x * 100)} min={0} max={100} onChange={(v) => set({ overrides: r.overrides.map((x) => (x.id === o.id ? { ...x, x: v / 100 } : x)) })} format={(v) => `${v}%`} />
+                <Slider label="Focus Y" value={Math.round(o.y * 100)} min={0} max={100} onChange={(v) => set({ overrides: r.overrides.map((x) => (x.id === o.id ? { ...x, y: v / 100 } : x)) })} format={(v) => `${v}%`} />
+                <Slider label="Zoom" value={Math.round(o.scale * 100)} min={100} max={300} onChange={(v) => set({ overrides: r.overrides.map((x) => (x.id === o.id ? { ...x, scale: v / 100 } : x)) })} format={(v) => `${(v / 100).toFixed(2)}×`} />
+                <Slider label="Length" value={o.endMs - o.startMs} min={500} max={10000} step={100} onChange={(v) => set({ overrides: r.overrides.map((x) => (x.id === o.id ? { ...x, endMs: Math.min(duration, x.startMs + v) } : x)) })} format={(v) => `${(v / 1000).toFixed(1)} s`} />
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] leading-snug text-mute">Smart-zoom ranges zoom around the face when this is on. The behind-the-speaker cut-out follows the same camera. Split-screen B-roll uses a plain crop for the speaker, and text that follows a motion track assumes the default crop (use it with this switch off).</p>
+        </>
+      ) : null}
+      {faces ? <Button size="sm" variant="ghost" onClick={() => void vision.removeFaces(project.id)}>Remove face data</Button> : null}
+    </Section>
+  );
+}
+
 function SubjectAndTracking() {
   const project = useEditor((s) => s.project)!;
   const vision = useVision();
@@ -92,6 +135,7 @@ export function EffectsPanel() {
         </ul>
         {zooms.length ? <Button size="sm" variant="ghost" onClick={() => setZooms(() => [])}>Remove all zooms</Button> : null}
       </Section>
+      <FaceFraming />
       <SubjectAndTracking />
       <div className="space-y-3 p-4">
         <Status kind="partial">Not built: face-aware zoom framing, multi-person separation, per-object (non-person) segmentation, 3D object anchoring on tracked planes (tracking is 2D position + scale).</Status>

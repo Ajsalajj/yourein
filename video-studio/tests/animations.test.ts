@@ -14,12 +14,13 @@ const REQUIRED_OLD = ["word-pop", "smooth-scale", "elastic-bounce", "karaoke", "
 
 const REQUIRED_P1 = [...REQUIRED_OLD, "color-switch", "sliding-box", "squash-stretch", "bouncy-lines", "yellow-emphasis", "bold-cinematic"];
 const REQUIRED_P2 = ["kinetic-center", "kinetic-scatter", "neon-flicker", "punch", "color-lerp", "hop", "shadow-reveal", "flip", "stretch", "zoom-keyword", "float", "glow-flash", "cinematic-headline", "perspective-fly", "editorial-reveal", "depth-push", "extrude-sway", "bold-cut"];
-const REQUIRED = [...REQUIRED_P1, ...REQUIRED_P2];
+const REQUIRED_P3 = ["word-blink", "smooth-fade-in-out", "alphabet-blink", "bottom-up-blurred", "fade-up-out-smooth", "letter-flicker", "type-in-out", "bounce-text", "text-tracking", "random-up", "ramp-up-zoom"];
+const REQUIRED = [...REQUIRED_P1, ...REQUIRED_P2, ...REQUIRED_P3];
 
-test("all 54 animation engines exist exactly once", () => {
-  assert.equal(BEHAVIORS.length, 54);
+test("all 65 animation engines exist exactly once", () => {
+  assert.equal(BEHAVIORS.length, 65);
   assert.deepEqual([...BEHAVIORS.map((b) => b.id)].sort(), [...REQUIRED].sort());
-  assert.equal(new Set(BEHAVIORS.map((b) => b.id)).size, 54);
+  assert.equal(new Set(BEHAVIORS.map((b) => b.id)).size, 65);
 });
 
 test("core 30 list: 30 presets, each template exists, each uses a DIFFERENT animation engine", () => {

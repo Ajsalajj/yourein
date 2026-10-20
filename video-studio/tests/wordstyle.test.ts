@@ -89,5 +89,5 @@ test("phase-2 template families are present, unique and each has a distinct anim
   assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, TEMPLATES.length);
   const fp = TEMPLATES.map((t) => JSON.stringify([t.animationId, t.style.fontFamily, t.style.color, t.style.highlightColor, t.style.strokeColor, t.style.strokeWidth, t.style.shadow, t.style.look ?? null, t.style.activeLook ?? null]));
   assert.equal(new Set(fp).size, fp.length, "two templates are visually identical");
-  assert.ok(TEMPLATES.length >= 73, `expected ≥73 templates, got ${TEMPLATES.length}`);
+  assert.ok(TEMPLATES.length >= 84, `expected ≥84 templates, got ${TEMPLATES.length}`);
 });

@@ -258,7 +258,23 @@ export const trackSchema = z.object({
 });
 export type Track = z.infer<typeof trackSchema>;
 
+/** Face detections of the source video (server-written). samples: [tMs, x, y, w, h, score] of the PRIMARY face (top-left box, normalised to the source frame) or null where no face was found. */
+export const facesSchema = z.object({
+  id: z.string(),
+  fps: z.number().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  method: z.string(),
+  sourceAssetId: z.string(),
+  createdAt: z.string(),
+  detected: z.number().int().min(0),
+  total: z.number().int().min(0),
+  samples: z.array(z.union([z.tuple([z.number(), z.number(), z.number(), z.number(), z.number(), z.number()]), z.tuple([z.number()])])),
+});
+export type Faces = z.infer<typeof facesSchema>;
+
 export const analysisSchema = z.object({
+  faces: facesSchema.nullable().default(null),
   segmentation: segmentationSchema.nullable().default(null),
   tracks: z.record(z.string(), trackSchema).default({}),
 });
@@ -287,7 +303,7 @@ export const projectSchema = z.object({
   wordStyles: z.record(z.string(), wordStyleSchema).default({}),
   /** Fonts uploaded by the user (asset kind "font"). */
   fonts: z.array(customFontSchema).default([]),
-  analysis: analysisSchema.default({ segmentation: null, tracks: {} }),
+  analysis: analysisSchema.default({ faces: null, segmentation: null, tracks: {} }),
   sfx: z.array(sfxClipSchema).default([]),
   sfxSettings: sfxSettingsSchema.default({ enabled: true, volume: 1, duckUnderSpeech: 0 }),
   transitions: z.array(transitionSchema).default([]),
@@ -328,7 +344,7 @@ export function newProject(opts: { id: string; name: string; aspect?: AspectId; 
     captionsBehindSubject: false,
     wordStyles: {},
     fonts: [],
-    analysis: { segmentation: null, tracks: {} },
+    analysis: { faces: null, segmentation: null, tracks: {} },
     audio: { originalVolume: 1, fadeInMs: 0, fadeOutMs: 0, music: null },
     sfx: [],
     sfxSettings: { enabled: true, volume: 1, duckUnderSpeech: 0 },

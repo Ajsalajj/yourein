@@ -38,7 +38,7 @@ test("projects saved before the advanced effects still load (defaults fill the n
   old.textLayers = [{ id: "t1", text: "hi", startMs: 0, endMs: 1000, x: 0.5, y: 0.5, fontSize: 80, color: "#fff", fontFamily: "Inter", fontWeight: 700, backgroundColor: "transparent" }];
   const p = migrateProject(old);
   assert.equal(p.schemaVersion, SCHEMA_VERSION);
-  assert.deepEqual(p.analysis, { segmentation: null, tracks: {} });
+  assert.deepEqual(p.analysis, { faces: null, segmentation: null, tracks: {} });
   assert.equal(p.captionsBehindSubject, false);
   assert.equal(p.textLayers[0].behind, false);
   assert.equal(p.textLayers[0].trackId, null);

@@ -10,6 +10,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface State {
   seg: { phase: Phase; progress: number; stage: string; error: string | null };
+  faces: { phase: Phase; progress: number; stage: string; error: string | null };
   track: { phase: Phase; progress: number; stage: string; error: string | null; lastTrackId: string | null };
   /** region picking on the preview */
   picking: boolean;
@@ -17,6 +18,8 @@ interface State {
   setPicking: (b: boolean) => void;
   setRoi: (r: Roi | null) => void;
   segment: (projectId: string) => Promise<void>;
+  analyseFaces: (projectId: string) => Promise<void>;
+  removeFaces: (projectId: string) => Promise<void>;
   removeSegmentation: (projectId: string) => Promise<void>;
   trackRegion: (projectId: string, roi: Roi, startMs: number, label: string) => Promise<string | null>;
   removeTrack: (projectId: string, trackId: string) => Promise<void>;
@@ -32,6 +35,7 @@ async function refreshAnalysis(projectId: string) {
 
 export const useVision = create<State>((set) => ({
   seg: { phase: "idle", progress: 0, stage: "", error: null },
+  faces: { phase: "idle", progress: 0, stage: "", error: null },
   track: { phase: "idle", progress: 0, stage: "", error: null, lastTrackId: null },
   picking: false,
   roi: null,
@@ -54,6 +58,29 @@ export const useVision = create<State>((set) => ({
     } catch (e) {
       set({ seg: { phase: "error", progress: 0, stage: "", error: (e as Error).message } });
     }
+  },
+  analyseFaces: async (projectId) => {
+    set({ faces: { phase: "running", progress: 0, stage: "starting", error: null } });
+    try {
+      const { jobId, facesId } = await api<{ jobId: string; facesId: string }>(`/api/projects/${projectId}/faces`, { method: "POST" });
+      for (;;) {
+        const s = await api<{ status: string; progress: number; stage: string; error: string | null }>(`/api/projects/${projectId}/faces?jobId=${jobId}&facesId=${facesId}`);
+        if (s.status === "failed") throw new Error(s.error ?? "Face detection failed");
+        set({ faces: { phase: "running", progress: s.progress, stage: s.stage, error: null } });
+        if (s.status === "done") break;
+        await sleep(700);
+      }
+      await refreshAnalysis(projectId);
+      set({ faces: { phase: "done", progress: 1, stage: "done", error: null } });
+    } catch (e) {
+      set({ faces: { phase: "error", progress: 0, stage: "", error: (e as Error).message } });
+    }
+  },
+  removeFaces: async (projectId) => {
+    await api(`/api/projects/${projectId}/faces`, { method: "DELETE" });
+    await refreshAnalysis(projectId);
+    useEditor.getState().setReframe({ mode: "off" });
+    set({ faces: { phase: "idle", progress: 0, stage: "", error: null } });
   },
   removeSegmentation: async (projectId) => {
     await api(`/api/projects/${projectId}/segment`, { method: "DELETE" });
