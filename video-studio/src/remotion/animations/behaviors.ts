@@ -616,16 +616,20 @@ const squashStretch: Behavior = {
   },
 };
 
-/* 34 ───────────────────────── Bouncy Multiline (each LINE bounces in, letters ride a decaying wave) */
+/* 34 ───────────────────────── Bouncy Multiline (each LINE grows like jelly from its baseline; a wave keeps rolling) */
 const bouncyLines: Behavior = {
   id: "bouncy-lines",
   name: "Bouncy Multiline",
   word: (c) => {
-    const lineT = c.sinceGroup - c.lineIndex * 150;
-    const s = c.spr(lineT, { damping: 6, stiffness: 170, mass: 0.9, durMs: Math.max(c.dur, 520) });
-    const wave = Math.sin((c.frame / c.fps) * 9 - c.indexInLine * 0.9) * px(c, 5) * c.k * Math.exp(-Math.max(0, lineT) / 700);
+    const lineT = c.sinceGroup - c.lineIndex * 170;
+    const s = c.spr(lineT, { damping: 5, stiffness: 210, mass: 0.8, durMs: Math.max(c.dur, 560) });
+    // jelly: the line is squeezed flat, grows past full height, wobbles back (no drop-in from above)
+    const sy = 0.12 + 0.88 * Math.min(s, 1.3);
+    const sx = 1 + (1 - Math.min(s, 1)) * 0.28 * c.sk;
+    const rolling = 0.35 + 0.65 * Math.exp(-Math.max(0, lineT) / 900); // the wave never fully dies while the line is up
+    const wave = Math.sin((c.frame / c.fps) * 8 - c.indexInLine * 1.1) * px(c, 7) * c.k * rolling;
     return {
-      style: { opacity: lineT > 0 ? 1 - c.exit : 0, transform: `translateY(${(1 - s) * px(c, 130) * c.k + wave}px) scale(${1 + (s - 1) * 0.25 * c.sk})`, color: c.isCurrent ? c.style.highlightColor : c.style.color },
+      style: { opacity: lineT > 0 ? 1 - c.exit : 0, transform: `translateY(${wave}px) scale(${sx}, ${1 + (sy - 1) * c.sk})`, transformOrigin: "50% 100%", color: c.isCurrent ? c.style.highlightColor : c.style.color },
     };
   },
 };

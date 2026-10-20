@@ -33,7 +33,8 @@ const PHRASES = [
 ];
 
 async function main() {
-  const presets = CORE_30.slice(0, COUNT);
+  const only = process.env.PRESET_IDS?.split(",").filter(Boolean);
+  const presets = only ? CORE_30.filter((p) => only.includes(p.templateId)) : CORE_30.slice(0, COUNT);
   // 1. audio with exact word timing
   const words: { preset: number; text: string; startMs: number; endMs: number }[] = [];
   const parts: string[] = [];
@@ -46,7 +47,7 @@ async function main() {
   run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=22050:cl=mono", "-t", "0.4", lead]);
   parts.push(lead);
   presets.forEach((p, pi) => {
-    PHRASES[pi].split(" ").forEach((w, wi) => {
+    PHRASES[CORE_30.findIndex((c) => c.templateId === presets[pi].templateId)].split(" ").forEach((w, wi) => {
       const f = path.join(OUT, `w_${pi}_${wi}.wav`);
       run("espeak-ng", ["-v", "en-us", "-s", "135", "-w", f + ".raw.wav", w]);
       run("ffmpeg", ["-v", "error", "-y", "-i", f + ".raw.wav", "-ar", "22050", "-ac", "1", "-af", "silenceremove=start_periods=1:start_threshold=-45dB:stop_periods=1:stop_threshold=-45dB:stop_duration=0.05", f]);
@@ -87,7 +88,7 @@ async function main() {
     return { ...cap, endMs: ws[ws.length - 1].endMs + 350 };
   });
   await j(`/api/projects/${project.id}`, { method: "PUT", body: JSON.stringify(p) });
-  fs.writeFileSync(path.join(OUT, "truth.json"), JSON.stringify({ presets: presets.map((x, i) => ({ ...x, startMs: words.filter((w) => w.preset === i)[0].startMs, endMs: p.captions[i].endMs })), words, durationMs: totalSec * 1000 }, null, 1));
+  fs.writeFileSync(path.join(OUT, "truth.json"), JSON.stringify({ presets: presets.map((x, i) => ({ ...x, posY: TEMPLATE_MAP[x.templateId].position.y, startMs: words.filter((w) => w.preset === i)[0].startMs, endMs: p.captions[i].endMs })), words, durationMs: totalSec * 1000 }, null, 1));
 
   // 4. export
   const t0 = Date.now();
