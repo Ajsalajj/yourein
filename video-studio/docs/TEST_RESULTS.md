@@ -66,3 +66,6 @@ One 9:16 export (1080×1920, 30 fps, person sample) with five captions, one per 
 
 ### Not re-verified in this phase
 Behind-subject rendering was verified in the earlier phase (`docs/ADVANCED_EFFECTS.md`) and is unchanged; the `behind-person-typography` template was not separately exported. 16:9 and 1:1 exports of the comparison project were not rendered (`ASPECT=16:9 npx tsx scripts/validate-phase2.ts` runs them).
+
+### Motion blur (verified on a rendered still)
+Same project, same frame (133 ms, mid-entry of "STOP"), `motionBlur` 0 vs 1: 4 514 pixels differ (>20/255) with blur on versus 8 at a settled frame (166 ms), i.e. the blur only appears while the text moves. Side-by-side: `docs/screens/motion-blur-off-vs-on.png` (left off, right on). It is applied by the project's template/overrides to the whole caption layer; per-caption template overrides (`styleId`) do not carry their own motion-blur setting.
