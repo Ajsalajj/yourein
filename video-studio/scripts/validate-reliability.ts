@@ -14,7 +14,7 @@ const check = (name: string, pass: boolean, detail = "") => { checks.push({ name
 const probe = (f: string) => JSON.parse(execFileSync("ffprobe", ["-v", "error", "-print_format", "json", "-show_streams", "-show_format", f], { encoding: "utf8" }));
 const startExport = async (id: string) => (await j(`/api/projects/${id}/export`, { method: "POST", body: JSON.stringify({ quality: "standard" }) })).job;
 const waitJob = async (id: string, jobId: string, ms = 300000) => { const t = Date.now(); for (;;) { const { job } = await j(`/api/projects/${id}/export/${jobId}`); if (["done", "failed", "cancelled"].includes(job.status)) return job; if (Date.now() - t > ms) throw new Error("job timed out"); await sleep(1000); } };
-const frameMad = (a: string, b: string, t: number) => { const f = (p: string, o: string) => execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", String(t), "-i", p, "-frames:v", "1", "-vf", "scale=135:240", o]); f(a, path.join(OUT, "_a.png")); f(b, path.join(OUT, "_b.png")); return Number(execFileSync("bash", ["-c", `ffmpeg -v info -i ${OUT}/_a.png -i ${OUT}/_b.png -lavfi psnr -f null - 2>&1 | grep -o 'average:[0-9a-z.]*' | head -1 | cut -d: -f2`], { encoding: "utf8" }).trim()); };
+const frameMad = (a: string, b: string, t: number) => { const f = (p: string, o: string) => execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", String(t), "-i", p, "-frames:v", "1", "-vf", "scale=135:240", o]); f(a, path.join(OUT, "_a.png")); f(b, path.join(OUT, "_b.png")); const v = execFileSync("bash", ["-c", `ffmpeg -v info -i ${OUT}/_a.png -i ${OUT}/_b.png -lavfi psnr -f null - 2>&1 | grep -o 'average:[0-9a-z.]*' | head -1 | cut -d: -f2`], { encoding: "utf8" }).trim(); return v === "inf" ? Infinity : Number(v); };
 
 async function mk(name: string, extra?: (p: any, assets: any[]) => void, files = [{ file: "data/samples/person.mp4" }]) {
   const { id, assets } = await createProject(name, files);
@@ -35,7 +35,7 @@ async function main() {
   const dur = info.map((i) => Number(i.format.duration));
   check("3 sequential exports all succeed with identical duration/size/streams", dur.every((d) => Math.abs(d - dur[0]) < 0.01) && info.every((i) => i.streams.length === info[0].streams.length && i.streams[0].width === info[0].streams[0].width), `durations ${dur.map((d) => d.toFixed(2)).join(", ")}`);
   const psnr = frameMad(outs[0], outs[1], 3);
-  check("repeated exports render the same pixels (PSNR >= 45 dB)", psnr >= 45 || !Number.isFinite(psnr), `PSNR ${psnr}`);
+  check("repeated exports render the same pixels (PSNR >= 45 dB)", psnr >= 45, `PSNR ${psnr}`);
 
   // 2. cancel mid-render, then export again
   const j1 = await startExport(A.id);

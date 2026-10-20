@@ -1,0 +1,50 @@
+{
+ "pass": true,
+ "checks": [
+  {
+   "name": "3 sequential exports all succeed with identical duration/size/streams",
+   "pass": true,
+   "detail": "durations 7.55, 7.55, 7.55"
+  },
+  {
+   "name": "repeated exports render the same pixels (PSNR >= 45 dB)",
+   "pass": true,
+   "detail": "PSNR Infinity"
+  },
+  {
+   "name": "cancelling a running export ends as 'cancelled' and leaves no downloadable file",
+   "pass": true,
+   "detail": "status cancelled/cancelled, download 409"
+  },
+  {
+   "name": "a new export works right after a cancel",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "editing the project during an export does not change that export",
+   "pass": true,
+   "detail": "PSNR vs snapshot-time render Infinity"
+  },
+  {
+   "name": "export with a missing B-roll file fails (does not hang) with a message",
+   "pass": true,
+   "detail": "failed after 9 s: Received a status code of 404 while downloading file http://127.0.0.1:3100/api/media/pf51f5ada47/ab518487acf.\nThe respon"
+  },
+  {
+   "name": "after restoring the file the same project exports fine",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "two simultaneous exports both finish and verify",
+   "pass": true,
+   "detail": "done/done"
+  },
+  {
+   "name": "finished job reports real size, duration and audio verification",
+   "pass": true,
+   "detail": ""
+  }
+ ]
+}
