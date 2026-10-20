@@ -143,3 +143,16 @@ def start_track(req: TrackIn):
     if not all(k in r and isinstance(r[k], (int, float)) for k in ("x", "y", "w", "h")) or r["w"] <= 0.01 or r["h"] <= 0.01 or not (0 <= r["x"] < 1 and 0 <= r["y"] < 1):
         raise HTTPException(422, "roi must be normalized {x,y,w,h} with a region of at least 1% of the frame")
     return _submit("track", lambda progress: vision.track_region(src, r, req.start_ms, req.fps, progress, req.end_ms))
+
+
+class FacesIn(BaseModel):
+    path: str
+    sample_fps: float = Field(default=10, ge=1, le=30)
+    max_ms: Optional[int] = Field(default=None, ge=0)
+
+
+@app.post("/v1/jobs/faces", dependencies=[Depends(auth)])
+def start_faces(req: FacesIn):
+    from . import faces
+    src = confined(req.path)
+    return _submit("faces", lambda progress: faces.analyse_faces(src, progress, req.sample_fps, max_ms=req.max_ms))
