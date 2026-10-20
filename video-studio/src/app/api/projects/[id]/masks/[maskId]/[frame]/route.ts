@@ -17,5 +17,7 @@ export const GET = route<P>(async (_req, { id, maskId, frame }) => {
   const file = path.join(projectDir(id), "masks", seg.id, `${String(n).padStart(6, "0")}.png`);
   const stat = await fsp.stat(file).catch(() => null);
   if (!stat?.isFile()) throw new HttpError(404, "Matte frame missing");
-  return new Response(Readable.toWeb(fs.createReadStream(file)) as ReadableStream, { headers: { "Content-Type": "image/png", "Content-Length": String(stat.size), "Cache-Control": "private, max-age=3600, immutable", "X-Content-Type-Options": "nosniff" } });
+  return new Response(Readable.toWeb(fs.createReadStream(file)) as ReadableStream, { headers: { "Content-Type": "image/png", "Content-Length": String(stat.size), "Cache-Control": "private, max-age=3600, immutable", "X-Content-Type-Options": "nosniff",
+    // CSS mask-image is fetched in CORS mode; the renderer page is served from a different origin than this app.
+    "Access-Control-Allow-Origin": "*", "Cross-Origin-Resource-Policy": "cross-origin" } });
 });

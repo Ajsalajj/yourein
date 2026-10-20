@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { measureText } from "@remotion/layout-utils";
 import { continueRender, delayRender, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Project, TextLayer } from "../lib/project";
 import { followTrack } from "../lib/tracking";
@@ -26,6 +27,7 @@ function useMatte(url: string): string {
   useEffect(() => {
     let alive = true;
     const img = new Image();
+    img.crossOrigin = "anonymous"; // same CORS mode as the CSS mask fetch, so the decoded image is reused
     img.onload = img.onerror = () => {
       if (alive) setShown(url);
       continueRender(handle);
@@ -76,7 +78,19 @@ const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Se
   const scale = Math.min(width, height) / 1080;
   const family = layer.fontFamily.includes(",") ? layer.fontFamily : stack(layer.fontFamily);
   const text = applyTransform(layer.text, { textTransform: layer.textTransform, uppercase: false });
-  useFontsReady(primaryFamily(family), layer.fontWeight, text);
+  const fontsReady = useFontsReady(primaryFamily(family), layer.fontWeight, text);
+  // Fit to width: never let a title run off the frame. Measured with the real font once it has loaded.
+  let fit = 1;
+  if (fontsReady && typeof document !== "undefined") {
+    try {
+      const px = layer.fontSize * scale;
+      const widest = Math.max(...text.split("\n").map((line) => measureText({ text: line, fontFamily: family, fontSize: px, fontWeight: String(layer.fontWeight), letterSpacing: `${layer.letterSpacing}em`, fontStyle: layer.italic ? "italic" : "normal" } as never).width));
+      const pad = layer.backgroundColor === "transparent" ? 0 : px * 0.8;
+      if (widest > 0) fit = Math.min(1, (width * 0.92) / (widest + pad));
+    } catch {
+      /* measurement is best-effort */
+    }
+  }
 
   // position, optionally following a motion track (tracks live in SOURCE time)
   let x = layer.x, y = layer.y, ts = 1;
@@ -110,8 +124,8 @@ const TextLayerView: React.FC<{ layer: TextLayer; project: Project; segments: Se
     <div
       style={{
         position: "absolute", left: `${x * 100}%`, top: `${y * 100}%`, transform: tf, transformOrigin: "50% 50%",
-        fontFamily: family, fontWeight: layer.fontWeight, fontSize: layer.fontSize * scale, color: layer.color, fontStyle: layer.italic ? "italic" : "normal", letterSpacing,
-        background: layer.backgroundColor, padding: layer.backgroundColor === "transparent" ? 0 : "0.15em 0.4em", borderRadius: 12 * scale, whiteSpace: "pre-wrap", textAlign: "center", maxWidth: "94%", lineHeight: 1.05,
+        fontFamily: family, fontWeight: layer.fontWeight, fontSize: layer.fontSize * scale * fit, color: layer.color, fontStyle: layer.italic ? "italic" : "normal", letterSpacing,
+        background: layer.backgroundColor, padding: layer.backgroundColor === "transparent" ? 0 : "0.15em 0.4em", borderRadius: 12 * scale, whiteSpace: "pre", textAlign: "center", lineHeight: 1.05,
         opacity, clipPath: clip, WebkitTextStroke: sw > 0 ? `${sw * 2}px ${layer.strokeColor}` : undefined, paintOrder: "stroke fill",
       }}
     >
