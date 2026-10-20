@@ -22,6 +22,8 @@ export interface StudioProps {
   mediaUrls: Record<string, string>;
   /** Where the subject mattes are served from (required for "behind the speaker" effects). */
   mask?: MaskSource | null;
+  /** render-time tuning that must not change the saved project (benchmarks / quality presets) */
+  hints?: { motionBlurSamples?: number };
   [key: string]: unknown;
 }
 
@@ -78,7 +80,7 @@ const VideoSegments: React.FC<{ project: Project; src: string; segments: Segment
   );
 };
 
-export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
+export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask, hints }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const meta = useMemo(() => getCompositionMeta(project), [project]);
@@ -126,7 +128,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   const blur = resolveStyle(project.captionStyle, null).style.motionBlur ?? 0;
   const layer = <CaptionLayer captions={outCaptions} styleState={project.captionStyle} wordStyles={project.wordStyles} />;
   // true temporal motion blur: sub-frame samples of the caption layer averaged over a shutter angle (only when enabled)
-  const captions = project.captionsVisible ? (blur > 0 ? <CameraMotionBlur shutterAngle={Math.round(60 + blur * 240)} samples={Math.round(6 + blur * 10)}>{layer}</CameraMotionBlur> : layer) : null;
+  const captions = project.captionsVisible ? (blur > 0 ? <CameraMotionBlur shutterAngle={Math.round(60 + blur * 240)} samples={hints?.motionBlurSamples ?? Math.round(6 + blur * 10)}>{layer}</CameraMotionBlur> : layer) : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>

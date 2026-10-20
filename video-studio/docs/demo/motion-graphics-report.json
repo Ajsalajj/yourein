@@ -1,0 +1,21 @@
+{
+ "circle": {
+  "text_px": 4913,
+  "median_radius_px": 173.0,
+  "expected_radius_px": 172.8,
+  "share_within_glyph_height": 1.0
+ },
+ "arc": {
+  "text_px": 8592,
+  "min_deg": -69.8,
+  "max_deg": 69.8,
+  "median_radius_px": 184.5,
+  "expected_radius_px": 183.60000000000002
+ },
+ "shatter": {
+  "intact_px": 17105,
+  "coverage_of_intact_text_by_shards_with_tiny_spread": 0.993,
+  "share_of_text_px_still_in_box_mid_break": 0.015
+ },
+ "pass": true
+}

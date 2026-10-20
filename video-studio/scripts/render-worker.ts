@@ -16,13 +16,15 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 
 interface Input {
-  props: { project: unknown; mediaUrls: Record<string, string> };
-  options: { crf: number; browserExecutable?: string; gl: string; concurrency: number };
+  props: { project: unknown; mediaUrls: Record<string, string>; hints?: { motionBlurSamples?: number } };
+  options: { crf: number; browserExecutable?: string; gl: string; concurrency: number; x264Preset?: string; jpegQuality?: number; imageFormat?: "jpeg" | "png"; offthreadCacheMB?: number; motionBlurSamples?: number };
   expected: { width: number; height: number; fps: number; durationInFrames: number; hasAudio: boolean };
   ffprobe: string;
 }
 
 const emit = (o: Record<string, unknown>) => process.stdout.write(JSON.stringify(o) + "\n");
+const T0 = Date.now();
+const lap = (name: string) => emit({ type: "timing", name, atMs: Date.now() - T0 });
 
 function sourceFingerprint(roots: string[]): string {
   const h = crypto.createHash("sha1");
@@ -48,6 +50,7 @@ async function main() {
   fs.mkdirSync(cacheDir, { recursive: true });
 
   emit({ type: "stage", stage: "bundling" });
+  lap("start");
   const fp = sourceFingerprint([path.join(root, "src/remotion"), path.join(root, "src/lib")]);
   const bundleDir = path.join(cacheDir, `bundle-${fp}`);
   let serveUrl = bundleDir;
@@ -58,11 +61,13 @@ async function main() {
     serveUrl = bundleDir;
   }
 
+  lap("bundled");
   const chromiumOptions = { gl: input.options.gl as "swangle" };
   const browserExecutable = input.options.browserExecutable || null;
   emit({ type: "stage", stage: "preparing" });
   const composition = await selectComposition({ serveUrl, id: "Studio", inputProps: input.props, browserExecutable, chromiumOptions });
 
+  lap("composition-selected");
   const e = input.expected;
   if (composition.width !== e.width || composition.height !== e.height || composition.fps !== e.fps || composition.durationInFrames !== e.durationInFrames) {
     throw new Error(`Composition metadata mismatch: got ${composition.width}x${composition.height}@${composition.fps} ${composition.durationInFrames}f`);
@@ -77,6 +82,10 @@ async function main() {
     codec: "h264",
     audioCodec: "aac",
     crf: input.options.crf,
+    x264Preset: (input.options.x264Preset ?? "medium") as "medium",
+    imageFormat: input.options.imageFormat ?? "jpeg",
+    jpegQuality: input.options.jpegQuality ?? 80,
+    offthreadVideoCacheSizeInBytes: input.options.offthreadCacheMB ? input.options.offthreadCacheMB * 1024 * 1024 : null,
     pixelFormat: "yuv420p",
     outputLocation: output,
     inputProps: input.props,
@@ -94,6 +103,7 @@ async function main() {
     },
   });
 
+  lap("rendered");
   emit({ type: "stage", stage: "verifying" });
   const j = JSON.parse(execFileSync(input.ffprobe, ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", output], { encoding: "utf8" }));
   const v = j.streams.find((s: { codec_type: string }) => s.codec_type === "video");

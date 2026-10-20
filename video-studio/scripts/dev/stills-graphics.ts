@@ -22,7 +22,8 @@ async function main() {
   const cases: { name: string; layers: ReturnType<typeof newTextLayer>[]; frames: number[] }[] = [
     { name: "circle", layers: [newTextLayer({ text: "ROUND AND ROUND WE GO • ", startMs: 0, endMs: 4000, x: 0.5, y: 0.5, fontSize: 70, fontWeight: 800, fontFamily: "Montserrat", path: { radius: 0.32, startDeg: -90, sweepDeg: 0, direction: "cw", inside: false, spinDegPerSec: 30 }, strokeWidth: 0 })], frames: [10, 40, 80] },
     { name: "circle-arc", layers: [newTextLayer({ text: "CURVED HEADLINE", startMs: 0, endMs: 4000, x: 0.5, y: 0.6, fontSize: 90, fontWeight: 800, fontFamily: "Anton", color: "#ffd60a", path: { radius: 0.34, startDeg: -70, sweepDeg: 140, direction: "cw", inside: false, spinDegPerSec: 0 } })], frames: [30] },
-    { name: "shatter-out", layers: [newTextLayer({ text: "SHATTER", startMs: 0, endMs: 3000, x: 0.5, y: 0.5, fontSize: 200, fontWeight: 400, fontFamily: "Anton", color: "#ffffff", shatter: { mode: "out", durationMs: 1000, spread: 0.9, detail: "medium", seed: 5 } })], frames: [30, 66, 75, 82, 90] },
+    { name: "shatter-out", layers: [newTextLayer({ text: "SHATTER", startMs: 0, endMs: 3000, x: 0.5, y: 0.5, fontSize: 200, fontWeight: 400, fontFamily: "Anton", color: "#ffffff", shatter: { mode: "out", durationMs: 1000, spread: 0.9, detail: "medium", seed: 5 } })], frames: [30, 61, 66, 75, 82, 90] },
+    { name: "shatter-tile", layers: [newTextLayer({ text: "SHATTER", startMs: 0, endMs: 3000, x: 0.5, y: 0.5, fontSize: 200, fontWeight: 400, fontFamily: "Anton", color: "#ffffff", shatter: { mode: "out", durationMs: 1000, spread: 0.1, detail: "high", seed: 5 } })], frames: [61] },
   ];
   for (const c of cases) {
     const props = mk(c.layers);
