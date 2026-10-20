@@ -27,7 +27,8 @@ What this means:
 | Scenario | Before | After | Fidelity after vs before | Change |
 |---|---|---|---|---|
 | Captions **behind the subject** (captions in the first 40 % of the clip) | 449 ms/frame (106 s) | **286 ms/frame (66 s) = -36 %** | 50.9 dB, SSIM 0.9965 | the subject cut-out (a second video decode + a matte per frame) is mounted only while something is drawn behind the subject (`behindContentActive`, unit-tested) |
-| Motion blur 0.5, 11 samples | 840-846 ms/frame (≈5× the plain frame) | see below | ≥45.9 dB vs a 24-sample reference | sample count 6-16 → 5-10 and blur skipped while no caption word can be moving (`captionMotionActive`) |
+| Motion blur 0.5 (11 samples, ungated) | 840 ms/frame (≈5× the plain frame) | **771 ms/frame (-8 %)** with 8 samples + gating | 45.9 dB vs a 24-sample reference (before: 46.5 dB) | sample count 6-16 → 5-10 and blur skipped while no caption word can be moving (`captionMotionActive`). A small gain only: it stays ≈4.8× a plain frame |
+| Plain captions, new defaults (JPEG q95) | 165 ms/frame, 4.05 MB, 46.04 dB | **160 ms/frame, 2.91 MB (-28 %), 46.56 dB** | +0.5 dB | JPEG quality 95 |
 
 Motion-blur cost is almost entirely the number of full-frame composited samples (≈63 ms per extra sample here). Quality check against a 24-sample reference (1590 ms/frame): 6 samples 45.94 dB / 527 ms, 10 samples 47.05 dB / 762 ms, 11 samples 46.55 dB / 846 ms; blur **off** is only 30.55 dB, i.e. the blur is clearly visible and 6 samples already reproduce it to within the JPEG noise floor. Gating saves little on dense speech (a word starts every ~0.4 s, so something is almost always moving); it helps with pauses.
 
