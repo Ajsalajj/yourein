@@ -3,7 +3,9 @@ import { AbsoluteFill, Audio, continueRender, delayRender, OffthreadVideo, Seque
 import type { Project } from "../lib/project";
 import { captionsToOutput, frameToMs, zoomsToOutput, type Segment } from "../lib/timeline";
 import { getCompositionMeta, zoomAt, speechActivity } from "../lib/composition";
+import { CameraMotionBlur } from "@remotion/motion-blur";
 import { CaptionLayer } from "./CaptionLayer";
+import { resolveStyle } from "./templates/registry";
 import { SubjectCutout, TextLayers, type MaskSource } from "./AdvancedLayers";
 import { clamp } from "./animations/helpers";
 import { stack } from "./fontStacks";
@@ -88,7 +90,10 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask }) => {
   const captionsBehind = canCut && project.captionsBehindSubject;
   const behindLayers = canCut ? behindText : [];
   const frontLayers = canCut ? frontText : project.textLayers;
-  const captions = project.captionsVisible ? <CaptionLayer captions={outCaptions} styleState={project.captionStyle} wordStyles={project.wordStyles} /> : null;
+  const blur = resolveStyle(project.captionStyle, null).style.motionBlur ?? 0;
+  const layer = <CaptionLayer captions={outCaptions} styleState={project.captionStyle} wordStyles={project.wordStyles} />;
+  // true temporal motion blur: sub-frame samples of the caption layer averaged over a shutter angle (only when enabled)
+  const captions = project.captionsVisible ? (blur > 0 ? <CameraMotionBlur shutterAngle={Math.round(60 + blur * 240)} samples={Math.round(6 + blur * 10)}>{layer}</CameraMotionBlur> : layer) : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>

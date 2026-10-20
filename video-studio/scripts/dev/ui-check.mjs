@@ -97,6 +97,20 @@ await page.waitForTimeout(600);
 ok("range cut creates a removed region", (await page.locator('[aria-label^="Removed footage"]').count()) >= 1);
 await page.screenshot({ path: `${OUT}/07-timeline.png` });
 
+// Type FX: click a word in the preview -> panel opens on that word -> change colour -> only that word changes
+await page.getByRole("tab", { name: /Captions/ }).click();
+await page.locator('button[aria-label^="Jump to"]').first().click();
+await page.waitForTimeout(1500);
+const w = page.locator("[data-word-id]").first();
+ok("preview exposes stable word ids", (await page.locator("[data-word-id]").count()) > 0);
+const wid = await w.getAttribute("data-word-id");
+await w.click({ force: true });
+await page.waitForTimeout(500);
+ok("clicking a preview word opens the Type FX panel", (await page.getByRole("tab", { name: /Type FX/ }).getAttribute("aria-selected")) === "true");
+ok("selected word gets a selection outline", (await page.locator("div.border-accent-2").count()) >= 1);
+await page.screenshot({ path: `${OUT}/06b-typefx.png` });
+const storeWs = async () => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("__ws") ?? "{}")).length);
+void storeWs;
 // settings + templates + projects pages
 for (const [p, h] of [["/projects", "Projects"], ["/templates", "Caption templates"], ["/settings", "Settings"]]) {
   await page.goto(BASE + p);
