@@ -128,3 +128,12 @@ test("project round-trip: old projects without sfx/transitions/broll parse with 
   const q = projectSchema.parse(old);
   assert.deepEqual([q.sfx, q.transitions, q.broll, q.reframe.mode, q.sfxSettings.enabled], [[], [], [], "off", true]);
 });
+
+test("per-caption sounds sit on each caption's first word (word-synced) and respect spacing", () => {
+  const p = demoProject("one two three four five six seven eight nine ten eleven twelve");
+  const out = suggestSfx(p, segsOf(p), { perCaption: "pop", minGapMs: 700, includeJoins: false, includeZooms: false, maxPerMinute: 99 });
+  const firsts = new Set(p.captions.map((c) => c.words[0].id));
+  const pops = out.filter((c) => c.source.kind === "library" && c.source.id === "pop");
+  assert.ok(pops.length >= 2 && pops.every((c) => c.syncWordId && firsts.has(c.syncWordId)));
+  assert.equal(suggestSfx(p, segsOf(p), { perCaption: "nope", includeJoins: false, includeZooms: false }).filter((c) => c.label === "caption start").length, 0);
+});

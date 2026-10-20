@@ -67,5 +67,15 @@ One 9:16 export (1080×1920, 30 fps, person sample) with five captions, one per 
 ### Not re-verified in this phase
 Behind-subject rendering was verified in the earlier phase (`docs/ADVANCED_EFFECTS.md`) and is unchanged; the `behind-person-typography` template was not separately exported. 16:9 and 1:1 exports of the comparison project were not rendered (`ASPECT=16:9 npx tsx scripts/validate-phase2.ts` runs them).
 
+## Phase 3
+
+Automated: `npm test` (TypeScript; **172 tests**, all pass at the time of writing), `npm run ai:test` (Python: transcription path, vision, **face detection/tracking 4**, **matte pipeline 5**), `npx tsc --noEmit`, `npx eslint src scripts tests`, `node scripts/dev/ui-check.mjs` (extended with SFX / Transitions / B-roll / face-framing panel checks).
+
+New test files: `tests/regressions.test.ts` (neon dark edge, extrusion word gap, punch scale cap, motion-blur and cut-out gating), `sfx.test.ts` (library WAVs, placement through cuts, word sync, gains, ducking, suggestions), `transitions.test.ts` (40 type×direction continuity cases, blur/distinctness, placement on joins), `broll.test.ts` (sentences, concepts, suggestions, fitting, timing through cuts, split layouts, Pexels/Pixabay mapping + mock servers, host allowlist, generator adapter), `broll-library.test.ts` (real ffprobe/thumbnail library search), `reframe.test.ts` (camera path: fallback, vertical reframing, lag, speed/acceleration bounds, outliers, gaps, overrides, no black bars), `motiongraphics.test.ts` (circle layout, shard mesh tiling/motion, scene projection), plus `ai-service/tests/test_faces.py` and `test_matte.py` (exact ground truth).
+
+Rendered/exported verification (reports in `docs/demo/`, sheets in `docs/screens/`): see [PHASE3.md](PHASE3.md) - SFX mixing (`sfx-validation-report.json`), transitions (`transitions-validation-report.json`), B-roll (`broll-validation-report.json`), reframing (`reframe-validation-report.json`), text-behind alignment (`mask-validation-report.json`), motion-graphics geometry (`motion-graphics-report.json`), phase-2 re-check after the visual fixes (`phase2-validation-report.json`). Benchmarks: [RENDER_BENCHMARKS.md](RENDER_BENCHMARKS.md).
+
+`scripts/validate-reliability.ts` (repeat / cancel / edit-during-export / missing asset / concurrent exports) is written but **its results are not recorded here unless listed below**.
+
 ### Motion blur (verified on a rendered still)
 Same project, same frame (133 ms, mid-entry of "STOP"), `motionBlur` 0 vs 1: 4 514 pixels differ (>20/255) with blur on versus 8 at a settled frame (166 ms), i.e. the blur only appears while the text moves. Side-by-side: `docs/screens/motion-blur-off-vs-on.png` (left off, right on). It is applied by the project's template/overrides to the whole caption layer; per-caption template overrides (`styleId`) do not carry their own motion-blur setting.

@@ -45,3 +45,27 @@ export function speechActivity(captions: OutCaption[], ms: number): number {
   return v;
 }
 
+
+/**
+ * True while any caption element can be moving at output time `ms`: a word that started within `lookbackMs`, a caption group entering/leaving.
+ * Temporal motion blur of a perfectly still layer is the identity, so the (expensive) multi-sample blur is only needed while this is true.
+ * Conservative on purpose: continuous looping effects (pulses, floats) are not "motion" for this purpose, matching how the blur is meant to be used.
+ */
+export function captionMotionActive(captions: OutCaption[], ms: number, lookbackMs = 700, exitMs = 450): boolean {
+  for (const c of captions) {
+    if (ms < c.startMs - 40 || ms > c.endMs + exitMs) continue;
+    if (ms <= c.startMs + lookbackMs || ms >= c.endMs - 40) return true;
+    for (const w of c.words) if (ms >= w.startMs - 40 && ms <= w.startMs + lookbackMs) return true;
+  }
+  return false;
+}
+
+/**
+ * Is anything drawn BEHIND the subject at output time `ms`? The subject cut-out (a second video decode + a matte per frame, ~3x the cost of a
+ * plain frame) only has to exist while a "behind" layer or behind-captions are visible; elsewhere it would be pixel-identical to the footage under it.
+ */
+export function behindContentActive(opts: { behindLayers: { startMs: number; endMs: number }[]; captionsBehind: boolean; captions: OutCaption[] }, ms: number, padMs = 120): boolean {
+  if (opts.behindLayers.some((l) => ms >= l.startMs - padMs && ms <= l.endMs + padMs)) return true;
+  // captions linger a little after their last word while they animate out
+  return opts.captionsBehind && opts.captions.some((c) => ms >= c.startMs - padMs && ms <= c.endMs + 600);
+}

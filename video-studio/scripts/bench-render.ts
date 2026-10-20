@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
-import { createProject, getProject, putProject } from "./lib/studio-client";
+import { createProject, getProject, j, putProject } from "./lib/studio-client";
 import { getCompositionMeta } from "../src/lib/composition";
 import { mediaUrls } from "../src/server/exports";
 import { distributeWords } from "../src/lib/captions/ops";
@@ -32,6 +32,14 @@ async function prepare(): Promise<{ id: string; project: Project }> {
   const dur = p.assets[p.sourceAssetId!].durationMs;
   p.captions = groupWords(distributeWords(TEXT.split(" "), 300, Math.min(dur - 300, 300 + TEXT.split(" ").length * 360), 0.9).map((w) => ({ ...w, timingSource: "asr" as const })), { wordsPerGroup: 4 });
   p.captionStyle = { templateId: "bold-white-kinetic", overrides: {}, position: { x: 0.5, y: 0.5 } };
+  if (scenario === "behind") {
+    const seg = await j(`/api/projects/${id}/segment`, { method: "POST", body: "{}" });
+    for (;;) { const st = await j(`/api/projects/${id}/segment?jobId=${seg.jobId}&maskId=${seg.maskId}`); if (st.status === "failed") throw new Error(st.error); if (st.status === "done") break; await new Promise((r) => setTimeout(r, 700)); }
+    const cur = await getProject(id);
+    p.analysis = cur.analysis;
+    p.captionsBehindSubject = true;
+    p.captions = groupWords(distributeWords(TEXT.split(" ").slice(0, 8), 300, 2900, 0.9).map((w) => ({ ...w, timingSource: "asr" as const })), { wordsPerGroup: 4 }); // captions only in the first ~40 % of the video
+  }
   if (scenario === "heavy") {
     p.cuts = [[2500, 3500], [5500, 6500], [8500, 9500]].map(([startMs, endMs]) => ({ id: uid("x_"), startMs, endMs, reason: "manual" as const }));
     p.transitions = ["whip-pan", "radial-zoom-blur", "cinematic-fade"].map((type, i) => ({ id: uid("t_"), type: type as "whip-pan", joinSrcMs: [2500, 5500, 8500][i], durationMs: 500, direction: "left" as const, intensity: 0.7, soundId: null }));
@@ -45,12 +53,12 @@ async function prepare(): Promise<{ id: string; project: Project }> {
 
 async function main() {
   const { id, project } = await prepare();
-  const proj: Project = { ...project, captionStyle: { ...project.captionStyle, overrides: { ...project.captionStyle.overrides, ...(kvm.blur ? { motionBlur: Number(kvm.blur) } : {}) } } };
+  const proj: Project = { ...project, captionsVisible: kvm.nocap ? false : project.captionsVisible, captionStyle: { ...project.captionStyle, overrides: { ...project.captionStyle.overrides, ...(kvm.blur ? { motionBlur: Number(kvm.blur) } : {}) } } };
   const meta = getCompositionMeta(proj);
   const dir = path.join(OUT, `${scenario}-${label}`);
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
-  const options = { crf: Number(kvm.crf ?? 20), browserExecutable: BROWSER, gl: kvm.gl ?? "swangle", concurrency: Number(kvm.concurrency ?? 0), x264Preset: kvm.preset, jpegQuality: kvm.jpeg ? Number(kvm.jpeg) : undefined, imageFormat: kvm.format as "jpeg" | "png" | undefined, offthreadCacheMB: kvm.cache ? Number(kvm.cache) : undefined };
-  fs.writeFileSync(path.join(dir, "input.json"), JSON.stringify({ props: { project: proj, mediaUrls: mediaUrls(proj), mask: null, hints: kvm.mbsamples ? { motionBlurSamples: Number(kvm.mbsamples) } : undefined }, options, expected: { width: meta.width, height: meta.height, fps: meta.fps, durationInFrames: meta.durationInFrames, hasAudio: true }, ffprobe: "ffprobe" }));
+  const options = { crf: Number(kvm.crf ?? 20), browserExecutable: BROWSER, gl: kvm.gl ?? "swangle", concurrency: Number(kvm.concurrency ?? 0), x264Preset: kvm.preset, jpegQuality: kvm.jpeg ? Number(kvm.jpeg) : undefined, scale: kvm.scale ? Number(kvm.scale) : undefined, imageFormat: kvm.format as "jpeg" | "png" | undefined, offthreadCacheMB: kvm.cache ? Number(kvm.cache) : undefined };
+  fs.writeFileSync(path.join(dir, "input.json"), JSON.stringify({ props: { project: proj, mediaUrls: mediaUrls(proj), mask: scenario === "behind" && proj.analysis.segmentation ? { base: `${process.env.INTERNAL_BASE_URL ?? "http://127.0.0.1:3100"}/api/projects/${id}/masks/${proj.analysis.segmentation.id}`, query: "", fps: proj.analysis.segmentation.fps, frames: proj.analysis.segmentation.frames } : null, hints: kvm.mbsamples || kvm.nogate ? { motionBlurSamples: kvm.mbsamples ? Number(kvm.mbsamples) : undefined, blurGating: kvm.nogate ? false : undefined, behindGating: kvm.nogate ? false : undefined } : undefined }, options, expected: { width: meta.width, height: meta.height, fps: meta.fps, durationInFrames: meta.durationInFrames, hasAudio: true }, ffprobe: "ffprobe" }));
   void id;
   const t0 = Date.now(); const laps: Record<string, number> = {};
   await new Promise<void>((resolve, reject) => {

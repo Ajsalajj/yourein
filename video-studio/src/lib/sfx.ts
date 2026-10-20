@@ -131,7 +131,7 @@ const RULES: { id: string; re: RegExp; label: string; volume: number }[] = [
   { id: "glitch", re: /^(glitch|error|bug|hack(ed|er)?|digital|ai)$/i, label: "tech word", volume: 0.6 },
 ];
 
-export interface SuggestOptions { minGapMs?: number; maxPerMinute?: number; includeZooms?: boolean; includeJoins?: boolean }
+export interface SuggestOptions { minGapMs?: number; maxPerMinute?: number; includeZooms?: boolean; includeJoins?: boolean; /** also put this library sound on the first word of every caption group (synced to its word animation) */ perCaption?: string | null }
 
 /**
  * Rule-based suggestions anchored to real events: matched WORDS (synced to the word's start, so the sound follows it when captions change),
@@ -150,6 +150,9 @@ export function suggestSfx(project: Project, segs: Segment[], opts: SuggestOptio
       const rule = RULES.find((r) => r.re.test(bare));
       if (rule) cand.push({ srcMs: w.startMs, clip: mk(rule.id, w.startMs, `${rule.label}: "${bare}"`, rule.volume, w.id) });
     }
+  }
+  if (opts.perCaption && sfxLibraryItem(opts.perCaption)) {
+    for (const c of project.captions) if (c.words[0]) cand.push({ srcMs: c.words[0].startMs, clip: mk(opts.perCaption, c.words[0].startMs, "caption start", 0.45, c.words[0].id) });
   }
   if (opts.includeZooms !== false) for (const z of project.zooms) cand.push({ srcMs: z.startMs, clip: mk("whoosh-fast", z.startMs, "zoom in", 0.55, null, -120) });
   if (opts.includeJoins !== false) for (const j of joinsOf(segs)) cand.push({ srcMs: j.srcMs, clip: mk("whoosh-soft", j.srcMs, "cut", 0.5, null, -150) });

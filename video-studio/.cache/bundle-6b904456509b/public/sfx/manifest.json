@@ -1,0 +1,159 @@
+[
+ {
+  "id": "whoosh-soft",
+  "name": "Whoosh (soft)",
+  "category": "transition",
+  "durationMs": 700,
+  "tags": [
+   "whoosh",
+   "swipe",
+   "slide",
+   "transition"
+  ]
+ },
+ {
+  "id": "whoosh-fast",
+  "name": "Whoosh (fast)",
+  "category": "transition",
+  "durationMs": 350,
+  "tags": [
+   "whip",
+   "pan",
+   "fast",
+   "swish"
+  ]
+ },
+ {
+  "id": "whoosh-reverse",
+  "name": "Whoosh (reverse)",
+  "category": "transition",
+  "durationMs": 800,
+  "tags": [
+   "reverse",
+   "zoom",
+   "blur"
+  ]
+ },
+ {
+  "id": "swell",
+  "name": "Swell",
+  "category": "transition",
+  "durationMs": 1400,
+  "tags": [
+   "fade",
+   "cinematic",
+   "soft"
+  ]
+ },
+ {
+  "id": "impact",
+  "name": "Impact hit",
+  "category": "emphasis",
+  "durationMs": 1200,
+  "tags": [
+   "hit",
+   "boom",
+   "punch",
+   "drop",
+   "slam"
+  ]
+ },
+ {
+  "id": "pop",
+  "name": "Pop",
+  "category": "emphasis",
+  "durationMs": 180,
+  "tags": [
+   "pop",
+   "bubble",
+   "word",
+   "appear"
+  ]
+ },
+ {
+  "id": "click",
+  "name": "Click",
+  "category": "ui",
+  "durationMs": 80,
+  "tags": [
+   "click",
+   "button",
+   "ui",
+   "tap"
+  ]
+ },
+ {
+  "id": "tick",
+  "name": "Typewriter tick",
+  "category": "ui",
+  "durationMs": 50,
+  "tags": [
+   "type",
+   "typing",
+   "keyboard",
+   "text"
+  ]
+ },
+ {
+  "id": "ding",
+  "name": "Ding",
+  "category": "emphasis",
+  "durationMs": 1600,
+  "tags": [
+   "ding",
+   "bell",
+   "success",
+   "notification",
+   "idea"
+  ]
+ },
+ {
+  "id": "riser",
+  "name": "Riser",
+  "category": "build",
+  "durationMs": 2000,
+  "tags": [
+   "riser",
+   "tension",
+   "build",
+   "rise",
+   "reveal"
+  ]
+ },
+ {
+  "id": "glitch",
+  "name": "Glitch",
+  "category": "texture",
+  "durationMs": 450,
+  "tags": [
+   "glitch",
+   "digital",
+   "error",
+   "tech"
+  ]
+ },
+ {
+  "id": "shutter",
+  "name": "Camera shutter",
+  "category": "ui",
+  "durationMs": 320,
+  "tags": [
+   "camera",
+   "photo",
+   "capture",
+   "freeze"
+  ]
+ },
+ {
+  "id": "sparkle",
+  "name": "Sparkle",
+  "category": "texture",
+  "durationMs": 1000,
+  "tags": [
+   "sparkle",
+   "magic",
+   "shine",
+   "glow"
+  ]
+ }
+]

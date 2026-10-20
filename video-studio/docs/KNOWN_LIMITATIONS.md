@@ -31,3 +31,20 @@
 **Not built:** text on a circular/curved path; per-glyph shatter ("Broken" in reference 3); real 3D-geometry letters (extrusion is stacked shadows, perspective is CSS 3D); radial zoom-blur *transitions between video clips* (the zoom-blur on outgoing words is implemented); a font-identity match to the reference videos (impossible from the files - see `REFERENCE_STYLE_ANALYSIS.md`); 16:9 / 1:1 comparison exports were not rendered in this phase.
 
 **Caveats:** motion blur multiplies render cost by its sample count (6-16×) for the caption layer; Indic scripts with per-character animations rely on grapheme splitting and were verified in phase 1, not re-rendered against every phase-2 template.
+
+## Phase 3 additions - honest status (details and numbers in [PHASE3.md](PHASE3.md))
+
+**Verified on real exports:** sound-effect mixing/ducking, ten transitions between real clips, B-roll (full, split-screen, overlay, PiP; speaker audio untouched), face-aware reframing 16:9→9:16, text-behind-subject alignment and edge controls, circular-path and shatter text geometry.
+
+**Not verified / not possible here:**
+* **Pexels and Pixabay adapters were never run against the live services** (no network route to them from this environment, no API keys). They are tested against local mock servers that reproduce the documented response shapes. The user's own B-roll folder is the fully verified path. The AI-generation adapter is a generic HTTP contract and is not configured by default.
+* **The After-Effects "Pro Presets" ZIP was not available**, so the 11 requested presets are original implementations of the *names*, not matches of the real presets (see PHASE3.md §2).
+* Whisper weights are still unavailable offline; transcription uses the pocketsphinx fallback unless a Whisper model is installed.
+
+**Known limits of what was built:**
+* B-roll: video clips only (no stills); suggestions are rule-based (lexicon + proper nouns), not a language model.
+* Face reframing: one primary subject; BlazeFace short-range misses very small faces (multi-scale search mitigates it); tracked text layers and split-screen B-roll assume the plain crop.
+* Matte: refinement gains over the previous pipeline are modest (IoU +0.014, boundary F1 +0.064 on the synthetic ground truth) - the 256 px network limits quality; re-refining costs ≈3 s per second of video; exports with a matte are ≈3× slower (a second video decode + 720 px mattes).
+* Transitions: placed on edit joins and B-roll in/out only (not between two arbitrary B-roll clips); a transition whose join is deleted is ignored and flagged.
+* SFX: rule-based suggestions; effects are anchored in source time (a sound inside removed footage is placed on the join); no waveform display for effects; mono sources are mixed with Remotion's -3 dB pan law.
+* Motion graphics are **2D/2.5D** - there is no 3D scene or mesh anywhere (table in PHASE3.md §8). Path text and shatter cannot be combined on one layer (path wins).

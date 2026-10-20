@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AbsoluteFill, Audio, continueRender, delayRender, OffthreadVideo, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Project } from "../lib/project";
 import { captionsToOutput, frameToMs, outputToSource, zoomsToOutput, type Segment } from "../lib/timeline";
-import { getCompositionMeta, zoomAt, speechActivity } from "../lib/composition";
+import { getCompositionMeta, zoomAt, speechActivity, captionMotionActive, behindContentActive } from "../lib/composition";
 import { resolveSfx, sfxActivity, sfxGain } from "../lib/sfx";
 import { buildCameraPath, videoRect } from "../lib/reframe";
 import { BrollLayer } from "./BrollLayer";
@@ -23,7 +23,7 @@ export interface StudioProps {
   /** Where the subject mattes are served from (required for "behind the speaker" effects). */
   mask?: MaskSource | null;
   /** render-time tuning that must not change the saved project (benchmarks / quality presets) */
-  hints?: { motionBlurSamples?: number };
+  hints?: { motionBlurSamples?: number; /** false = always run the multi-sample blur (benchmark baseline) */ blurGating?: boolean; /** false = keep the subject cut-out mounted for the whole video (benchmark baseline) */ behindGating?: boolean };
   [key: string]: unknown;
 }
 
@@ -128,7 +128,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask, hints 
   const blur = resolveStyle(project.captionStyle, null).style.motionBlur ?? 0;
   const layer = <CaptionLayer captions={outCaptions} styleState={project.captionStyle} wordStyles={project.wordStyles} />;
   // true temporal motion blur: sub-frame samples of the caption layer averaged over a shutter angle (only when enabled)
-  const captions = project.captionsVisible ? (blur > 0 ? <CameraMotionBlur shutterAngle={Math.round(60 + blur * 240)} samples={hints?.motionBlurSamples ?? Math.round(6 + blur * 10)}>{layer}</CameraMotionBlur> : layer) : null;
+  const captions = project.captionsVisible ? (blur > 0 && (hints?.blurGating === false || captionMotionActive(outCaptions, ms)) ? <CameraMotionBlur shutterAngle={Math.round(60 + blur * 240)} samples={hints?.motionBlurSamples ?? Math.round(5 + blur * 5)}>{layer}</CameraMotionBlur> : layer) : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: src ? "#000" : "transparent", overflow: "hidden" }}>
@@ -143,7 +143,7 @@ export const Studio: React.FC<StudioProps> = ({ project, mediaUrls, mask, hints 
       {/* BEHIND the speaker: text first, then the person cut out of the same video on top of it */}
       <TextLayers layers={behindLayers} project={project} segments={meta.segments} scene={sceneCtx} />
       {captionsBehind ? captions : null}
-      {canCut && !fullBroll && !split && (behindLayers.length > 0 || captionsBehind) ? (
+      {canCut && !fullBroll && !split && (hints?.behindGating === false || behindContentActive({ behindLayers, captionsBehind, captions: outCaptions }, ms)) ? (
         <AbsoluteFill style={rectAt ? undefined : { transform: `scale(${z.scale})`, transformOrigin: `${z.fx * 100}% ${z.fy * 100}%` }}>
           <SubjectCutout src={src!} segments={meta.segments} mask={mask!} rectAt={rectAt} />
         </AbsoluteFill>

@@ -23,6 +23,7 @@ export function SfxPanel() {
   const [cat, setCat] = useState<(typeof CATS)[number] | "all">("all");
   const audio = useRef<HTMLAudioElement | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [perCaption, setPerCaption] = useState<string>("");
 
   const preview = (url: string) => {
     audio.current?.pause();
@@ -37,7 +38,7 @@ export function SfxPanel() {
     useEditor.getState().select({ sfxId: id });
   };
   const suggest = () => {
-    const found = suggestSfx(project, meta.segments);
+    const found = suggestSfx(project, meta.segments, { perCaption: perCaption || null, minGapMs: perCaption ? 700 : 1400, maxPerMinute: perCaption ? 40 : 14 });
     const st = useEditor.getState();
     st.setSfx((l) => [...l.filter((x) => !x.auto), ...found]);
     setNote(found.length ? `Added ${found.length} suggested sounds (rules: keywords, numbers, zooms, cuts). Review them in the list - they are ordinary clips you can edit or delete.` : "Nothing to suggest: no matching words, zooms or cuts yet.");
@@ -54,6 +55,9 @@ export function SfxPanel() {
         <Slider label="Track volume" value={Math.round(project.sfxSettings.volume * 100)} min={0} max={200} onChange={(v) => useEditor.getState().setSfxSettings({ volume: v / 100 })} format={(v) => `${v}%`} />
         <Slider label="Duck under speech" value={Math.round(project.sfxSettings.duckUnderSpeech * 100)} min={0} max={100} onChange={(v) => useEditor.getState().setSfxSettings({ duckUnderSpeech: v / 100 })} format={(v) => (v === 0 ? "off" : `-${v}% while speaking`)} />
         <p className="text-[11px] leading-relaxed text-mute">Speech is taken from the caption timing. Music ducks under every sound marked &ldquo;duck music&rdquo; (set the music level in the Audio tab).</p>
+        <label className="block text-[11px] text-mute">Sound on every caption (synced to its first word)
+          <select aria-label="Sound on every caption" className="field mt-1" value={perCaption} onChange={(e) => setPerCaption(e.target.value)}><option value="">None</option>{SFX_LIBRARY.filter((x) => ["pop", "tick", "click"].includes(x.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+        </label>
         <Button size="sm" variant="secondary" onClick={suggest}><Sparkles size={13} /> Suggest sounds</Button>
         {project.sfx.some((c) => c.auto) ? <Button size="sm" variant="ghost" onClick={() => useEditor.getState().setSfx((l) => l.filter((c) => !c.auto))}>Remove suggested</Button> : null}
         {note ? <p role="status" className="text-[11px] text-mute">{note}</p> : null}

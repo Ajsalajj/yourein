@@ -71,3 +71,27 @@ test("regression: 3D Punch never enters larger than 1.5x, so an incoming word ca
   assert.ok(maxScale <= 1.5, `punch scale peaked at ${maxScale.toFixed(2)}`);
   assert.ok(maxScale > 1.05, "punch must still overshoot (it is a punch)");
 });
+
+import { captionMotionActive } from "../src/lib/composition";
+test("motion-blur gating: the expensive multi-sample blur is off while captions are still and on while they move", () => {
+  const caps = [{ id: "c", startMs: 1000, endMs: 3000, words: [{ id: "a", text: "x", startMs: 1000, endMs: 1400, confidence: 1, timingSource: "asr" as const, srcStartMs: 1000, srcEndMs: 1400 }, { id: "b", text: "y", startMs: 2000, endMs: 2400, confidence: 1, timingSource: "asr" as const, srcStartMs: 2000, srcEndMs: 2400 }], styleId: null, animationId: null, position: null, speakerId: null }];
+  assert.equal(captionMotionActive(caps, 500), false, "before the caption");
+  assert.equal(captionMotionActive(caps, 1300), true, "entering");
+  assert.equal(captionMotionActive(caps, 1800), false, "settled between words");
+  assert.equal(captionMotionActive(caps, 2200), true, "second word entering");
+  assert.equal(captionMotionActive(caps, 3100), true, "leaving");
+  assert.equal(captionMotionActive(caps, 4000), false, "gone");
+});
+
+import { behindContentActive } from "../src/lib/composition";
+test("subject cut-out gating: only exists while something is drawn behind the subject", () => {
+  const caps = [{ id: "c", startMs: 1000, endMs: 2000, words: [], styleId: null, animationId: null, position: null, speakerId: null }];
+  const o = { behindLayers: [{ startMs: 5000, endMs: 6000 }], captionsBehind: true, captions: caps };
+  assert.equal(behindContentActive(o, 500), false);
+  assert.equal(behindContentActive(o, 1500), true, "behind-caption visible");
+  assert.equal(behindContentActive(o, 2400), true, "caption animating out");
+  assert.equal(behindContentActive(o, 3500), false, "gap between content");
+  assert.equal(behindContentActive(o, 5500), true, "behind title");
+  assert.equal(behindContentActive({ ...o, captionsBehind: false }, 1500), false, "captions in front need no cut-out");
+  assert.equal(behindContentActive({ behindLayers: [], captionsBehind: false, captions: caps }, 5500), false);
+});

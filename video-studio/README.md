@@ -42,16 +42,27 @@ See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for the full, honest 
 |---|---|
 | Upload (MP4/MOV/WebM), validation, ffprobe metadata, thumbnail, progress, errors | ✅ |
 | Local transcription, word timestamps, language detect, editing, SRT/VTT import/export | ✅ (Whisper path unverified with real weights here) |
-| 30 caption animations, 42 templates, gallery, search, categories, live preview | ✅ |
+| 65 caption motion engines, 84 templates in 16 categories, gallery, search, live preview | ✅ |
+| Per-word styles with stable ids, Type FX panel, click a word in the preview to style it, custom fonts | ✅ |
 | Editable captions: text, split, merge, delete, word timing, grouping, search & jump | ✅ |
 | Edit-decision list (cuts) separate from caption text | ✅ |
-| Silence removal (energy based), smart zoom (transcript based), music + ducking, fades | ✅ |
-| Timeline: ruler, scrub, waveform, drag/resize, split, cut range, zoom, undo/redo | ✅ |
+| Silence removal (energy based), smart zoom, music + ducking, fades | ✅ |
+| **Sound-effects track**: CC0 library, word-synced placement, suggestions, ducking, export mixing | ✅ verified on exports |
+| **10 cinematic transitions** between real clips (radial zoom blur, whip pan, flash, mask reveal, ...) | ✅ verified on exports |
+| **AI B-roll**: transcript analysis, search/auto-fill, full/split/overlay/PiP, speaker audio kept | ✅ local folder verified; Pexels/Pixabay adapters ⚠ not run against the live services |
+| **Face-aware auto zoom / vertical reframing** with smoothing, gap handling, overrides | ✅ verified on exports |
+| **Text behind people**: neural matte + guided-filter edges + temporal consistency + feather/grow | ✅ verified on exports (modest quality gains; 256 px model) |
+| Circular-path text, shattered text, camera-aware (scene-pinned) text | ✅ 2D/2.5D - **no true 3D anywhere** |
+| Timeline: ruler, scrub, waveform, drag/resize, split, cut range, zoom, B-roll & SFX lanes, undo/redo | ✅ |
 | MP4 export (H.264+AAC, 9:16 / 16:9 / 1:1, 30 or 60 fps), progress, cancel, verification | ✅ |
 | Projects: create, rename, duplicate, delete, autosave, versioned JSON | ✅ |
-| B-roll, transitions, SFX track, noise reduction, face-aware zoom, 4K, image layers | ❌ not built |
-| Subject masking, text behind person, tracking, 3D text (milestone 4) | ❌ not built |
+| After-Effects-style presets matched to a real preset pack | ❌ pack not provided (11 original look-alikes exist) |
+| Noise reduction, 4K, image layers, true 3D text | ❌ not built |
 | PostgreSQL/Prisma, Redis workers | ❌ intentionally deferred (JSON files + in-process jobs) |
+
+Documentation: [PHASE3](docs/PHASE3.md) · [KNOWN_LIMITATIONS](docs/KNOWN_LIMITATIONS.md) · [TEST_RESULTS](docs/TEST_RESULTS.md) · [RENDER_BENCHMARKS](docs/RENDER_BENCHMARKS.md) · [CAPTION_ENGINE](docs/CAPTION_ENGINE.md) · [REFERENCE_STYLE_ANALYSIS](docs/REFERENCE_STYLE_ANALYSIS.md) · [FONTS](docs/FONTS.md).
+
+**Optional environment:** `PEXELS_API_KEY`, `PIXABAY_API_KEY` (stock B-roll), `BROLL_GEN_ENDPOINT`/`BROLL_GEN_TOKEN` (generic AI-generation service), `BROWSER_EXECUTABLE`, `RENDER_CONCURRENCY`. Your own B-roll folder: `data/library/broll/*.mp4` (+ optional `name.txt` tags).
 
 ## Commands
 
@@ -59,11 +70,13 @@ See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for the full, honest 
 |---|---|
 | `npm run dev` / `build` / `start` | app (port 3100, bound to 127.0.0.1) |
 | `npm run ai` | AI service (port 8100, bound to 127.0.0.1) |
-| `npm run test:all` | typecheck + lint + 56 TS tests + Python tests |
+| `npm run test:all` | typecheck + lint + TS tests + Python tests |
 | `npm run sample` | regenerate the synthetic demo clip (needs `espeak-ng`) |
 | `npx tsx scripts/e2e.ts [templateId]` | **full workflow against the running app**: upload → transcribe → edit → style → cuts → zoom → export → pixel-verify the MP4 |
 | `node scripts/dev/ui-check.mjs` | drives the real UI in Chromium (needs `playwright-core` + a Chromium) |
 | `npx tsx scripts/dev/stills.ts <dir> [ids]` | renders still frames of templates (design review) |
+| `npx tsx scripts/validate-{phase2,sfx,transitions,broll,reframe,mask,reliability}.ts` | real exports + pixel/audio verification of each subsystem (reports in `docs/demo/`) |
+| `npx tsx scripts/bench-render.ts <scenario> <label> key=value…` | render benchmark with fidelity (PSNR/SSIM) vs a reference |
 
 ## Security notes
 

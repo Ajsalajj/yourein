@@ -17,7 +17,7 @@ import { renderMedia, selectComposition } from "@remotion/renderer";
 
 interface Input {
   props: { project: unknown; mediaUrls: Record<string, string>; hints?: { motionBlurSamples?: number } };
-  options: { crf: number; browserExecutable?: string; gl: string; concurrency: number; x264Preset?: string; jpegQuality?: number; imageFormat?: "jpeg" | "png"; offthreadCacheMB?: number; motionBlurSamples?: number };
+  options: { crf: number; browserExecutable?: string; gl: string; concurrency: number; x264Preset?: string; jpegQuality?: number; imageFormat?: "jpeg" | "png"; offthreadCacheMB?: number; motionBlurSamples?: number; scale?: number };
   expected: { width: number; height: number; fps: number; durationInFrames: number; hasAudio: boolean };
   ffprobe: string;
 }
@@ -84,9 +84,10 @@ async function main() {
     crf: input.options.crf,
     x264Preset: (input.options.x264Preset ?? "medium") as "medium",
     imageFormat: input.options.imageFormat ?? "jpeg",
-    jpegQuality: input.options.jpegQuality ?? 80,
+    jpegQuality: input.options.jpegQuality ?? 95 /* same speed as 80, +0.5 dB and 28 % smaller files (docs/RENDER_BENCHMARKS.md) */,
     offthreadVideoCacheSizeInBytes: input.options.offthreadCacheMB ? input.options.offthreadCacheMB * 1024 * 1024 : null,
     pixelFormat: "yuv420p",
+    scale: input.options.scale ?? 1,
     outputLocation: output,
     inputProps: input.props,
     browserExecutable,
