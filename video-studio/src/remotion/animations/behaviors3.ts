@@ -5,82 +5,103 @@
 import React from "react";
 import type { Behavior } from "./types";
 import { clamp, easeInOutCubic, easeOutCubic, easeOutExpo, hash, mix, px } from "./helpers";
+import { AE_PRESETS, evalKeys, key, opacityOf, presetAmounts } from "../../lib/aeselector";
 
 const h = React.createElement;
 
-/* 1 ─ Word Blink: every word flashes on/off a few times when it is spoken, then holds */
+/**
+ * Behaviours driven by parameters DECODED from the user's Pro Presets .ffx files (src/lib/aeselector.ts, docs/AE_PRESET_ANALYSIS.md).
+ * Timing runs in the preset's own frames (24 or 30 fps) from the start of the caption group; exits are anchored to the end of the caption.
+ */
+const unitIndex = (c: { index: number; count: number }, i: number, n: number) => ({ idx: c.index * n + i, total: Math.max(1, c.count * n) });
+
+/** amounts per animator for a caption at this moment, for `n` units */
+const amountsAt = (presetId: string, n: number, c: { sinceGroup: number; untilGroupEnd: number }) => {
+  const p = AE_PRESETS[presetId];
+  return p.animators.map((_, k) => presetAmounts(p, k, n, c.sinceGroup, c.untilGroupEnd));
+};
+
+/* 1 ─ Word Blink (decoded) */
 export const wordBlink: Behavior = {
   id: "word-blink",
   name: "Word Blink",
   word: (c) => {
-    const blinkMs = clamp(c.dur * 0.7, 260, 640);
-    const step = blinkMs / 5;
-    const t = c.sinceWord;
-    const blinking = t >= 0 && t < blinkMs;
-    const on = !blinking || Math.floor(t / step) % 2 === 0;
-    return { style: { opacity: c.revealed && on ? 1 - c.exit : 0, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
+    const am = amountsAt("word-blink", c.count, c);
+    return { style: { opacity: opacityOf(AE_PRESETS["word-blink"], am, c.index) * (1 - c.exit), color: c.isCurrent ? c.style.highlightColor : c.style.color } };
   },
 };
 
-/* 2 ─ Smooth Fade In and Out: the whole caption eases in with a small drift and eases out again */
+/* 2 ─ Smooth Fade In and Out (decoded): characters fade in with a ramp sweep, fade out with a ramp-down sweep, tracking drifts */
 export const smoothFadeInOut: Behavior = {
   id: "smooth-fade-in-out",
   name: "Smooth Fade In & Out",
-  group: (c) => ({ style: { opacity: easeInOutCubic(c.enter) * (1 - easeInOutCubic(c.exit)), transform: `translateY(${(1 - easeOutCubic(c.enter)) * px(c, 14) * c.k}px) scale(${mix(0.985, 1, easeOutCubic(c.enter))})` } }),
-  word: (c) => ({ style: { color: c.isCurrent ? c.style.highlightColor : c.style.color } }),
+  unit: "char",
+  word: (c) => {
+    const p = AE_PRESETS["smooth-fade-in-out"];
+    const tr = evalKeys(p.trackingKeys!, (c.sinceGroup * p.fps) / 1000) / 1000;
+    return { style: { color: c.isCurrent ? c.style.highlightColor : c.style.color, letterSpacing: `${c.style.letterSpacing + tr}em` } };
+  },
+  char: (c, _ch, i, n) => {
+    const { idx, total } = unitIndex(c, i, n);
+    const p = AE_PRESETS["smooth-fade-in-out"];
+    const am = amountsAt("smooth-fade-in-out", total, c);
+    return { display: "inline-block", opacity: opacityOf(p, am, idx) };
+  },
 };
 
-/* 3 ─ Alphabet Blink: letters blink on one after another as if typed on a faulty keyboard */
+/* 3 ─ Alphabet Blink (decoded) */
 export const alphabetBlink: Behavior = {
   id: "alphabet-blink",
   name: "Alphabet Blink",
   unit: "char",
-  word: (c) => ({ style: { opacity: c.revealed ? 1 - c.exit : 0 } }),
+  word: (c) => ({ style: { opacity: 1 - c.exit } }),
   char: (c, _ch, i, n) => {
-    const per = clamp((c.untilWordEnd + c.sinceWord) / Math.max(1, n), 24, 70);
-    const t = c.sinceWord - i * per;
-    const blinkMs = 3 * 46;
-    const on = t >= blinkMs || (t >= 0 && Math.floor(t / 46) % 2 === 0);
-    return { display: "inline-block", opacity: on ? 1 : 0 };
+    const { idx, total } = unitIndex(c, i, n);
+    const p = AE_PRESETS["alphabet-blink"];
+    return { display: "inline-block", opacity: opacityOf(p, amountsAt("alphabet-blink", total, c), idx) };
   },
 };
 
-/* 4 ─ Bottom to Up Blurred: words rise from below out of a blur */
+/* 4 ─ Bottom to Up Blurred (decoded): words start 57 px low, fully blurred (59 px) and transparent, then settle in sequence */
 export const bottomUpBlurred: Behavior = {
   id: "bottom-up-blurred",
   name: "Bottom to Up Blurred",
   word: (c) => {
-    const p = easeOutExpo(clamp(c.sinceWord / Math.max(200, c.dur)));
-    return { style: { opacity: c.revealed ? p * (1 - c.exit) : 0, transform: `translateY(${(1 - p) * px(c, 78) * c.k}px)`, filter: `blur(${(1 - p) * px(c, 16) * c.k}px)`, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
+    const p = AE_PRESETS["bottom-up-blurred"];
+    const a = amountsAt("bottom-up-blurred", c.count, c)[0][c.index];
+    const an = p.animators[0].props;
+    return { style: { opacity: (1 + a * (an.opacity! / 100 - 1)) * (1 - c.exit), transform: `translateY(${a * an.y! * c.scale * c.k}px)`, filter: a > 0.003 ? `blur(${a * an.blur! * c.scale * 0.5}px)` : undefined, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
   },
 };
 
-/* 5 ─ Fade Up and Out Smooth: lines float up into place, hold, then float on upward while fading */
+/* 5 ─ Fade Up and Out Smooth (partly decoded): words uncovered left to right, characters fade out by a ramp-down sweep, tracking drifts */
 export const fadeUpOutSmooth: Behavior = {
   id: "fade-up-out-smooth",
   name: "Fade Up & Out Smooth",
-  group: (c) => {
-    const inP = easeOutCubic(c.enter), outP = easeInOutCubic(c.exit);
-    return { style: { opacity: inP * (1 - outP), transform: `translateY(${(1 - inP) * px(c, 44) - outP * px(c, 44)}px)`, filter: outP > 0 ? `blur(${outP * px(c, 6)}px)` : undefined } };
-  },
+  unit: "char",
   word: (c) => {
-    const p = easeOutCubic(clamp((c.sinceGroup - c.index * 55) / Math.max(200, c.dur)));
-    return { style: { opacity: p, transform: `translateY(${(1 - p) * px(c, 16)}px)`, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
+    const p = AE_PRESETS["fade-up-out-smooth"];
+    const tr = evalKeys(p.trackingKeys!, (c.sinceGroup * p.fps) / 1000) / 1000;
+    const a = presetAmounts(p, 0, c.count, c.sinceGroup, c.untilGroupEnd)[c.index];
+    return { style: { opacity: 1 - a, transform: `translateY(${a * px(c, 22)}px)`, color: c.isCurrent ? c.style.highlightColor : c.style.color, letterSpacing: `${c.style.letterSpacing + tr}em` } };
+  },
+  char: (c, _ch, i, n) => {
+    const p = AE_PRESETS["fade-up-out-smooth"];
+    const { idx, total } = unitIndex(c, i, n);
+    const a = presetAmounts(p, 1, total, c.sinceGroup, c.untilGroupEnd)[idx];
+    return { display: "inline-block", opacity: 1 - a };
   },
 };
 
-/* 6 ─ Letter Flicker: each letter flickers like a failing sign, steadier and steadier, with a rare glitch afterwards */
+/* 6 ─ Letter Flicker (decoded): letters leave a randomised square selection one by one while the order reshuffles every frame */
 export const letterFlicker: Behavior = {
   id: "letter-flicker",
   name: "Letter Flicker",
   unit: "char",
-  word: (c) => ({ style: { opacity: c.revealed ? 1 - c.exit : 0 }, glowK: 0.6 + 0.9 * (1 - clamp(c.sinceWord / 900)) }),
-  char: (c, _ch, i) => {
-    const settle = clamp(c.sinceWord / Math.max(500, c.dur * 1.6));
-    const tick = Math.floor(c.frame / 2);
-    const r = hash(i * 13.37 + c.index * 7.1 + tick * 0.91);
-    const flickerOn = settle >= 1 ? r < 0.012 : r < (1 - settle) * 0.75;
-    return { display: "inline-block", opacity: flickerOn ? (settle >= 1 ? 0.55 : 0.12) : 1 };
+  word: (c) => ({ style: { opacity: 1 - c.exit }, glowK: 0.6 + 0.9 * (1 - clamp(c.sinceGroup / 1200)) }),
+  char: (c, _ch, i, n) => {
+    const { idx, total } = unitIndex(c, i, n);
+    return { display: "inline-block", opacity: opacityOf(AE_PRESETS["letter-flicker"], amountsAt("letter-flicker", total, c), idx) };
   },
 };
 
@@ -105,37 +126,37 @@ export const typeInOut: Behavior = {
   },
 };
 
-/* 8 ─ Bouncext: letters drop in and bounce on landing */
+/* 8 ─ Bouncext (decoded): the whole text slides up 6.09 % of the frame height over 3.5 frames while fading in, then the preset's own overshoot
+   expression runs: value + v * 0.04 * sin(1.8 * t * 2pi) / e^(3 t) * easeOut(t, 0, 3, 1, 0), v = speed just before the last key. */
 export const bouncext: Behavior = {
   id: "bounce-text",
   name: "Bouncext",
-  unit: "char",
-  word: (c) => ({ style: { opacity: c.revealed ? 1 - c.exit : 0, color: c.isCurrent ? c.style.highlightColor : c.style.color } }),
-  char: (c, _ch, i) => {
-    const t = c.sinceWord - i * 26;
-    const s = c.spr(t, { damping: 4.5, stiffness: 190, mass: 0.7, durMs: 640 });
-    const land = Math.max(0, s - 1); // overshoot below the baseline squashes the letter
-    return { display: "inline-block", opacity: t > 0 ? 1 : 0, transform: `translateY(${(1 - s) * -px(c, 150) * c.k}px) rotate(${(1 - Math.min(s, 1)) * (i % 2 ? 9 : -9)}deg) scale(${1 + land * 0.28}, ${1 - land * 0.34})`, transformOrigin: "50% 100%" };
+  group: (c) => {
+    const fps = 30, riseFrames = 3.5, rise = 0.06094 * 1080 * c.scale;
+    const f = (c.sinceGroup * fps) / 1000;
+    const inP = clamp(f / riseFrames);
+    const v = -rise / (riseFrames / fps); // px/s, upward while sliding in (linear keys)
+    const t = Math.max(0, (f - riseFrames) / fps); // s after the last key
+    const easeOut = Math.pow(1 - clamp(t / 3), 3);
+    const bounce = t > 0 && t < 3 ? v * 0.04 * Math.sin(1.8 * t * 2 * Math.PI) / Math.exp(3 * t) * easeOut : 0;
+    return { style: { opacity: inP * (1 - c.exit), transform: `translateY(${(1 - inP) * rise + bounce}px)` } };
   },
+  word: (c) => ({ style: { color: c.isCurrent ? c.style.highlightColor : c.style.color } }),
 };
 
-/* 9 ─ Text Tracking: letter spacing opens wide and closes in, with a soft blur-in */
+/* 9 ─ Text Tracking (decoded values): tracking amount 0 -> 12 (1/1000 em) over 73 frames at 30 fps, applied to every character */
 export const textTracking: Behavior = {
   id: "text-tracking",
   name: "Text Tracking",
-  unit: "char",
   word: (c) => {
-    const p = easeOutCubic(clamp(c.sinceWord / Math.max(300, c.dur * 1.4)));
-    return { style: { opacity: c.revealed ? Math.min(1, p * 1.6) * (1 - c.exit) : 0, filter: `blur(${(1 - p) * px(c, 7)}px)`, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
-  },
-  char: (c, _ch, i, n) => {
-    const p = easeOutExpo(clamp(c.sinceWord / Math.max(300, c.dur * 1.4)));
-    const spread = (1 - p) * 0.62 * c.k; // em of extra spacing between neighbours, applied symmetrically about the word centre
-    return { display: "inline-block", transform: `translateX(${(i - (n - 1) / 2) * spread}em)` };
+    const tr = evalKeys(key([0, 0], [73, 12]), (c.sinceGroup * 30) / 1000) / 1000;
+    return { style: { opacity: c.revealed ? 1 - c.exit : 0, letterSpacing: `${c.style.letterSpacing + tr}em`, color: c.isCurrent ? c.style.highlightColor : c.style.color } };
   },
 };
 
-/* 10 ─ Random Up Text: every letter climbs from its own random depth with its own random delay */
+/* 10 ─ Random Up Text (partly decoded): each letter animates for 24 frames (rotation -79.7 -> 0 deg, opacity 0 -> 100, bezier ease 0.33/0.17) and the
+   range selector sweeps 0 -> 100 over 40 frames at 30 fps, so letters start at random moments inside the first 16 frames. The 1000 px position animator
+   is driven by an expression selector that cannot be read from the file; the small rise below is my own addition. */
 export const randomUp: Behavior = {
   id: "random-up",
   name: "Random Up Text",
@@ -143,10 +164,9 @@ export const randomUp: Behavior = {
   word: (c) => ({ style: { opacity: c.revealed ? 1 - c.exit : 0 } }),
   char: (c, _ch, i) => {
     const seed = c.index * 31.7 + i * 5.3;
-    const delay = hash(seed) * Math.max(160, c.dur * 0.7);
-    const rise = 38 + hash(seed + 9.1) * 90;
-    const p = easeOutExpo(clamp((c.sinceWord - delay) / Math.max(260, c.dur * 0.9)));
-    return { display: "inline-block", opacity: p, transform: `translateY(${(1 - p) * px(c, rise) * c.k}px)` };
+    const delay = hash(seed) * (16 / 30) * 1000;
+    const p = easeOutCubic(clamp((c.sinceWord - delay) / ((24 / 30) * 1000)));
+    return { display: "inline-block", opacity: p, transform: `translateY(${(1 - p) * px(c, 60 + hash(seed + 9.1) * 60) * c.k}px) rotate(${(1 - p) * -79.7}deg)` };
   },
 };
 

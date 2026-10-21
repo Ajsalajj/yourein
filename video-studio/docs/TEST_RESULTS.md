@@ -81,3 +81,6 @@ Final run: 172 TS tests, 21 Python tests, typecheck + lint clean, UI check 29/29
 
 ### Motion blur (verified on a rendered still)
 Same project, same frame (133 ms, mid-entry of "STOP"), `motionBlur` 0 vs 1: 4 514 pixels differ (>20/255) with blur on versus 8 at a settled frame (166 ms), i.e. the blur only appears while the text moves. Side-by-side: `docs/screens/motion-blur-off-vs-on.png` (left off, right on). It is applied by the project's template/overrides to the whole caption layer; per-caption template overrides (`styleId`) do not carry their own motion-blur setting.
+
+### Pro Presets decoding
+`tests/aepresets.test.ts` (10 tests: keyframes, permutation, sweeps, uncover, randomise, decoded constants, end states, exit anchoring, engines settle, short-group compression). Full suite now **182 TS tests pass**; typecheck and lint clean.

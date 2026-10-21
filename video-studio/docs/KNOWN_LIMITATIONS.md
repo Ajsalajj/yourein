@@ -38,7 +38,7 @@
 
 **Not verified / not possible here:**
 * **Pexels and Pixabay adapters were never run against the live services** (no network route to them from this environment, no API keys). They are tested against local mock servers that reproduce the documented response shapes. The user's own B-roll folder is the fully verified path. The AI-generation adapter is a generic HTTP contract and is not configured by default.
-* **The After-Effects "Pro Presets" ZIP was not available**, so the 11 requested presets are original implementations of the *names*, not matches of the real presets (see PHASE3.md §2).
+* **Pro Presets**: parameters were decoded from the supplied `.ffx` files, but Type Animation In & Out and Ramp Up Zoom Text (plugin/expression driven) are my own designs, Random Up Text and Text Tracking only partly decoded, ramp/ease semantics are inferred, and nothing was compared with real After Effects renders (see AE_PRESET_ANALYSIS.md).
 * Whisper weights are still unavailable offline; transcription uses the pocketsphinx fallback unless a Whisper model is installed.
 
 **Known limits of what was built:**

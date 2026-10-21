@@ -14,11 +14,9 @@ Honesty legend used in this file: **Verified** = measured on a real export in th
 
 ## 2. After-Effects-style motion presets
 
-**The "Pro Presets" ZIP is not in the workspace** (only the four reference videos from phase 2 were uploaded), so **nothing was analysed from it and no behaviour was matched to a specific preset.** I implemented the eleven names as original Remotion behaviours (`src/remotion/animations/behaviors3.ts`) from what such presets are generally known for, and registered them as templates in the new *Motion Presets* category:
+The Pro Presets ZIP was provided later and **decoded read-only**; see [AE_PRESET_ANALYSIS.md](AE_PRESET_ANALYSIS.md). Eight presets use parameters taken from the files (word/char range selectors, keyframes, fps, tracking, randomisation seeds) through an original selector engine (`src/lib/aeselector.ts`); Type Animation In & Out and Ramp Up Zoom Text depend on plugin/expression data that is not stored in the files and remain my own designs; Random Up Text and Text Tracking are partly decoded. `.ffx` files are never imported. Not compared against real AE renders.
 
 Word Blink · Smooth Fade In & Out · Alphabet Blink · Bottom to Up Blurred · Fade Up & Out Smooth · Letter Flicker · Type Animation In & Out · Bouncext · Text Tracking · Random Up Text · Ramp Up Zoom Text.
-
-Status: **Unit-tested** (all 65 engines animate over time and are mutually distinct) and **reviewed on rendered stills** (`data/stills-p3` contact sheet during development). To match a real preset exactly I need either the ZIP/`.ffx` parameter values or a short screen-recorded / rendered export of each preset on a known word - please upload them. `.ffx` files are never imported.
 
 ## 3. AI B-roll
 

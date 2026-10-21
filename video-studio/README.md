@@ -56,7 +56,7 @@ See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for the full, honest 
 | Timeline: ruler, scrub, waveform, drag/resize, split, cut range, zoom, B-roll & SFX lanes, undo/redo | ✅ |
 | MP4 export (H.264+AAC, 9:16 / 16:9 / 1:1, 30 or 60 fps), progress, cancel, verification | ✅ |
 | Projects: create, rename, duplicate, delete, autosave, versioned JSON | ✅ |
-| After-Effects-style presets matched to a real preset pack | ❌ pack not provided (11 original look-alikes exist) |
+| After-Effects-style presets matched to a real preset pack | ⚠️ 8 of 11 decoded from the supplied `.ffx` files, 3 partly/not decodable; no AE render comparison ([details](docs/AE_PRESET_ANALYSIS.md)) |
 | Noise reduction, 4K, image layers, true 3D text | ❌ not built |
 | PostgreSQL/Prisma, Redis workers | ❌ intentionally deferred (JSON files + in-process jobs) |
 
