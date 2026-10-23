@@ -17,6 +17,8 @@ type Props = {
   /** Shown in the top bar on phones. */
   title: string;
   note?: string;
+  /** Optional control at the right of the top bar (phones), e.g. "Next design". */
+  topAction?: React.ReactNode;
   onClose: () => void;
   closeLabel?: string;
   /** Sticky bottom bar: the one primary action for this screen. */
@@ -33,7 +35,7 @@ type Props = {
  * the invitation fills the screen between a slim top bar and the action bar.
  * Used for catalog previews and for the host's own preview while editing.
  */
-export function InvitationViewer({ t, title, note, onClose, closeLabel = "Close preview", bar, side, step, footer }: Props) {
+export function InvitationViewer({ t, title, note, topAction, onClose, closeLabel = "Close preview", bar, side, step, footer }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(0);
@@ -76,6 +78,7 @@ export function InvitationViewer({ t, title, note, onClose, closeLabel = "Close 
         </button>
         <span className="pv-title">{title}</span>
         {note && <span className="pv-top-note">{note}</span>}
+        {topAction}
       </div>
 
       {side && <aside className="pv-side">{side(phase, () => setRun((r) => r + 1))}</aside>}
