@@ -7,8 +7,11 @@ import { PRICE_LABEL } from "@/config/site";
 import { CustomizeLink } from "@/components/site/Actions";
 import { InvitationViewer } from "./InvitationViewer";
 
-/** Catalog preview: try the real design, then one clear next step. */
-export default function PreviewOverlay({ slug, onClose, onPick }: { slug: string | null; onClose: () => void; onPick: (slug: string) => void }) {
+/**
+ * Catalog preview: try the real design, then one clear next step.
+ * `landing` is the standalone page ads link to (/try): phones get a "Next design" button and the call to action reads "Make it yours".
+ */
+export default function PreviewOverlay({ slug, onClose, onPick, landing = false }: { slug: string | null; onClose: () => void; onPick: (slug: string) => void; landing?: boolean }) {
   const t = slug ? getTemplate(slug) : undefined;
   const idx = t ? TEMPLATES.findIndex((x) => x.slug === t.slug) : 0;
   const prev = TEMPLATES[(idx - 1 + TEMPLATES.length) % TEMPLATES.length];
@@ -21,12 +24,14 @@ export default function PreviewOverlay({ slug, onClose, onPick }: { slug: string
           key="pv"
           t={t}
           title={t.name}
-          note="Sample names"
+          note={landing ? undefined : "Sample names"}
+          topAction={landing ? <button type="button" className="pv-top-next" onClick={() => onPick(next.slug)}>Next design <span aria-hidden="true">→</span></button> : undefined}
+          closeLabel={landing ? "See all designs" : undefined}
           onClose={onClose}
           footer={
             <div className="inv-order">
-              <p>Like this design? Add your own names, dates and photographs.</p>
-              <CustomizeLink slug={t.slug} className="btn btn-solid btn-block">Customize this design</CustomizeLink>
+              <p>{landing ? "Like it? Add your names, dates and photos in a few minutes. Free to try, pay only when you publish." : "Like this design? Add your own names, dates and photographs."}</p>
+              <CustomizeLink slug={t.slug} className="btn btn-solid btn-block">{landing ? "Make it yours" : "Customize this design"}</CustomizeLink>
             </div>
           }
           side={(phase, replay) => (
@@ -58,7 +63,7 @@ export default function PreviewOverlay({ slug, onClose, onPick }: { slug: string
                 <span>{PRICE_LABEL}, paid when you publish</span>
               </div>
               <div className="pv-bar-price"><b>{PRICE_LABEL}</b><span>when you publish</span></div>
-              <CustomizeLink slug={t.slug} />
+              <CustomizeLink slug={t.slug}>{landing ? "Make it yours" : "Customize"}</CustomizeLink>
             </>
           }
         />

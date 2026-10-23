@@ -12,7 +12,7 @@ const config: NextConfig = {
       { source: "/i/:path*", headers: noindexFollow },
       { source: "/admin", headers: noindex },
       { source: "/admin/:path*", headers: noindex },
-      ...["dashboard", "invites", "guests", "account", "edit", "pay", "success", "start", "signin", "reset", "shot"].map((p) => ({ source: `/${p}/:path*`, headers: noindex })),
+      ...["dashboard", "invites", "guests", "account", "edit", "pay", "success", "start", "signin", "reset", "shot", "try"].map((p) => ({ source: `/${p}/:path*`, headers: noindex })),
       { source: "/signin", headers: noindex },
       { source: "/dashboard", headers: noindex },
       { source: "/invites", headers: noindex },

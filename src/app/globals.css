@@ -582,3 +582,11 @@ h2 { font-size: clamp(1.85rem, 7.4vw, 3.2rem); line-height: 1.06; text-wrap: bal
 /* never on top of a page's own bottom bar (design page, editor, dashboard) or the full-screen preview (z-index 100) */
 body:has(.tpl-bar, .ed-bar, .tabbar) .ad-consent { bottom: calc(88px + env(safe-area-inset-bottom)); }
 .foot-cookie { font-size: inherit; color: inherit; text-decoration-color: currentColor; }
+
+/* /try: the ad landing page is the preview itself */
+.pv-landing { min-height: 100dvh; background: #0c0c0c; }
+.pv-top-next { margin-left: auto; min-height: 40px; padding: 0 14px; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: #f6efe0; font: inherit; font-size: 0.86rem; white-space: nowrap; cursor: pointer; }
+.pv-top-next:hover { border-color: rgba(255, 255, 255, 0.45); }
+@media (min-width: 1040px) { .pv-top-next { display: none; } }
+/* the cookie question sits above the preview here (ads land on this page), clear of the action bar */
+body:has(.pv-landing) .ad-consent { z-index: 105; bottom: calc(80px + env(safe-area-inset-bottom)); }
