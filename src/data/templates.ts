@@ -140,6 +140,8 @@ export type Template = {
   tz?: string;
   /** Present only when rendering a customer's invitation. */
   live?: Live;
+  /** A sample song for previews of the design itself (no customer invitation); starts when the invitation is opened. */
+  sampleMusic?: string;
 };
 
 export const TEMPLATES: Template[] = [

@@ -26,7 +26,8 @@ export function TryClient({ slug: initial }: { slug: string }) {
 
   return (
     <div className="pv-landing">
-      <PreviewOverlay slug={slug} landing onPick={pick} onClose={() => window.location.assign("/create")} />
+      {/* "Her" (JVKE) plays as soon as the invitation is opened */}
+      <PreviewOverlay slug={slug} landing music="her" onPick={pick} onClose={() => window.location.assign("/create")} />
     </div>
   );
 }
