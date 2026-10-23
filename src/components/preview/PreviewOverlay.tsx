@@ -3,6 +3,7 @@
 import React from "react";
 import { AnimatePresence } from "motion/react";
 import { TEMPLATES, getTemplate } from "@/data/templates";
+import { getTrack } from "@/data/music";
 import { PRICE_LABEL } from "@/config/site";
 import { CustomizeLink } from "@/components/site/Actions";
 import { InvitationViewer } from "./InvitationViewer";
@@ -11,8 +12,11 @@ import { InvitationViewer } from "./InvitationViewer";
  * Catalog preview: try the real design, then one clear next step.
  * `landing` is the standalone page ads link to (/try): phones get a "Next design" button and the call to action reads "Make it yours".
  */
-export default function PreviewOverlay({ slug, onClose, onPick, landing = false }: { slug: string | null; onClose: () => void; onPick: (slug: string) => void; landing?: boolean }) {
-  const t = slug ? getTemplate(slug) : undefined;
+export default function PreviewOverlay({ slug, onClose, onPick, landing = false, music }: { slug: string | null; onClose: () => void; onPick: (slug: string) => void; landing?: boolean; music?: string }) {
+  const base = slug ? getTemplate(slug) : undefined;
+  /* a sample song plays when the visitor opens the invitation (the tap is what lets the browser start audio) */
+  const song = music ? getTrack(music)?.url : undefined;
+  const t = base && song ? { ...base, sampleMusic: song } : base;
   const idx = t ? TEMPLATES.findIndex((x) => x.slug === t.slug) : 0;
   const prev = TEMPLATES[(idx - 1 + TEMPLATES.length) % TEMPLATES.length];
   const next = TEMPLATES[(idx + 1) % TEMPLATES.length];

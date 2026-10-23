@@ -30,7 +30,7 @@ export default function Invitation({ t, footer, onPhase, startOpen }: { t: Templ
   const [phase, setPhaseState] = useState<Phase>(startOpen ? "open" : "sealed");
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-  const music = t.live?.music;
+  const music = t.live ? t.live.music : t.sampleMusic;
   const musicTarget = Math.max(0.05, Math.min(1, (t.live?.musicVolume ?? 35) / 100));
   const musicAutostart = t.live?.musicAutostart ?? true;
 
