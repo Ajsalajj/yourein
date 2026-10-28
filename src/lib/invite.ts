@@ -61,6 +61,21 @@ const RsvpSchema = z.object({
   questions: z.array(QuestionSchema).max(6).catch([]).default([]),
 });
 
+/**
+ * How a photo sits in its frame: x/y are the point of the photo kept in view (percent, like CSS object-position)
+ * and z the zoom (1 = fill the frame). The uploaded file is never changed, so a photo can be re-adjusted any time.
+ */
+export type PhotoFit = { x: number; y: number; z: number };
+const PhotoFitSchema = z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100), z: z.number().min(1).max(4) });
+export const DEFAULT_FIT: PhotoFit = { x: 50, y: 50, z: 1 };
+
+/** Inline style that shows a photo with its fit. The element must be absolutely filling its frame. */
+export function fitStyle(f: PhotoFit | undefined): Record<string, string> {
+  if (!f) return {};
+  const at = `${f.x}% ${f.y}%`;
+  return { objectFit: "cover", objectPosition: at, ...(f.z > 1 ? { transform: `scale(${f.z})`, transformOrigin: at } : {}) };
+}
+
 export const InviteDataSchema = z.object({
   eventType: z.enum(EVENT_TYPES).catch("Wedding").default("Wedding"),
   /** Used when the event type is "Other". */
@@ -80,6 +95,8 @@ export const InviteDataSchema = z.object({
   closing: text(200),
   portrait: mediaId.nullable().catch(null).default(null),
   gallery: z.array(mediaId).max(8).catch([]).default([]),
+  /** Position and zoom chosen for each photo (by media id). Photos without an entry are centred. */
+  photoFit: z.record(z.string().max(40), PhotoFitSchema).catch({}).default({}),
   music: mediaId.nullable().catch(null).default(null),
   /** Where the background music comes from. "auto" is how invitations made before the library read: their upload, if any. */
   musicSource: z.enum(["auto", "builtin", "upload", "none"]).catch("auto").default("auto"),
@@ -278,6 +295,7 @@ export function resolveTemplate(base: Template, d: InviteData, o: ResolveOptions
       eventTitle: title,
       portrait: d.portrait ? o.mediaUrl(d.portrait) : undefined,
       gallery: d.gallery.map(o.mediaUrl),
+      photoFit: Object.fromEntries([d.portrait, ...d.gallery].filter((m): m is string => !!m && !!d.photoFit[m]).map((m) => [o.mediaUrl(m), d.photoFit[m]])),
       music: musicUrlOf(d, o.mediaUrl),
       musicVolume: d.musicVolume,
       musicAutostart: d.musicStart === "on_open",

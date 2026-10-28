@@ -1,5 +1,6 @@
 "use client";
 
+import { fitStyle } from "@/lib/invite";
 import React, { useEffect, useId, useState } from "react";
 import { nameScale, pairOf, type Template } from "@/data/templates";
 import { googleCalendarUrl, icsFile } from "@/lib/share";
@@ -52,8 +53,10 @@ function Portrait({ t }: { t: Template }) {
     <section className="sec sec-portrait">
       <figure className={`frame ${FRAME_CLASS[t.theme.frame]}`} data-rv="photo">
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="frame-photo" src={photo} alt={pairOf(t)} loading="lazy" />
+          <div className="photo-wrap">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="frame-photo" src={photo} alt={pairOf(t)} loading="lazy" style={fitStyle(t.live?.photoFit?.[photo])} />
+          </div>
         ) : (
           <div className="frame-art"><PortraitArt t={t} id={`pt${id}`} /></div>
         )}
@@ -260,8 +263,11 @@ function Gallery({ t }: { t: Template }) {
         <div className={`gallery gallery-photos n${Math.min(live.gallery.length, 5)}`}>
           {live.gallery.map((src, i) => (
             <figure key={src} className="g-tile" data-rv="photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={`${pairOf(t)}, photo ${i + 1}`} loading="lazy" />
+              {/* the wrapper takes the reveal animation; the photo keeps the position and zoom the host chose */}
+              <div className="photo-wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`${pairOf(t)}, photo ${i + 1}`} loading="lazy" style={fitStyle(live.photoFit?.[src])} />
+              </div>
             </figure>
           ))}
         </div>

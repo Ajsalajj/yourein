@@ -84,6 +84,8 @@ export type Live = {
   eventTitle: string;
   portrait?: string;
   gallery: string[];
+  /** Position and zoom for photos, keyed by photo address. */
+  photoFit?: Record<string, { x: number; y: number; z: number }>;
   music?: string;
   /** Out of 100; the music fades up to this. */
   musicVolume?: number;

@@ -405,3 +405,22 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .mp-mini-info small { font-size: 0.72rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .mp-mini-info input[type="range"] { width: 100%; height: 18px; margin: 0; accent-color: var(--accent); }
 .mp-mini-x { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--surface-2); cursor: pointer; }
+
+/* photo position & zoom */
+.adj-card { display: grid; gap: 12px; }
+.adj-h { font-size: var(--fs-section); letter-spacing: -0.02em; margin-top: 6px; }
+.adj-sub, .adj-note { color: var(--ink-2); font-size: 0.88rem; margin: 0; }
+.adj-box { position: relative; width: min(100%, 300px); max-height: 52dvh; margin: 4px auto; overflow: hidden; background: var(--surface-2); border-radius: var(--r-md); touch-action: none; cursor: grab; user-select: none; box-shadow: 0 0 0 1px var(--line-strong); }
+.adj-box.is-dragging { cursor: grabbing; }
+.adj-oval { border-radius: 50%; }
+.adj-arch { border-radius: 999px 999px var(--r-md) var(--r-md); }
+.adj-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+.adj-grid { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  background: linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.7) calc(33.33% - 0.5px), rgba(255,255,255,0.7) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255,255,255,0.7) calc(66.66% - 0.5px), rgba(255,255,255,0.7) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+              linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.7) calc(33.33% - 0.5px), rgba(255,255,255,0.7) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255,255,255,0.7) calc(66.66% - 0.5px), rgba(255,255,255,0.7) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)); }
+.adj-box.is-dragging .adj-grid { opacity: 1; }
+.adj-zoom { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 1.1rem; }
+.adj-zoom input { flex: 1; accent-color: var(--ink); min-height: 32px; }
+.adj-actions { display: flex; align-items: center; gap: 10px; }
+.adj-spacer { flex: 1; }
+.thumb-adjust { position: absolute; left: 4px; bottom: 4px; min-height: 28px; padding: 0 9px; border-radius: 99px; border: 0; background: rgba(20, 18, 15, 0.72); color: #fff; font: inherit; font-size: 0.72rem; cursor: pointer; }
