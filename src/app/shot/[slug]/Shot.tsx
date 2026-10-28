@@ -29,7 +29,7 @@ export default function Shot({ slug }: { slug: string }) {
       data-ready={art ? "true" : "false"}
       style={{ ...themeVars(t.theme), width: "100vw", height: "100vh", ["--ih" as string]: "100vh" }}
     >
-      <style>{`.drift{display:none}.sc-soft>svg,.sc-layer>svg,.tap-ring{animation:none!important}`}</style>
+      <style>{`.drift{display:none}.sc-soft>svg,.sc-layer>svg{animation:none!important}`}</style>
       <ArtDefs />
       {art && <HeroStage t={t} art={art} sealed={sealed} />}
     </div>

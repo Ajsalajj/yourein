@@ -128,18 +128,6 @@
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
-.tap-ring {
-  display: grid;
-  place-items: center;
-  width: 9.4cqw;
-  height: 9.4cqw;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-.tap-ring svg { width: 40%; height: 40%; }
 
 /* small ambient loops */
 @keyframes tw { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
@@ -158,8 +146,6 @@
 
 .open-hit { position: absolute; inset: 0; z-index: 8; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .open-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -6px; }
-.is-sealed .tap-ring { animation: nudge 2.4s ease-in-out infinite; }
-@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
 .skip-btn {
   position: absolute; z-index: 9; right: 14px; bottom: max(18px, 3.5%);
@@ -438,7 +424,7 @@
   .feat-pin { position: relative; }
   .feat-arch .feat-layer { display: none; }
   .feat-lead { top: 6%; }
-  .is-sealed .tap-ring, .scroll-cue i { animation: none; }
+  .scroll-cue i { animation: none; }
 }
 
 /* a call to action placed at the very end of an invitation by the page hosting it */
