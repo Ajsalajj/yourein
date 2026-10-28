@@ -1,0 +1,8 @@
+{
+  "ORVANE_API_URL": "https://api.orvane.example",
+  "SUPABASE_URL": "https://your-project.supabase.co",
+  "SUPABASE_ANON_KEY": "public-anon-key",
+  "PRIVACY_POLICY_URL": "https://orvane.example/privacy",
+  "TERMS_URL": "https://orvane.example/terms",
+  "SUPPORT_EMAIL": "support@orvane.example"
+}
