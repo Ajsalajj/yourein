@@ -6,7 +6,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence } from "motion/react";
 import { TEMPLATES, getTemplate } from "@/data/templates";
 import { PRICE_LABEL } from "@/config/site";
-import { EVENT_TYPES, InviteDataSchema, MAX_GALLERY, TIME_ZONES, formatDate, formatTime, mediaUrl, missingFields, namesOf, requestLineFor, resolveTemplate, type InviteData, type InviteEventInput } from "@/lib/invite";
+import { EVENT_TYPES, InviteDataSchema, MAX_GALLERY, TIME_ZONES, fitStyle, formatDate, formatTime, mediaUrl, missingFields, namesOf, requestLineFor, resolveTemplate, type InviteData, type InviteEventInput, type PhotoFit } from "@/lib/invite";
+import { PhotoAdjuster } from "./PhotoAdjuster";
 import { InvitationViewer } from "@/components/preview/InvitationViewer";
 import { InvitationPhoneMockup } from "@/components/site/InvitationPhoneMockup";
 import { api, shrinkImage } from "./client";
@@ -294,6 +295,16 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
     window.location.assign(published ? `/invites/${id}` : guest ? `/templates/${templateSlug}` : "/dashboard");
   };
 
+  /* ---- photo position & zoom ---- */
+  const [adjusting, setAdjusting] = useState<null | { id: string; kind: "portrait" | "gallery" }>(null);
+  const saveFit = (mediaId: string, fit: PhotoFit) => setData((d) => ({ ...d, photoFit: { ...d.photoFit, [mediaId]: fit } }));
+  /* a removed photo's position is dropped with it */
+  const dropFit = (mediaId: string) => setData((d) => {
+    const { [mediaId]: _gone, ...rest } = d.photoFit;
+    return { ...d, photoFit: rest };
+  });
+  const portraitShape = template.theme.frame === "oval" ? "oval" : template.theme.frame === "rect" ? "rect" : "arch";
+
   /* ---- uploads ---- */
   const upload = async (kind: "portrait" | "gallery" | "music", files: FileList | null) => {
     if (!files?.length) return;
@@ -308,6 +319,8 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(out.error || "That file could not be uploaded.");
         setData((d) => ({ ...d, portrait: out.portrait, gallery: out.gallery, music: out.music, ...(kind === "music" ? { musicSource: "upload" as const, musicName: file.name.slice(0, 120) } : {}) }));
+        /* a new main photo opens straight into positioning, where most people want to nudge it */
+        if (kind === "portrait" && out.portrait) setAdjusting({ id: out.portrait, kind: "portrait" });
       } catch (e) {
         setUploadError((e as Error).message);
         break;
@@ -435,14 +448,15 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                 <div className="uploader">
                   <div className="portrait-slot">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {data.portrait ? <img src={mediaUrl(data.portrait)} alt="Your main photo" /> : "A portrait of you both works best"}
+                    {data.portrait ? <img src={mediaUrl(data.portrait)} alt="Your main photo" style={fitStyle(data.photoFit[data.portrait])} /> : "A portrait of you both works best"}
                   </div>
                   <div className="chips">
                     <label className="btn btn-quiet btn-sm file-btn">
                       {data.portrait ? "Replace photo" : "Choose photo"}
                       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { void upload("portrait", e.target.files); e.target.value = ""; }} />
                     </label>
-                    {data.portrait && <button type="button" className="btn btn-sm btn-danger" onClick={() => set("portrait", null)}>Remove</button>}
+                    {data.portrait && <button type="button" className="btn btn-quiet btn-sm" onClick={() => setAdjusting({ id: data.portrait!, kind: "portrait" })}>Adjust</button>}
+                    {data.portrait && <button type="button" className="btn btn-sm btn-danger" onClick={() => { dropFit(data.portrait!); set("portrait", null); }}>Remove</button>}
                   </div>
                 </div>
               </div>
@@ -452,8 +466,9 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
                   {data.gallery.map((g, i) => (
                     <div key={g} className="thumb">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={mediaUrl(g)} alt={`Gallery photo ${i + 1}`} />
-                      <button type="button" className="thumb-x" onClick={() => set("gallery", data.gallery.filter((x) => x !== g))} aria-label={`Remove photo ${i + 1}`}>
+                      <img src={mediaUrl(g)} alt={`Gallery photo ${i + 1}`} style={fitStyle(data.photoFit[g])} />
+                      <button type="button" className="thumb-adjust" onClick={() => setAdjusting({ id: g, kind: "gallery" })} aria-label={`Adjust photo ${i + 1}`}>Adjust</button>
+                      <button type="button" className="thumb-x" onClick={() => { dropFit(g); set("gallery", data.gallery.filter((x) => x !== g)); }} aria-label={`Remove photo ${i + 1}`}>
                         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
                       </button>
                     </div>
@@ -468,6 +483,19 @@ export function Editor({ id, initial, initialTemplate, status, guest = false }: 
               </div>
               <p className="hint" role="status" style={{ marginTop: 14 }}>{uploading || " "}</p>
               {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
+              {adjusting && (
+                <PhotoAdjuster
+                  key={adjusting.id}
+                  src={mediaUrl(adjusting.id)}
+                  aspect={adjusting.kind === "portrait" ? (portraitShape === "oval" ? 4 / 5 : 3 / 4) : 1}
+                  shape={adjusting.kind === "portrait" ? portraitShape : "rect"}
+                  title={adjusting.kind === "portrait" ? "Position your main photo" : "Position this photo"}
+                  note={adjusting.kind === "gallery" ? "Some gallery tiles are taller than this square, so a little more may show above and below." : undefined}
+                  initial={data.photoFit[adjusting.id]}
+                  onSave={(fit) => { saveFit(adjusting.id, fit); setAdjusting(null); }}
+                  onCancel={() => setAdjusting(null)}
+                />
+              )}
             </>
           )}
 

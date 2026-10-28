@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import { getTemplate } from "@/data/templates";
 import { eventTitleOf, formatDate } from "@/lib/invite";
 import { getMedia, getPublished } from "@/server/invitations";
+import type { PhotoFit } from "@/lib/invite";
 
 const W = 1200;
 const H = 630;
@@ -22,13 +23,22 @@ function font(pkg: string, file: string): Buffer | null {
 }
 
 /** The couple's own portrait as a PNG data URL (the card renderer reads neither WebP nor HEIC). */
-async function portrait(mediaId: string | null | undefined): Promise<string | undefined> {
+async function portrait(mediaId: string | null | undefined, fit?: PhotoFit): Promise<string | undefined> {
   if (!mediaId) return undefined;
   try {
     const media = await getMedia(mediaId);
     if (!media || !media.mime.startsWith("image/")) return undefined;
     const sharp = (await import("sharp")).default;
-    const buf = await sharp(media.bytes).rotate().resize(460, 540, { fit: "cover" }).png().toBuffer();
+    const W = 460, H = 540;
+    let img = sharp(await sharp(media.bytes).rotate().toBuffer());
+    if (fit && (fit.z > 1 || fit.x !== 50 || fit.y !== 50)) {
+      /* the same framing the host chose in the editor: the visible part is xp*(width - visible) from the left */
+      const { width = 0, height = 0 } = await img.metadata();
+      const s = Math.max(W / width, H / height) * fit.z;
+      const vw = Math.min(width, Math.round(W / s)), vh = Math.min(height, Math.round(H / s));
+      img = img.extract({ left: Math.round((fit.x / 100) * (width - vw)), top: Math.round((fit.y / 100) * (height - vh)), width: vw, height: vh });
+    }
+    const buf = await img.resize(W, H, { fit: "cover" }).png().toBuffer();
     return `data:image/png;base64,${buf.toString("base64")}`;
   } catch {
     return undefined;
@@ -48,7 +58,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const th = t?.theme ?? { bg: "#FBF8F1", ink: "#1B1814", soft: "#5F574C", accent: "#A98443", script: "pinyon" as const };
   const d = inv.data;
 
-  const photo = await portrait(d.portrait);
+  const photo = await portrait(d.portrait, d.portrait ? d.photoFit[d.portrait] : undefined);
   const script = th.script === "allura" ? font("allura", "allura-latin-400-normal.woff") : font("pinyon-script", "pinyon-script-latin-400-normal.woff");
   const caps = font("cinzel", "cinzel-latin-400-normal.woff");
 
