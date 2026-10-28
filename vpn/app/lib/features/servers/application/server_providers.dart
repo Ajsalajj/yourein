@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,8 +46,12 @@ class LatencyNotifier extends Notifier<Map<String, Duration?>> {
 
   void record(String id, Duration? latency) => state = {...state, id: latency};
 
+  /// Browsers can't open raw sockets: leave latency unmeasured ("—")
+  /// rather than reporting every server as unreachable.
+  static bool get supported => !kIsWeb;
+
   Future<void> measureAll() async {
-    if (_running) return;
+    if (_running || !supported) return;
     final servers = ref.read(serversProvider).value;
     if (servers == null || servers.isEmpty) return;
     _running = true;

@@ -86,12 +86,14 @@ class _FadingBranches extends StatelessWidget {
         for (var i = 0; i < children.length; i++)
           IgnorePointer(
             ignoring: i != index,
-            child: TickerMode(
-              enabled: i == index,
-              child: AnimatedOpacity(
-                opacity: i == index ? 1 : 0,
-                duration: OMotion.quick,
-                curve: OMotion.inOut,
+            // The fade must sit outside TickerMode: a muted ticker would
+            // freeze the fade-out and leave the old tab half visible.
+            child: AnimatedOpacity(
+              opacity: i == index ? 1 : 0,
+              duration: OMotion.quick,
+              curve: OMotion.inOut,
+              child: TickerMode(
+                enabled: i == index,
                 child: ExcludeSemantics(excluding: i != index, child: children[i]),
               ),
             ),

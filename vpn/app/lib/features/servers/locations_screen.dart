@@ -345,18 +345,22 @@ class ServerRow extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(server.city, style: OType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
-                        Flexible(child: Text(server.city, style: OType.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        Flexible(
+                          child: Text(
+                            available
+                                ? server.countryName
+                                : '${server.countryName} · ${server.availability == ServerAvailability.maintenance ? 'Maintenance' : 'Offline'}',
+                            style: OType.footnote,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         if (server.isPremium) ...[const SizedBox(width: 6), const PremiumBadge()],
                       ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      available ? server.countryName : '${server.countryName} · ${server.availability == ServerAvailability.maintenance ? 'Maintenance' : 'Offline'}',
-                      style: OType.footnote,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -365,9 +369,11 @@ class ServerRow extends ConsumerWidget {
                 const Padding(
                   padding: EdgeInsets.only(right: 6),
                   child: Icon(Icons.lock_rounded, size: 16, color: OColors.textFaint),
-                ),
-              if (available) LatencyLabel(latency: latencies[server.id], measured: latencies.containsKey(server.id)),
+                )
+              else if (available)
+                LatencyLabel(latency: latencies[server.id], measured: latencies.containsKey(server.id)),
               IconButton(
+                visualDensity: VisualDensity.compact,
                 tooltip: favorite ? 'Remove from favorites' : 'Add to favorites',
                 onPressed: () => ref.read(favoritesProvider.notifier).toggle(server.id),
                 icon: AnimatedSwitcher(
@@ -382,6 +388,7 @@ class ServerRow extends ConsumerWidget {
                 ),
               ),
               IconButton(
+                visualDensity: VisualDensity.compact,
                 tooltip: 'Location details',
                 onPressed: () => context.push('/locations/${server.id}'),
                 icon: const Icon(Icons.info_outline_rounded, color: OColors.textMuted, size: 20),

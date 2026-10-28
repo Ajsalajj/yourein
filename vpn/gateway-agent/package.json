@@ -1,0 +1,21 @@
+{
+  "name": "orvane-gateway-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs on each WireGuard gateway; applies peer changes from the Orvane API. No runtime dependencies.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/agent.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "5.9"
+  }
+}

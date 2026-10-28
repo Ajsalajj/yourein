@@ -152,7 +152,7 @@ class _ServerDetailScreenState extends ConsumerState<ServerDetailScreen> {
                   label: 'Measure latency again',
                   variant: OButtonVariant.ghost,
                   loading: _measuring,
-                  onPressed: s.isOnline ? () => _measure(s) : null,
+                  onPressed: s.isOnline && LatencyNotifier.supported ? () => _measure(s) : null,
                 ),
               ],
             ),
