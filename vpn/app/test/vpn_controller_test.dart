@@ -66,6 +66,8 @@ class FakeEngine implements VpnEngine {
   Future<void> openSystemVpnSettings() async {}
   @override
   Future<Map<String, Object?>> diagnostics() async => {};
+  @override
+  Future<String> deviceName() async => 'Pixel Test';
 }
 
 class FakeProvisioner implements Provisioner {

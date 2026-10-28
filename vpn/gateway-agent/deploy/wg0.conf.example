@@ -1,0 +1,15 @@
+# /etc/wireguard/wg0.conf on an Orvane gateway.
+#
+# Peers are NOT listed here: the orvane-agent adds/removes them at runtime
+# and the API re-syncs the full set after any restart. SaveConfig stays off
+# so no client keys are ever written to disk on the gateway.
+#
+# Generate the gateway key pair once:
+#   umask 077; wg genkey | tee /etc/wireguard/private.key | wg pubkey > /etc/wireguard/public.key
+# Paste public.key into the admin dashboard when adding the gateway.
+
+[Interface]
+Address = 10.64.0.1/16, fd00:64::1/112
+ListenPort = 51820
+PostUp = wg set %i private-key /etc/wireguard/private.key
+SaveConfig = false

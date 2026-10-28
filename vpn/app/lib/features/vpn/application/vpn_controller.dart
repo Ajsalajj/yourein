@@ -39,7 +39,7 @@ final provisionerProvider = Provider<Provisioner>((ref) {
   if (api == null) return const NotConfiguredProvisioner();
   return ApiProvisioner(
     api,
-    deviceName: 'Android device',
+    deviceName: () => ref.read(vpnEngineProvider).deviceName().catchError((Object _) => 'Android device'),
     signedIn: () => ref.read(authControllerProvider).value != null,
   );
 });

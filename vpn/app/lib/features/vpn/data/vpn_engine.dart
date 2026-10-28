@@ -66,6 +66,9 @@ abstract interface class VpnEngine {
 
   /// Non-sensitive diagnostic facts for support screens.
   Future<Map<String, Object?>> diagnostics();
+
+  /// Human-readable device model, used to label the device in the account.
+  Future<String> deviceName();
 }
 
 /// Real engine on Android, backed by the Kotlin WireGuard integration.
@@ -146,6 +149,9 @@ class MethodChannelVpnEngine implements VpnEngine {
   @override
   Future<Map<String, Object?>> diagnostics() async =>
       (await _call<Map<Object?, Object?>>('diagnostics')).map((k, v) => MapEntry(k.toString(), v));
+
+  @override
+  Future<String> deviceName() => _call<String>('deviceName');
 }
 
 /// Used on every platform without a native engine (web preview, tests,
@@ -175,6 +181,8 @@ class UnsupportedVpnEngine implements VpnEngine {
   Future<void> openSystemVpnSettings() async {}
   @override
   Future<Map<String, Object?>> diagnostics() async => {'engine': 'unsupported', 'platform': defaultTargetPlatform.name};
+  @override
+  Future<String> deviceName() async => defaultTargetPlatform.name;
 }
 
 VpnEngine createPlatformEngine() =>

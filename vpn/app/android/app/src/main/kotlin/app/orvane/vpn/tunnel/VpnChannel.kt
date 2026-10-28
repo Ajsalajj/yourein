@@ -104,6 +104,10 @@ class VpnChannel : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler
                     }.getOrNull(),
                 )
             }
+            "deviceName" -> {
+                val maker = Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
+                result.success(if (Build.MODEL.startsWith(maker, ignoreCase = true)) Build.MODEL else "$maker ${Build.MODEL}")
+            }
             "openVpnSettings" -> {
                 val a = activity?.activity
                 if (a == null) {

@@ -13,7 +13,7 @@ class ApiProvisioner implements Provisioner {
   ApiProvisioner(this._api, {required this.deviceName, required this.signedIn});
 
   final ApiClient _api;
-  final String deviceName;
+  final Future<String> Function() deviceName;
   final bool Function() signedIn;
 
   @override
@@ -23,7 +23,7 @@ class ApiProvisioner implements Provisioner {
       final j = await _api.post('/v1/tunnels', {
         'serverId': server.id,
         'publicKey': devicePublicKey,
-        'deviceName': deviceName,
+        'deviceName': await deviceName(),
         'platform': 'android',
       }) as Map<String, dynamic>;
       return TunnelConfig.fromJson(j);

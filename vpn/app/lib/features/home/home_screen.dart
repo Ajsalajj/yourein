@@ -41,7 +41,10 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: OSpace.xs),
             Reveal(child: _TopBar(premium: premium)),
             const SizedBox(height: OSpace.lg),
-            Reveal(delay: const Duration(milliseconds: 80), child: _StatusHeader(state: vpn, server: server)),
+            Reveal(
+              delay: const Duration(milliseconds: 80),
+              child: _StatusHeader(state: vpn, server: server),
+            ),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, c) {
@@ -80,10 +83,16 @@ class HomeScreen extends ConsumerWidget {
             ),
             Reveal(
               delay: const Duration(milliseconds: 160),
-              child: Tilt3D(maxAngle: 0.05, child: _ServerCard(server: server, connected: vpn.phase == VpnPhase.connected)),
+              child: Tilt3D(
+                maxAngle: 0.05,
+                child: _ServerCard(server: server, connected: vpn.phase == VpnPhase.connected),
+              ),
             ),
             const SizedBox(height: OSpace.sm),
-            Reveal(delay: const Duration(milliseconds: 220), child: _LiveStats(state: vpn)),
+            Reveal(
+              delay: const Duration(milliseconds: 220),
+              child: _LiveStats(state: vpn),
+            ),
             // Room for the floating navigation bar.
             SizedBox(height: 96 + MediaQuery.paddingOf(context).bottom),
           ],
@@ -100,30 +109,48 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Every piece can shrink, so large accessibility text sizes and narrow
+    // phones never overflow.
     return Row(
       children: [
-        const OrvaneWordmark(),
-        const Spacer(),
-        Pressable(
-          onTap: () => context.push('/premium'),
-          semanticLabel: premium ? 'Premium plan active' : 'View Premium plans',
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              borderRadius: ORadius.chip,
-              gradient: premium
-                  ? const LinearGradient(colors: [Color(0x334F8CFF), Color(0x2293C5FD)])
-                  : null,
-              color: premium ? null : OColors.glassFill,
-              border: Border.all(color: premium ? OColors.blue.withValues(alpha: 0.45) : OColors.glassStroke),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(premium ? Icons.workspace_premium_rounded : Icons.auto_awesome_rounded, size: 15, color: OColors.ice),
-                const SizedBox(width: 6),
-                Text(premium ? 'Premium' : 'Go Premium', style: OType.caption.copyWith(color: OColors.text)),
-              ],
+        const Flexible(
+          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: OrvaneWordmark()),
+        ),
+        const SizedBox(width: OSpace.xs),
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Pressable(
+              onTap: () => context.push('/premium'),
+              semanticLabel: premium ? 'Premium plan active' : 'View Premium plans',
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  borderRadius: ORadius.chip,
+                  gradient: premium ? const LinearGradient(colors: [Color(0x334F8CFF), Color(0x2293C5FD)]) : null,
+                  color: premium ? null : OColors.glassFill,
+                  border: Border.all(color: premium ? OColors.blue.withValues(alpha: 0.45) : OColors.glassStroke),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      premium ? Icons.workspace_premium_rounded : Icons.auto_awesome_rounded,
+                      size: 15,
+                      color: OColors.ice,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        premium ? 'Premium' : 'Go Premium',
+                        style: OType.caption.copyWith(color: OColors.text),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -183,7 +210,10 @@ class _StatusHeader extends StatelessWidget {
             switchInCurve: OMotion.enter,
             transitionBuilder: (child, a) => FadeTransition(
               opacity: a,
-              child: SlideTransition(position: Tween(begin: const Offset(0, 0.15), end: Offset.zero).animate(a), child: child),
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.15), end: Offset.zero).animate(a),
+                child: child,
+              ),
             ),
             child: KeyedSubtree(key: ValueKey('${state.phase}-${state.step}'), child: headline),
           ),
@@ -252,12 +282,7 @@ class _ErrorNotice extends ConsumerWidget {
       _ => (null, null),
     };
     // The headline above already shows the error title.
-    return ONotice(
-      message: error.message,
-      actionLabel: label,
-      onAction: action,
-      onDismiss: ctrl.dismissError,
-    );
+    return ONotice(message: error.message, actionLabel: label, onAction: action, onDismiss: ctrl.dismissError);
   }
 }
 
@@ -284,7 +309,9 @@ class _ServerCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Flexible(child: Text(server!.countryName, style: OType.bodyStrong, overflow: TextOverflow.ellipsis)),
+                    Flexible(
+                      child: Text(server!.countryName, style: OType.bodyStrong, overflow: TextOverflow.ellipsis),
+                    ),
                     if (server!.isPremium) ...[const SizedBox(width: 6), const PremiumBadge()],
                   ],
                 ),
@@ -302,11 +329,11 @@ class _ServerCard extends ConsumerWidget {
       final (title, subtitle) = switch (servers) {
         AsyncLoading() => ('Loading locations…', 'Fetching the live server list'),
         AsyncError(:final error) => (
-            'Locations unavailable',
-            error is ServersUnavailable && error.reason == 'not_configured'
-                ? 'No Orvane service is configured for this build'
-                : 'Couldn’t reach the server list — tap to retry',
-          ),
+          'Locations unavailable',
+          error is ServersUnavailable && error.reason == 'not_configured'
+              ? 'No Orvane service is configured for this build'
+              : 'Couldn’t reach the server list — tap to retry',
+        ),
         _ => ('Choose a location', 'Pick from the live server list'),
       };
       content = Row(
@@ -314,7 +341,11 @@ class _ServerCard extends ConsumerWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: OColors.glassFill, border: Border.all(color: OColors.glassStroke)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: OColors.glassFill,
+              border: Border.all(color: OColors.glassStroke),
+            ),
             child: servers.isLoading
                 ? const Center(child: OSpinner(size: 18))
                 : const Icon(Icons.public_rounded, color: OColors.ice, size: 22),
@@ -341,7 +372,9 @@ class _ServerCard extends ConsumerWidget {
         context.go('/locations');
       },
       pressedScale: 0.98,
-      semanticLabel: server == null ? 'Choose a location' : 'Location: ${server!.city}, ${server!.countryName}. Change location',
+      semanticLabel: server == null
+          ? 'Choose a location'
+          : 'Location: ${server!.city}, ${server!.countryName}. Change location',
       child: GlassSurface(
         padding: const EdgeInsets.symmetric(horizontal: OSpace.md, vertical: 14),
         tint: connected ? OColors.success : null,
@@ -366,11 +399,17 @@ class _LiveStats extends StatelessWidget {
       opacity: live ? 1 : 0.55,
       child: Row(
         children: [
-          Expanded(child: _StatTile(icon: Icons.south_rounded, label: 'Download', value: live ? Fmt.rate(state.rxRate) : '—')),
+          Expanded(
+            child: _StatTile(icon: Icons.south_rounded, label: 'Download', value: live ? Fmt.rate(state.rxRate) : '—'),
+          ),
           const SizedBox(width: OSpace.xs),
-          Expanded(child: _StatTile(icon: Icons.north_rounded, label: 'Upload', value: live ? Fmt.rate(state.txRate) : '—')),
+          Expanded(
+            child: _StatTile(icon: Icons.north_rounded, label: 'Upload', value: live ? Fmt.rate(state.txRate) : '—'),
+          ),
           const SizedBox(width: OSpace.xs),
-          Expanded(child: _StatTile(icon: Icons.data_usage_rounded, label: 'Session', value: live ? Fmt.bytes(total) : '—')),
+          Expanded(
+            child: _StatTile(icon: Icons.data_usage_rounded, label: 'Session', value: live ? Fmt.bytes(total) : '—'),
+          ),
         ],
       ),
     );
@@ -400,7 +439,9 @@ class _StatTile extends StatelessWidget {
                 children: [
                   Icon(icon, size: 13, color: OColors.ice),
                   const SizedBox(width: 4),
-                  Flexible(child: Text(label, style: OType.caption, overflow: TextOverflow.ellipsis)),
+                  Flexible(
+                    child: Text(label, style: OType.caption, overflow: TextOverflow.ellipsis),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),

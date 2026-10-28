@@ -1,0 +1,33 @@
+# /etc/systemd/system/orvane-agent.service
+[Unit]
+Description=Orvane gateway agent
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+Requires=wg-quick@wg0.service
+
+[Service]
+# AGENT_SECRET comes from the admin dashboard ("Add gateway"). Store it in
+# /etc/orvane/agent.env (mode 0600):
+#   AGENT_SECRET=...
+#   WG_INTERFACE=wg0
+#   PORT=8443
+#   TLS_CERT=/etc/orvane/tls/fullchain.pem
+#   TLS_KEY=/etc/orvane/tls/privkey.pem
+EnvironmentFile=/etc/orvane/agent.env
+ExecStart=/usr/bin/node /opt/orvane-agent/dist/agent.js
+# The agent needs CAP_NET_ADMIN for `wg set` and nothing else.
+User=orvane
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadOnlyPaths=/etc/orvane
+Restart=on-failure
+RestartSec=3
+# Only counts are logged; never peers, endpoints or traffic.
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
