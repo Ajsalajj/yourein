@@ -72,10 +72,8 @@ function Drift({ slug }: { slug: string }) {
 export function TapCue({ label, ink }: { label: string; ink?: string }) {
   return (
     <span className="tap-cue" style={ink ? { color: ink } : undefined}>
+      {/* label only: a down arrow here read as "scroll", but the cover opens with a tap */}
       <span className="tap-label">{label}</span>
-      <span className="tap-ring" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </span>
     </span>
   );
 }
