@@ -3,8 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
+import '../../../core/design/components/pressable.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/motion/tilt.dart';
 import '../../vpn/domain/vpn_models.dart';
@@ -98,7 +98,7 @@ class _ConnectionSphereState extends State<ConnectionSphere> with SingleTickerPr
     if (old.phase != widget.phase && widget.phase == VpnPhase.connected) {
       _frame.shock = 0;
       _frame.accentMix = 1;
-      HapticFeedback.mediumImpact();
+      OHaptics.medium();
     }
     if (!_motion) _snapToTargets();
   }
@@ -201,7 +201,7 @@ class _ConnectionSphereState extends State<ConnectionSphere> with SingleTickerPr
         onTapUp: enabled
             ? (_) {
                 setState(() => _pressed = false);
-                HapticFeedback.lightImpact();
+                OHaptics.light();
                 widget.onPressed?.call();
               }
             : null,

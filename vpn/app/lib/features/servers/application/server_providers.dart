@@ -43,6 +43,8 @@ class LatencyNotifier extends Notifier<Map<String, Duration?>> {
   @override
   Map<String, Duration?> build() => const {};
 
+  void record(String id, Duration? latency) => state = {...state, id: latency};
+
   Future<void> measureAll() async {
     if (_running) return;
     final servers = ref.read(serversProvider).value;

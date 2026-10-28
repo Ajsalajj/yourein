@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../servers/domain/server.dart';
+import '../../settings/app_settings.dart';
 import '../data/api_provisioner.dart';
 import '../data/vpn_engine.dart';
 import '../domain/provisioner.dart';
+import '../domain/routing.dart';
 import '../domain/vpn_models.dart';
 
 export '../domain/provisioner.dart';
@@ -42,6 +44,11 @@ final provisionerProvider = Provider<Provisioner>((ref) {
   );
 });
 final vpnTimingsProvider = Provider<VpnTimings>((ref) => const VpnTimings());
+
+final routingPolicyProvider = Provider<RoutingPolicy>((ref) {
+  final s = ref.watch(settingsProvider);
+  return RoutingPolicy(blockIpv6Leaks: s.blockIpv6Leaks, excludeLan: s.excludeLan);
+});
 
 final vpnControllerProvider = NotifierProvider<VpnController, VpnState>(VpnController.new);
 
@@ -146,7 +153,8 @@ class VpnController extends Notifier<VpnState> {
 
       state = state.copyWith(step: () => ConnectStep.provisioning);
       final key = await _engine.publicKey();
-      final config = await ref.read(provisionerProvider).provision(server: server, devicePublicKey: key);
+      final issued = await ref.read(provisionerProvider).provision(server: server, devicePublicKey: key);
+      final config = applyRouting(issued, ref.read(routingPolicyProvider));
       if (!current()) return;
 
       state = state.copyWith(step: () => ConnectStep.starting);

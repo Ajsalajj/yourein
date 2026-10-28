@@ -4,6 +4,23 @@ import 'package:flutter/widgets.dart';
 
 enum PressHaptic { none, selection, light, medium }
 
+/// Global haptics switch, driven by the user's setting.
+abstract final class OHaptics {
+  static bool enabled = true;
+
+  static void selection() {
+    if (enabled) HapticFeedback.selectionClick();
+  }
+
+  static void light() {
+    if (enabled) HapticFeedback.lightImpact();
+  }
+
+  static void medium() {
+    if (enabled) HapticFeedback.mediumImpact();
+  }
+}
+
 /// Makes anything tappable with a physical press: it compresses while held
 /// and springs back with a small overshoot on release. Semantics, focus and
 /// keyboard activation are handled so custom controls stay accessible.
@@ -59,11 +76,11 @@ class _PressableState extends State<Pressable> with SingleTickerProviderStateMix
       case PressHaptic.none:
         break;
       case PressHaptic.selection:
-        HapticFeedback.selectionClick();
+        OHaptics.selection();
       case PressHaptic.light:
-        HapticFeedback.lightImpact();
+        OHaptics.light();
       case PressHaptic.medium:
-        HapticFeedback.mediumImpact();
+        OHaptics.medium();
     }
     widget.onTap?.call();
   }

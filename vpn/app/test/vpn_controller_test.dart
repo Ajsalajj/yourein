@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:orvane/features/servers/domain/server.dart';
 import 'package:orvane/features/vpn/application/vpn_controller.dart';
 import 'package:orvane/features/vpn/data/vpn_engine.dart';
+import 'package:orvane/features/vpn/domain/routing.dart';
 import 'package:orvane/features/vpn/domain/vpn_models.dart';
 
 /// Scriptable engine double. It records calls and reports whatever
@@ -110,6 +111,7 @@ void main() {
     c = ProviderContainer(overrides: [
       vpnEngineProvider.overrideWithValue(engine),
       provisionerProvider.overrideWithValue(provisioner),
+      routingPolicyProvider.overrideWithValue(const RoutingPolicy()),
       vpnTimingsProvider.overrideWithValue(const VpnTimings(
         handshakeTimeout: Duration(milliseconds: 300),
         handshakePoll: Duration(milliseconds: 20),
