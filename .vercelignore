@@ -1,0 +1,3 @@
+# The Orvane VPN packages are separate projects with their own toolchains;
+# the invitations site neither builds nor serves them.
+vpn/
